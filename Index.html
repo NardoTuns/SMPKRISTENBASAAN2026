@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assesmen Akhir Semester 2026 - SMP Kristen Basaan</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f3f4f6; --text: #1f2937; --error: #dc2626; --success: #16a34a; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; user-select: none; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: var(--primary); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: var(--primary); color: white; border: none; padding: 10px 20px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .hidden { display: none !important; }
+        
+        /* Exam UI */
+        .header-ujian { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
+        .timer { font-size: 1.5em; font-weight: bold; color: var(--error); }
+        .soal-container img { max-width: 100%; max-height: 300px; display: block; margin: 10px 0; border-radius: 4px;}
+        .opsi-label { display: block; padding: 10px; margin: 5px 0; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .opsi-label:hover { background-color: #f3f4f6; }
+        input[type="radio"] { margin-right: 10px; }
+        
+        /* Stats & Cheat */
+        .stats { display: flex; justify-content: space-around; background: #e5e7eb; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-weight: bold; }
+        .cheat-warning { background: #fee2e2; color: var(--error); padding: 10px; border-radius: 4px; text-align: center; font-weight: bold; margin-bottom: 15px; border: 1px solid var(--error); }
+    </style>
+</head>
+<body oncontextmenu="return false;"> <div id="loginPage" class="container">
+    <h1>Assesmen Akhir Semester 2026</h1>
+    <h2>SMP Kristen Basaan</h2>
+    <div id="loadingMessage" style="text-align:center; color:#666;">Sedang memuat data...</div>
+    
+    <form id="loginForm" class="hidden" onsubmit="event.preventDefault(); doLogin();">
+        <div class="form-group">
+            <label>Kelas</label>
+            <select id="kelas" required onchange="filterNama()">
+                <option value="">-- Pilih Kelas --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Nama Siswa</label>
+            <select id="nama" required>
+                <option value="">-- Pilih Nama --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Mata Pelajaran</label>
+            <select id="mapel" required>
+                <option value="">-- Pilih Mapel --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" required>
+        </div>
+        <button type="submit" id="btnLogin">LOGIN</button>
+    </form>
+</div>
+
+<div id="examPage" class="container hidden">
+    <div class="cheat-warning hidden" id="cheatAlert"></div>
+    <div class="stats">
+        <div style="color:var(--success)">Benar: <span id="statBenar">0</span></div>
+        <div style="color:var(--error)">Salah: <span id="statSalah">0</span></div>
+        <div>Sisa Soal: <span id="statSisa">0</span></div>
+    </div>
+    
+    <div class="header-ujian">
+        <div>Soal ke-<span id="nomorSoal">1</span></div>
+        <div class="timer" id="timerDisplay">00:00</div>
+    </div>
+    
+    <div class="soal-container" id="soalKonten">
+        </div>
+    
+    <button id="btnNext" disabled onclick="cekJawaban()">Selanjutnya</button>
+</div>
+
+<div id="resultPage" class="container hidden">
+    <h1>Ujian Selesai</h1>
+    <div style="font-size: 1.2em; text-align: center; margin-top: 20px;">
+        <p>Total Benar: <strong style="color:var(--success)" id="finalBenar">0</strong></p>
+        <p>Total Salah: <strong style="color:var(--error)" id="finalSalah">0</strong></p>
+        <p>Tidak Terjawab: <strong id="finalKosong">0</strong></p>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSv1-Me5okRaSdHOY7T_xhfbUoQUBm2UAX9YNBqx3R8-sp75w1-WIDwag8whctAFTS/exec'; 
+    let allUsers = [];
+    let currentSoalData = [];
+    let currentIndex = 0;
+    let timerInterval;
+    let waktuSisa = 0;
+    
+    // Status
+    let score = { benar: 0, salah: 0, kosong: 0 };
+    let userInfo = { nama: '', kelas: '', mapel: '' };
+    let cheatCount = 0;
+
+    // Inisialisasi Data
+    window.onload = function() {
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'action=getInitData'
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                allUsers = data.users;
+                
+                // Populate Kelas Unik
+                let kelasSet = new Set(allUsers.map(u => u.kelas));
+                kelasSet.forEach(k => {
+                    document.getElementById('kelas').innerHTML += `<option value="${k}">${k}</option>`;
+                });
+                
+                // Populate Mapel
+                data.mapel.forEach(m => {
+                    document.getElementById('mapel').innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+            }
+        });
+    };
+
+    function filterNama() {
+        const kelasDipilih = document.getElementById('kelas').value;
+        const namaSelect = document.getElementById('nama');
+        namaSelect.innerHTML = '<option value="">-- Pilih Nama --</option>';
+        allUsers.filter(u => u.kelas == kelasDipilih).forEach(u => {
+            namaSelect.innerHTML += `<option value="${u.nama}">${u.nama}</option>`;
+        });
+    }
+
+    function doLogin() {
+        const btn = document.getElementById('btnLogin');
+        btn.innerText = 'Memeriksa...';
+        btn.disabled = true;
+
+        userInfo.nama = document.getElementById('nama').value;
+        userInfo.kelas = document.getElementById('kelas').value;
+        userInfo.mapel = document.getElementById('mapel').value;
+        const pwd = document.getElementById('password').value;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=login&nama=${userInfo.nama}&password=${pwd}&mapel=${userInfo.mapel}`
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                ambilSoal();
+            } else {
+                alert(data.message);
+                btn.innerText = 'LOGIN';
+                btn.disabled = false;
+            }
+        });
+    }
+
+    function ambilSoal() {
+        document.getElementById('btnLogin').innerText = 'Memuat Soal...';
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=getSoal&mapel=${userInfo.mapel}&kelas=${userInfo.kelas}`
+        }).then(res => res.json()).then(data => {
+            if(data.success && data.data.length > 0) {
+                currentSoalData = data.data;
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('examPage').classList.remove('hidden');
+                initAntiCheat();
+                reqFullscreen();
+                tampilkanSoal();
+            } else {
+                alert('Soal tidak ditemukan untuk Mapel dan Kelas ini.');
+                document.getElementById('btnLogin').innerText = 'LOGIN';
+                document.getElementById('btnLogin').disabled = false;
+            }
+        });
+    }
+
+    function tampilkanSoal() {
+        if(currentIndex >= currentSoalData.length) {
+            selesaiUjian();
+            return;
+        }
+
+        const soal = currentSoalData[currentIndex];
+        document.getElementById('nomorSoal').innerText = currentIndex + 1;
+        document.getElementById('statSisa').innerText = currentSoalData.length - currentIndex;
+        
+        let htmlSoal = `<p>${soal.soal}</p>`;
+        if (soal.gambar && soal.gambar.trim() !== "") {
+            // Mengubah format link gdrive agar bisa dirender
+            let imgId = soal.gambar.match(/id=([^&]+)/) || soal.gambar.match(/d\/([^/]+)/);
+            if(imgId) {
+                htmlSoal += `<img src="https://drive.google.com/thumbnail?id=${imgId[1]}&sz=w800" alt="Gambar Soal"/>`;
+            }
+        }
+
+        const abcd = ['A', 'B', 'C', 'D'];
+        soal.opsi.forEach((o, i) => {
+            htmlSoal += `<label class="opsi-label"><input type="radio" name="jawaban" value="${abcd[i]}"> ${abcd[i]}. ${o}</label>`;
+        });
+
+        document.getElementById('soalKonten').innerHTML = htmlSoal;
+        MathJax.typesetPromise(); // Render MathJax
+
+        // Setup Timer
+        waktuSisa = parseInt(soal.timer);
+        document.getElementById('btnNext').disabled = true;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            waktuSisa--;
+            let m = Math.floor(waktuSisa / 60).toString().padStart(2, '0');
+            let s = (waktuSisa % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+            
+            if(waktuSisa <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('btnNext').disabled = false;
+            }
+        }, 1000);
+    }
+
+    function cekJawaban() {
+        const jawaban = document.querySelector('input[name="jawaban"]:checked');
+        const kunci = currentSoalData[currentIndex].kunci;
+        
+        if (!jawaban) {
+            score.kosong++;
+            alert('Waktu habis, Anda tidak memilih jawaban.');
+        } else if (jawaban.value === kunci) {
+            score.benar++;
+            alert('Jawaban Anda Benar!');
+        } else {
+            score.salah++;
+            alert('Jawaban Anda Salah!');
+        }
+
+        document.getElementById('statBenar').innerText = score.benar;
+        document.getElementById('statSalah').innerText = score.salah;
+
+        currentIndex++;
+        tampilkanSoal();
+    }
+
+    function selesaiUjian() {
+        document.getElementById('examPage').classList.add('hidden');
+        document.getElementById('resultPage').classList.remove('hidden');
+        document.getElementById('finalBenar').innerText = score.benar;
+        document.getElementById('finalSalah').innerText = score.salah;
+        document.getElementById('finalKosong').innerText = score.kosong;
+        
+        // Hentikan pengawasan
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("blur", handleBlur);
+    }
+
+    // --- SISTEM ANTI CHEAT ---
+    function initAntiCheat() {
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("blur", handleBlur);
+        document.addEventListener("keyup", (e) => {
+            if (e.key === 'PrintScreen') laporKecurangan('Mencoba Screenshot (PrintScreen)');
+        });
+    }
+
+    function handleVisibility() {
+        if (document.hidden) laporKecurangan('Pindah Tab / Minimize Browser');
+    }
+
+    function handleBlur() {
+        laporKecurangan('Aplikasi Kehilangan Fokus (Kemungkinan Membuka Layar Lain)');
+    }
+
+    function laporKecurangan(jenis) {
+        cheatCount++;
+        const alertBox = document.getElementById('cheatAlert');
+        alertBox.innerText = `PERINGATAN! Anda terdeteksi melakukan kecurangan: ${jenis}. (Total: ${cheatCount}/5)`;
+        alertBox.classList.remove('hidden');
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=catatCurang&nama=${userInfo.nama}&kelas=${userInfo.kelas}&mapel=${userInfo.mapel}&keterangan=${jenis}&jumlah=${cheatCount}`
+        }).then(res => res.json()).then(data => {
+            if(data.blocked) {
+                alert('Anda telah melakukan kecurangan 5 kali. Ujian dihentikan dan akun Anda dinonaktifkan.');
+                window.location.reload(); // Paksa keluar
+            }
+        });
+        
+        setTimeout(() => { alertBox.classList.add('hidden'); }, 5000);
+    }
+
+    function reqFullscreen() {
+        let elem = document.documentElement;
+        if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+        else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+    }
+</script>
+</body>
+</html>

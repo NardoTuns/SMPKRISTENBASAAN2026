@@ -14,106 +14,115 @@
     };
 </script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root { 
-            --primary: #00f3ff; /* Neon Cyan */
-            --bg-color: #050a12; /* Dark Space */
-            --panel-bg: rgba(10, 15, 30, 0.85);
-            --text-main: #e2e8f0;
-            --error: #ff003c; /* Neon Red */
-            --success: #39ff14; /* Neon Green */
-            --border-glow: 0 0 10px rgba(0, 243, 255, 0.4);
+            --primary: #FF6B6B; /* Ceria: Merah Koral/Pink */
+            --secondary: #4ECDC4; /* Ceria: Tosca/Teal */
+            --bg-color: #F7FFF7; /* Terang */
+            --panel-bg: #FFFFFF;
+            --text-main: #2D3436; /* Gelap lembut */
+            --text-muted: #636E72;
+            --error: #FF4757; /* Merah terang */
+            --success: #2ED573; /* Hijau cerah */
+            --soft-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
         }
         
         body { 
-            font-family: 'Rajdhani', sans-serif; 
-            background-color: var(--bg-color); 
+            font-family: 'Nunito', sans-serif; 
+            /* Latar belakang cerah dan penuh warna */
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            background-attachment: fixed;
             color: var(--text-main); 
-            margin: 0; padding: 0; 
+            margin: 0; padding: 15px; 
             user-select: none;
-            /* Background Grid Pattern */
-            background-image: 
-                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
-            background-size: 30px 30px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* Agar di HP tidak terpotong saat layar kecil */
             min-height: 100vh;
+            box-sizing: border-box;
         }
         
         .container { 
-            width: 100%; max-width: 800px; 
-            margin: 20px; padding: 30px; 
+            width: 100%; max-width: 700px; 
+            margin: auto; padding: 35px 30px; 
             background: var(--panel-bg); 
-            border: 1px solid var(--primary); 
-            border-radius: 12px; 
-            box-shadow: var(--border-glow), inset 0 0 20px rgba(0,243,255,0.05); 
-            backdrop-filter: blur(5px);
+            border: none; 
+            border-radius: 25px; /* Sudut membulat yang ramah */
+            box-shadow: var(--soft-shadow); 
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Pita warna-warni di bagian atas container */
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            background: linear-gradient(90deg, #FF6B6B, #FFE66D, #4ECDC4, #A8E6CF);
         }
 
         h1, h2 { 
             text-align: center; 
-            font-family: 'Orbitron', sans-serif; 
-            color: var(--primary); 
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+            font-family: 'Fredoka', sans-serif; 
             margin-bottom: 5px;
+            letter-spacing: 1px;
         }
-        h2 { font-size: 1.2rem; color: #fff; text-shadow: none; margin-bottom: 25px;}
+        h1 { font-size: 1.8rem; color: var(--primary); text-shadow: 2px 2px 0px rgba(255, 107, 107, 0.1); }
+        h2 { font-size: 1.1rem; color: var(--secondary); margin-bottom: 30px;}
 
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #a5b4fc; letter-spacing: 1px;}
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--text-muted); font-size: 0.9rem;}
         
-        /* Input & Select Futuristic Style */
+        /* Input & Select: Clean & Modern */
         select, input[type="password"] { 
-            width: 100%; padding: 12px; 
-            background: rgba(0, 0, 0, 0.5); 
-            border: 1px solid #1e3a8a; 
-            color: var(--primary); 
-            font-family: 'Rajdhani', sans-serif; 
+            width: 100%; padding: 15px; 
+            background: #F4F6F8; 
+            border: 2px solid #E2E8F0; 
+            color: var(--text-main); 
+            font-family: 'Nunito', sans-serif; 
             font-size: 1.1rem;
             font-weight: 600;
-            border-radius: 6px; 
+            border-radius: 12px; 
             box-sizing: border-box;
-            transition: 0.3s;
+            transition: all 0.3s ease;
             outline: none;
+            appearance: none;
         }
         select:focus, input[type="password"]:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(0,243,255,0.3);
+            border-color: var(--secondary);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.2);
         }
 
-        /* Button Futuristic Style */
+        /* Button: Bubbly & Ceria */
         button { 
-            background: transparent; 
-            color: var(--primary); 
-            border: 2px solid var(--primary); 
-            padding: 14px 20px; 
+            background: var(--primary); 
+            color: #ffffff; 
+            border: none; 
+            padding: 16px 20px; 
             width: 100%; 
-            border-radius: 6px; 
+            border-radius: 15px; 
             cursor: pointer; 
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.1rem; 
-            font-weight: bold; 
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.2rem; 
+            font-weight: 600; 
+            letter-spacing: 1px;
             transition: all 0.3s ease; 
-            box-shadow: inset 0 0 10px rgba(0,243,255,0.2);
-            margin-top: 10px;
+            box-shadow: 0 6px 15px rgba(255, 107, 107, 0.3);
+            margin-top: 15px;
         }
         button:hover:not(:disabled) { 
-            background: var(--primary); 
-            color: #000; 
-            box-shadow: 0 0 20px var(--primary); 
+            background: #FF5252; 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
         }
         button:disabled { 
-            border-color: #475569; color: #475569; 
-            cursor: not-allowed; box-shadow: none; 
+            background: #E2E8F0; color: #A0AEC0; 
+            cursor: not-allowed; box-shadow: none; transform: none;
         }
         
         .hidden { display: none !important; }
@@ -121,62 +130,80 @@
         /* Exam UI */
         .header-ujian { 
             display: flex; justify-content: space-between; align-items: center; 
-            border-bottom: 1px dashed var(--primary); 
-            padding-bottom: 15px; margin-bottom: 20px; 
-            font-family: 'Orbitron', sans-serif;
+            background: #F8FAFC;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 25px; 
+            font-family: 'Fredoka', sans-serif;
+            color: var(--text-muted);
+            border: 2px solid #E2E8F0;
         }
-        .timer { font-size: 1.8em; font-weight: bold; color: var(--error); text-shadow: 0 0 8px rgba(255,0,60,0.5); }
+        .header-ujian div:first-child { font-weight: 600; color: var(--secondary); }
+        .timer { font-size: 1.6rem; font-weight: 600; color: var(--error); background: #FFF0F0; padding: 5px 15px; border-radius: 10px; }
         
-        .soal-container { margin-bottom: 25px; font-size: 1.2rem; line-height: 1.6;}
-        .soal-container img { max-width: 100%; max-height: 250px; display: block; margin: 15px 0; border: 1px solid var(--primary); border-radius: 4px;}
+        .soal-container { margin-bottom: 30px; font-size: 1.15rem; line-height: 1.7; font-weight: 600; color: var(--text-main);}
+        .soal-container img { max-width: 100%; max-height: 250px; display: block; margin: 15px auto; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
         
         .opsi-label { 
-            display: block; padding: 12px 15px; margin: 10px 0; 
-            border: 1px solid #1e3a8a; border-radius: 6px; 
-            cursor: pointer; transition: 0.2s; 
-            background: rgba(0,0,0,0.3);
+            display: flex; align-items: center; padding: 15px 20px; margin: 12px 0; 
+            border: 2px solid #E2E8F0; border-radius: 15px; 
+            cursor: pointer; transition: all 0.2s ease; 
+            background: #FFFFFF;
         }
         .opsi-label:hover { 
-            background: rgba(0, 243, 255, 0.1); 
-            border-color: var(--primary); 
-            box-shadow: inset 0 0 10px rgba(0,243,255,0.1);
+            background: #F0FBFA; 
+            border-color: var(--secondary); 
+            transform: translateX(5px);
         }
-        input[type="radio"] { accent-color: var(--primary); width: 1.2rem; height: 1.2rem; vertical-align: middle; margin-right: 10px;}
+        /* Style saat radio button dipilih */
+        .opsi-label:has(input[type="radio"]:checked) {
+            background: #E6F9F7;
+            border-color: var(--secondary);
+            box-shadow: 0 4px 10px rgba(78, 205, 196, 0.15);
+        }
+        input[type="radio"] { accent-color: var(--secondary); width: 1.4rem; height: 1.4rem; margin-right: 15px; flex-shrink: 0;}
         
         /* Stats & Cheat */
         .stats { 
             display: flex; justify-content: space-around; 
-            background: rgba(0,0,0,0.6); padding: 12px; 
-            border-radius: 6px; margin-bottom: 20px; 
-            border: 1px solid #1e3a8a;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
+            background: #FFFFFF; padding: 15px; 
+            border-radius: 15px; margin-bottom: 20px; 
+            border: 2px solid #E2E8F0;
+            font-family: 'Fredoka', sans-serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
+        .stats div { text-align: center; font-size: 0.9rem; font-weight: 600;}
+        .stats span { display: block; font-size: 1.4rem; margin-top: 5px;}
+
         .cheat-warning { 
-            background: rgba(255, 0, 60, 0.1); color: var(--error); 
-            padding: 15px; border-radius: 6px; text-align: center; 
-            font-weight: bold; margin-bottom: 20px; 
-            border: 1px solid var(--error); 
-            box-shadow: 0 0 15px rgba(255,0,60,0.3);
-            animation: blink 1s infinite alternate;
+            background: #FFF0F0; color: var(--error); 
+            padding: 15px; border-radius: 12px; text-align: center; 
+            font-weight: 700; margin-bottom: 20px; 
+            border: 2px solid #FFD6D6; 
+            animation: shake 0.5s infinite alternate;
         }
 
         .score-board {
-            text-align: center; margin-top: 30px; font-size: 1.3rem;
-            background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; border: 1px solid var(--primary);
+            text-align: center; margin-top: 30px; font-size: 1.2rem; font-weight: 600;
+            background: #F8FAFC; padding: 30px; border-radius: 20px; border: 2px solid #E2E8F0;
         }
-        .final-score { font-size: 4rem; font-family: 'Orbitron', sans-serif; color: var(--primary); text-shadow: 0 0 20px var(--primary); margin: 10px 0;}
+        .final-score { font-size: 5rem; font-family: 'Fredoka', sans-serif; color: var(--primary); margin: 15px 0; text-shadow: 3px 3px 0px rgba(255, 107, 107, 0.1);}
 
-        @keyframes blink { from { opacity: 0.8; } to { opacity: 1; } }
+        @keyframes shake { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
+        @keyframes blink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        /* RESPONSIVE MOBILE */
+        /* RESPONSIVE MOBILE OPTIMIZATION */
         @media (max-width: 600px) {
-            .container { margin: 10px; padding: 20px; border-radius: 0; border: none; border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary);}
+            body { padding: 10px; align-items: stretch; }
+            .container { padding: 25px 20px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center;}
             h1 { font-size: 1.5rem; }
-            h2 { font-size: 1rem; }
-            .header-ujian { flex-direction: column; gap: 10px;}
-            .timer { font-size: 2rem; }
-            .stats { flex-direction: column; text-align: center; gap: 5px;}
+            h2 { font-size: 1rem; margin-bottom: 20px;}
+            .header-ujian { flex-direction: column; gap: 15px; text-align: center; padding: 15px;}
+            .timer { font-size: 2rem; width: 100%; box-sizing: border-box;}
+            .stats { flex-wrap: wrap; gap: 10px; }
+            .stats div { flex-basis: 30%; }
+            .opsi-label { padding: 14px 15px; }
+            button { font-size: 1.1rem; padding: 15px; }
         }
     </style>
 </head>
@@ -185,7 +212,7 @@
 <div id="loginPage" class="container">
     <h1>SYS_ASSESMEN_2026</h1>
     <h2>SMP KRISTEN BASAAN</h2>
-    <div id="loadingMessage" style="text-align:center; color:var(--primary); font-family:'Orbitron', sans-serif; animation: blink 1s infinite;">[ MEMUAT DATABASE PROTOKOL... ]</div>
+    <div id="loadingMessage" style="text-align:center; color:var(--primary); font-family:'Fredoka', sans-serif; animation: blink 1s infinite;">[ MEMUAT DATABASE PROTOKOL... ]</div>
     
     <form id="loginForm" class="hidden" onsubmit="event.preventDefault(); doLogin();">
         <div class="form-group">
@@ -230,9 +257,9 @@
     <div class="cheat-warning hidden" id="cheatAlert"></div>
     
     <div class="stats">
-        <div style="color:var(--success)">[ BENAR: <span id="statBenar">0</span> ]</div>
-        <div style="color:var(--error)">[ SALAH: <span id="statSalah">0</span> ]</div>
-        <div style="color:var(--primary)">[ SISA SOAL: <span id="statSisa">0</span> ]</div>
+        <div style="color:var(--success)">BENAR <span id="statBenar">0</span></div>
+        <div style="color:var(--error)">SALAH <span id="statSalah">0</span></div>
+        <div style="color:var(--secondary)">SISA SOAL <span id="statSisa">0</span></div>
     </div>
     
     <div class="header-ujian">
@@ -250,12 +277,12 @@
     <h2>PROTOKOL DITUTUP</h2>
     
     <div class="score-board">
-        <p>NILAI AKHIR</p>
+        <p style="color: var(--text-muted); margin-bottom: 0;">NILAI AKHIR</p>
         <div class="final-score" id="finalNilai">0</div>
-        <hr style="border-color:#1e3a8a; margin: 20px 0;">
+        <hr style="border-color:#E2E8F0; border-style: dashed; margin: 25px 0;">
         <p>Total Benar: <strong style="color:var(--success)" id="finalBenar">0</strong></p>
         <p>Total Salah: <strong style="color:var(--error)" id="finalSalah">0</strong></p>
-        <p>Tidak Terjawab: <strong style="color:#94a3b8" id="finalKosong">0</strong></p>
+        <p>Tidak Terjawab: <strong style="color:var(--text-muted)" id="finalKosong">0</strong></p>
     </div>
 </div>
 

@@ -364,7 +364,11 @@
         document.getElementById('nomorSoal').innerText = currentIndex + 1;
         document.getElementById('statSisa').innerText = currentSoalData.length - currentIndex;
         
-        let htmlSoal = `<p>${soal.soal}</p>`;
+        // FITUR BARU: Auto-Convert format kurung biasa (...) menjadi format MathJax \(...\)
+        let teksSoal = soal.soal.toString().replace(/\(([^)]+)\)/g, '\\( $1 \\)');
+        
+        let htmlSoal = `<p>${teksSoal}</p>`;
+        
         if (soal.gambar && soal.gambar.trim() !== "") {
             let imgId = soal.gambar.match(/id=([^&]+)/) || soal.gambar.match(/d\/([^/]+)/);
             if(imgId) {
@@ -374,10 +378,14 @@
 
         const abcd = ['A', 'B', 'C', 'D'];
         soal.opsi.forEach((o, i) => {
-            htmlSoal += `<label class="opsi-label"><input type="radio" name="jawaban" value="${abcd[i]}"> ${abcd[i]}. ${o}</label>`;
+            // Berlakukan juga Auto-Convert untuk Pilihan Ganda
+            let teksOpsi = o.toString().replace(/\(([^)]+)\)/g, '\\( $1 \\)');
+            htmlSoal += `<label class="opsi-label"><input type="radio" name="jawaban" value="${abcd[i]}"> ${abcd[i]}. ${teksOpsi}</label>`;
         });
 
         document.getElementById('soalKonten').innerHTML = htmlSoal;
+        
+        // Panggil MathJax untuk merender ulang teks yang baru dimasukukan
         MathJax.typesetPromise(); 
 
         waktuSisa = parseInt(soal.timer);

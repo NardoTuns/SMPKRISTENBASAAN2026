@@ -12,12 +12,11 @@
             displayMath: [['$$', '$$'], ['\\[', '\\]']]
         }
     };
-</script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* [Gaya CSS tetap sama persis seperti kode asli Anda] */
         :root { 
             --primary: #FF6B6B; 
             --secondary: #4ECDC4; 
@@ -113,12 +112,12 @@
             margin-top: 15px;
         }
         button:hover:not(:disabled) { 
-            background: #FF5252; 
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+            filter: brightness(1.1);
         }
         button:disabled { 
-            background: #E2E8F0; color: #A0AEC0; 
+            background: #E2E8F0 !important; color: #A0AEC0 !important; 
             cursor: not-allowed; box-shadow: none; transform: none;
         }
         
@@ -157,6 +156,8 @@
             box-shadow: 0 4px 10px rgba(78, 205, 196, 0.15);
         }
         input[type="radio"] { accent-color: var(--secondary); width: 1.4rem; height: 1.4rem; margin-right: 15px; flex-shrink: 0;}
+        input[type="radio"]:disabled { cursor: not-allowed; }
+        .opsi-label:has(input[type="radio"]:disabled) { opacity: 0.6; cursor: not-allowed; transform: none; background: #F8FAFC;}
         
         .stats { 
             display: flex; justify-content: space-around; 
@@ -169,21 +170,12 @@
         .stats div { text-align: center; font-size: 0.9rem; font-weight: 600;}
         .stats span { display: block; font-size: 1.4rem; margin-top: 5px;}
 
-        .cheat-warning { 
-            background: #FFF0F0; color: var(--error); 
-            padding: 15px; border-radius: 12px; text-align: center; 
-            font-weight: 700; margin-bottom: 20px; 
-            border: 2px solid #FFD6D6; 
-            animation: shake 0.5s infinite alternate;
-        }
-
         .score-board {
             text-align: center; margin-top: 30px; font-size: 1.2rem; font-weight: 600;
             background: #F8FAFC; padding: 30px; border-radius: 20px; border: 2px solid #E2E8F0;
         }
         .final-score { font-size: 5rem; font-family: 'Fredoka', sans-serif; color: var(--primary); margin: 15px 0; text-shadow: 3px 3px 0px rgba(255, 107, 107, 0.1);}
 
-        @keyframes shake { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
         @keyframes blink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
 
         @media (max-width: 600px) {
@@ -247,8 +239,6 @@
 </div>
 
 <div id="examPage" class="container hidden">
-    <div class="cheat-warning hidden" id="cheatAlert"></div>
-    
     <div class="stats">
         <div style="color:var(--success)">BENAR <span id="statBenar">0</span></div>
         <div style="color:var(--error)">SALAH <span id="statSalah">0</span></div>
@@ -275,7 +265,7 @@
         <hr style="border-color:#E2E8F0; border-style: dashed; margin: 25px 0;">
         <p>Total Benar: <strong style="color:var(--success)" id="finalBenar">0</strong></p>
         <p>Total Salah: <strong style="color:var(--error)" id="finalSalah">0</strong></p>
-        <p>Tidak Terjawab: <strong style="color:var(--text-muted)" id="finalKosong">0</strong></p>
+        <p>Tidak Terjawab / Batal: <strong style="color:var(--text-muted)" id="finalKosong">0</strong></p>
     </div>
 </div>
 
@@ -293,7 +283,6 @@
     let userInfo = { nama: '', kelas: '', mapel: '', rombel: '' };
     let cheatCount = 0;
 
-    // --- FUNGSI UNTUK MENYIMPAN PROGRESS KE LOCALSTORAGE ---
     function simpanProgress() {
         const progressData = {
             userInfo: userInfo,
@@ -305,17 +294,14 @@
         localStorage.setItem('ujianProgress_2026', JSON.stringify(progressData));
     }
 
-    // --- FUNGSI MENGHAPUS PROGRESS SAAT UJIAN SELESAI ---
     function hapusProgress() {
         localStorage.removeItem('ujianProgress_2026');
     }
 
     window.onload = function() {
-        // --- CEK APAKAH ADA SESI UJIAN YANG BELUM SELESAI ---
         const savedProgress = localStorage.getItem('ujianProgress_2026');
         
         if (savedProgress) {
-            // Jika ada sesi tersimpan, pulihkan sesi tersebut
             if(confirm("Ditemukan sesi ujian yang terputus. Klik 'OK' untuk melanjutkan ujian terakhir Anda.")) {
                 const data = JSON.parse(savedProgress);
                 userInfo = data.userInfo;
@@ -324,7 +310,6 @@
                 score = data.score;
                 cheatCount = data.cheatCount || 0;
 
-                // Update UI Statistik
                 document.getElementById('statBenar').innerText = score.benar;
                 document.getElementById('statSalah').innerText = score.salah;
 
@@ -333,14 +318,12 @@
                 initAntiCheat();
                 reqFullscreen();
                 tampilkanSoal();
-                return; // Langsung keluar dari window.onload agar tidak memuat form login
+                return; 
             } else {
-                // Jika siswa memilih Cancel, hapus memori dan mulai dari awal
                 hapusProgress(); 
             }
         }
 
-        // --- JIKA TIDAK ADA SESI / MEMULAI BARU ---
         fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -410,10 +393,7 @@
                 currentSoalData = data.data;
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('examPage').classList.remove('hidden');
-                
-                // --- SIMPAN PROGRESS AWAL SAAT SOAL BERHASIL DIUNDUH ---
                 simpanProgress();
-
                 initAntiCheat();
                 reqFullscreen();
                 tampilkanSoal();
@@ -451,8 +431,13 @@
         document.getElementById('soalKonten').innerHTML = htmlSoal;
         MathJax.typesetPromise(); 
 
+        // Reset tombol ke keadaan awal
+        const btnNext = document.getElementById('btnNext');
+        btnNext.innerText = 'PROSES JAWABAN >>';
+        btnNext.style.background = 'var(--primary)';
+        btnNext.disabled = true;
+
         waktuSisa = parseInt(soal.timer);
-        document.getElementById('btnNext').disabled = true;
         
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -463,7 +448,7 @@
             
             if(waktuSisa <= 0) {
                 clearInterval(timerInterval);
-                document.getElementById('btnNext').disabled = false;
+                btnNext.disabled = false;
             }
         }, 1000);
     }
@@ -480,10 +465,7 @@
         document.getElementById('statSalah').innerText = score.salah;
 
         currentIndex++;
-        
-        // --- SIMPAN PROGRESS TERBARU SETIAP SELESAI MENJAWAB 1 SOAL ---
         simpanProgress();
-
         tampilkanSoal();
     }
 
@@ -491,71 +473,70 @@
         document.getElementById('examPage').classList.add('hidden');
         document.getElementById('resultPage').classList.remove('hidden');
         
-        // Hentikan Pengawasan Anti-Cheat
         document.removeEventListener("visibilitychange", handleVisibility);
         window.removeEventListener("blur", handleBlur);
         
-        // --- HAPUS PROGRESS KARENA UJIAN SUDAH SELESAI ---
         hapusProgress();
 
-        // Kalkulasi Nilai: (Benar / Total Soal) * 100
         let totalSoal = currentSoalData.length;
         let nilaiAkhir = Math.round((score.benar / totalSoal) * 100);
         
-        // Tampilkan di Layar
         document.getElementById('finalNilai').innerText = nilaiAkhir;
         document.getElementById('finalBenar').innerText = score.benar;
         document.getElementById('finalSalah').innerText = score.salah;
         document.getElementById('finalKosong').innerText = score.kosong;
         
-        // Kirim Data ke Sheet "HASIL" via Web App
         fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: `action=simpanHasil&rombel=${userInfo.rombel}&nama=${userInfo.nama}&benar=${score.benar}&salah=${score.salah}&kosong=${score.kosong}&nilai=${nilaiAkhir}`
-        }).then(res => console.log('Data Nilai Berhasil Dikirim ke Server.'));
+        }).then(res => console.log('Data Nilai Berhasil Dikirim.'));
     }
 
-    // --- SISTEM ANTI CHEAT ---
+    // --- SISTEM ANTI CHEAT DIAM-DIAM ---
     function initAntiCheat() {
         document.addEventListener("visibilitychange", handleVisibility);
         window.addEventListener("blur", handleBlur);
         document.addEventListener("keyup", (e) => {
-            if (e.key === 'PrintScreen') laporKecurangan('Mencoba Screenshot (PrintScreen)');
+            if (e.key === 'PrintScreen') laporKecurangan('Screenshot');
         });
     }
 
     function handleVisibility() {
-        if (document.hidden) laporKecurangan('Pindah Tab / Minimize Browser');
+        if (document.hidden) laporKecurangan('Pindah Tab/Minimize');
     }
 
     function handleBlur() {
-        laporKecurangan('Aplikasi Kehilangan Fokus (Membuka Notif/Layar Lain)');
+        laporKecurangan('Hilang Fokus Layar');
     }
 
     function laporKecurangan(jenis) {
         cheatCount++;
-        
-        // Simpan hitungan cheat ke progress
         simpanProgress();
 
-        const alertBox = document.getElementById('cheatAlert');
-        alertBox.innerText = `[ PERINGATAN SISTEM ] Kecurangan terdeteksi: ${jenis}. (Total: ${cheatCount}/5)`;
-        alertBox.classList.remove('hidden');
+        // 1. Matikan timer agar tidak terlihat janggal
+        clearInterval(timerInterval);
+        document.getElementById('timerDisplay').innerText = "00:00";
 
+        // 2. Kunci semua opsi jawaban dan batalkan jawaban jika sempat dipilih
+        const opsiJawaban = document.querySelectorAll('input[type="radio"]');
+        opsiJawaban.forEach(opsi => {
+            opsi.disabled = true;
+            opsi.checked = false; // Membatalkan jawaban
+        });
+
+        // 3. Paksa tombol next menjadi aktif agar siswa bisa lewat
+        const btnNext = document.getElementById('btnNext');
+        btnNext.disabled = false;
+        btnNext.innerText = 'PELANGGARAN! LANJUT SOAL >>';
+        btnNext.style.background = '#FF4757'; // Berubah jadi merah (warna error)
+
+        // 4. Catat ke server secara diam-diam tanpa ada alert yang muncul
         fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: `action=catatCurang&nama=${userInfo.nama}&kelas=${userInfo.kelas}&mapel=${userInfo.mapel}&keterangan=${jenis}&jumlah=${cheatCount}`
-        }).then(res => res.json()).then(data => {
-            if(data.blocked) {
-                alert('AKSES DIBLOKIR: Anda telah melakukan pelanggaran 5 kali. Ujian dihentikan.');
-                hapusProgress(); // Hapus progress jika diblokir agar tidak bisa dilanjut
-                window.location.reload(); 
-            }
-        });
-        
-        setTimeout(() => { alertBox.classList.add('hidden'); }, 5000);
+        }).catch(err => console.log('Log recorded'));
     }
 
     function reqFullscreen() {

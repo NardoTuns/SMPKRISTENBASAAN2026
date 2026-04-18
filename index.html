@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Assesmen Akhir Semester 2026 - Sistem Ujian V2.0</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+    MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+    };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* [Gaya CSS tetap sama persis seperti kode asli Anda] */
+        :root { 
+            --primary: #FF6B6B; 
+            --secondary: #4ECDC4; 
+            --bg-color: #F7FFF7; 
+            --panel-bg: #FFFFFF;
+            --text-main: #2D3436; 
+            --text-muted: #636E72;
+            --error: #FF4757; 
+            --success: #2ED573; 
+            --soft-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+        
+        body { 
+            font-family: 'Nunito', sans-serif; 
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            background-attachment: fixed;
+            color: var(--text-main); 
+            margin: 0; padding: 15px; 
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; 
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        .container { 
+            width: 100%; max-width: 700px; 
+            margin: auto; padding: 35px 30px; 
+            background: var(--panel-bg); 
+            border: none; 
+            border-radius: 25px; 
+            box-shadow: var(--soft-shadow); 
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            background: linear-gradient(90deg, #FF6B6B, #FFE66D, #4ECDC4, #A8E6CF);
+        }
+
+        h1, h2 { 
+            text-align: center; 
+            font-family: 'Fredoka', sans-serif; 
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        h1 { font-size: 1.8rem; color: var(--primary); text-shadow: 2px 2px 0px rgba(255, 107, 107, 0.1); }
+        h2 { font-size: 1.1rem; color: var(--secondary); margin-bottom: 30px;}
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--text-muted); font-size: 0.9rem;}
+        
+        select, input[type="password"] { 
+            width: 100%; padding: 15px; 
+            background: #F4F6F8; 
+            border: 2px solid #E2E8F0; 
+            color: var(--text-main); 
+            font-family: 'Nunito', sans-serif; 
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px; 
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            outline: none;
+            appearance: none;
+        }
+        select:focus, input[type="password"]:focus {
+            border-color: var(--secondary);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.2);
+        }
+
+        button { 
+            background: var(--primary); 
+            color: #ffffff; 
+            border: none; 
+            padding: 16px 20px; 
+            width: 100%; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.2rem; 
+            font-weight: 600; 
+            letter-spacing: 1px;
+            transition: all 0.3s ease; 
+            box-shadow: 0 6px 15px rgba(255, 107, 107, 0.3);
+            margin-top: 15px;
+        }
+        button:hover:not(:disabled) { 
+            background: #FF5252; 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+        }
+        button:disabled { 
+            background: #E2E8F0; color: #A0AEC0; 
+            cursor: not-allowed; box-shadow: none; transform: none;
+        }
+        
+        .hidden { display: none !important; }
+        
+        .header-ujian { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #F8FAFC;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 25px; 
+            font-family: 'Fredoka', sans-serif;
+            color: var(--text-muted);
+            border: 2px solid #E2E8F0;
+        }
+        .header-ujian div:first-child { font-weight: 600; color: var(--secondary); }
+        .timer { font-size: 1.6rem; font-weight: 600; color: var(--error); background: #FFF0F0; padding: 5px 15px; border-radius: 10px; }
+        
+        .soal-container { margin-bottom: 30px; font-size: 1.15rem; line-height: 1.7; font-weight: 600; color: var(--text-main);}
+        .soal-container img { max-width: 100%; max-height: 250px; display: block; margin: 15px auto; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+        
+        .opsi-label { 
+            display: flex; align-items: center; padding: 15px 20px; margin: 12px 0; 
+            border: 2px solid #E2E8F0; border-radius: 15px; 
+            cursor: pointer; transition: all 0.2s ease; 
+            background: #FFFFFF;
+        }
+        .opsi-label:hover { 
+            background: #F0FBFA; 
+            border-color: var(--secondary); 
+            transform: translateX(5px);
+        }
+        .opsi-label:has(input[type="radio"]:checked) {
+            background: #E6F9F7;
+            border-color: var(--secondary);
+            box-shadow: 0 4px 10px rgba(78, 205, 196, 0.15);
+        }
+        input[type="radio"] { accent-color: var(--secondary); width: 1.4rem; height: 1.4rem; margin-right: 15px; flex-shrink: 0;}
+        
+        .stats { 
+            display: flex; justify-content: space-around; 
+            background: #FFFFFF; padding: 15px; 
+            border-radius: 15px; margin-bottom: 20px; 
+            border: 2px solid #E2E8F0;
+            font-family: 'Fredoka', sans-serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .stats div { text-align: center; font-size: 0.9rem; font-weight: 600;}
+        .stats span { display: block; font-size: 1.4rem; margin-top: 5px;}
+
+        .cheat-warning { 
+            background: #FFF0F0; color: var(--error); 
+            padding: 15px; border-radius: 12px; text-align: center; 
+            font-weight: 700; margin-bottom: 20px; 
+            border: 2px solid #FFD6D6; 
+            animation: shake 0.5s infinite alternate;
+        }
+
+        .score-board {
+            text-align: center; margin-top: 30px; font-size: 1.2rem; font-weight: 600;
+            background: #F8FAFC; padding: 30px; border-radius: 20px; border: 2px solid #E2E8F0;
+        }
+        .final-score { font-size: 5rem; font-family: 'Fredoka', sans-serif; color: var(--primary); margin: 15px 0; text-shadow: 3px 3px 0px rgba(255, 107, 107, 0.1);}
+
+        @keyframes shake { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
+        @keyframes blink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; align-items: stretch; }
+            .container { padding: 25px 20px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center;}
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1rem; margin-bottom: 20px;}
+            .header-ujian { flex-direction: column; gap: 15px; text-align: center; padding: 15px;}
+            .timer { font-size: 2rem; width: 100%; box-sizing: border-box;}
+            .stats { flex-wrap: wrap; gap: 10px; }
+            .stats div { flex-basis: 30%; }
+            .opsi-label { padding: 14px 15px; }
+            button { font-size: 1.1rem; padding: 15px; }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="loginPage" class="container">
+    <h1>SYS_ASSESMEN_2026</h1>
+    <h2>SMP KRISTEN BASAAN</h2>
+    <div id="loadingMessage" style="text-align:center; color:var(--primary); font-family:'Fredoka', sans-serif; animation: blink 1s infinite;">[ MEMUAT DATABASE PROTOKOL... ]</div>
+    
+    <form id="loginForm" class="hidden" onsubmit="event.preventDefault(); doLogin();">
+        <div class="form-group">
+            <label>KELAS</label>
+            <select id="kelas" required onchange="filterNama()">
+                <option value="">[ PILIH KELAS ]</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>ROMBEL</label>
+            <select id="rombel" required>
+                <option value="">[ PILIH ROMBEL ]</option>
+                <option value="7A">7A</option>
+                <option value="7B">7B</option>
+                <option value="8A">8A</option>
+                <option value="8B">8B</option>
+                <option value="9A">9A</option>
+                <option value="9B">9B</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>IDENTITAS SISWA</label>
+            <select id="nama" required>
+                <option value="">[ PILIH NAMA ]</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>MATA PELAJARAN</label>
+            <select id="mapel" required>
+                <option value="">[ PILIH MAPEL ]</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>KODE AKSES (PASSWORD)</label>
+            <input type="password" id="password" placeholder="***" required>
+        </div>
+        <button type="submit" id="btnLogin">INISIALISASI UJIAN</button>
+    </form>
+</div>
+
+<div id="examPage" class="container hidden">
+    <div class="cheat-warning hidden" id="cheatAlert"></div>
+    
+    <div class="stats">
+        <div style="color:var(--success)">BENAR <span id="statBenar">0</span></div>
+        <div style="color:var(--error)">SALAH <span id="statSalah">0</span></div>
+        <div style="color:var(--secondary)">SISA SOAL <span id="statSisa">0</span></div>
+    </div>
+    
+    <div class="header-ujian">
+        <div>SEKTOR SOAL // <span id="nomorSoal">1</span></div>
+        <div class="timer" id="timerDisplay">00:00</div>
+    </div>
+    
+    <div class="soal-container" id="soalKonten"></div>
+    
+    <button id="btnNext" disabled onclick="cekJawaban()">PROSES JAWABAN >></button>
+</div>
+
+<div id="resultPage" class="container hidden">
+    <h1>SESI UJIAN SELESAI</h1>
+    <h2>PROTOKOL DITUTUP</h2>
+    
+    <div class="score-board">
+        <p style="color: var(--text-muted); margin-bottom: 0;">NILAI AKHIR</p>
+        <div class="final-score" id="finalNilai">0</div>
+        <hr style="border-color:#E2E8F0; border-style: dashed; margin: 25px 0;">
+        <p>Total Benar: <strong style="color:var(--success)" id="finalBenar">0</strong></p>
+        <p>Total Salah: <strong style="color:var(--error)" id="finalSalah">0</strong></p>
+        <p>Tidak Terjawab: <strong style="color:var(--text-muted)" id="finalKosong">0</strong></p>
+    </div>
+</div>
+
+<script>
+    // --- GANTI DENGAN URL WEB APP ANDA ---
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx7EkgwfVpzMRZwByWd4sadDEhEkJ4xQwONAYIV_Eq4BgslJAXzSvIfL6RTlnkCGJtG/exec'; 
+    
+    let allUsers = [];
+    let currentSoalData = [];
+    let currentIndex = 0;
+    let timerInterval;
+    let waktuSisa = 0;
+    
+    let score = { benar: 0, salah: 0, kosong: 0 };
+    let userInfo = { nama: '', kelas: '', mapel: '', rombel: '' };
+    let cheatCount = 0;
+
+    // --- FUNGSI UNTUK MENYIMPAN PROGRESS KE LOCALSTORAGE ---
+    function simpanProgress() {
+        const progressData = {
+            userInfo: userInfo,
+            currentSoalData: currentSoalData,
+            currentIndex: currentIndex,
+            score: score,
+            cheatCount: cheatCount
+        };
+        localStorage.setItem('ujianProgress_2026', JSON.stringify(progressData));
+    }
+
+    // --- FUNGSI MENGHAPUS PROGRESS SAAT UJIAN SELESAI ---
+    function hapusProgress() {
+        localStorage.removeItem('ujianProgress_2026');
+    }
+
+    window.onload = function() {
+        // --- CEK APAKAH ADA SESI UJIAN YANG BELUM SELESAI ---
+        const savedProgress = localStorage.getItem('ujianProgress_2026');
+        
+        if (savedProgress) {
+            // Jika ada sesi tersimpan, pulihkan sesi tersebut
+            if(confirm("Ditemukan sesi ujian yang terputus. Klik 'OK' untuk melanjutkan ujian terakhir Anda.")) {
+                const data = JSON.parse(savedProgress);
+                userInfo = data.userInfo;
+                currentSoalData = data.currentSoalData;
+                currentIndex = data.currentIndex;
+                score = data.score;
+                cheatCount = data.cheatCount || 0;
+
+                // Update UI Statistik
+                document.getElementById('statBenar').innerText = score.benar;
+                document.getElementById('statSalah').innerText = score.salah;
+
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('examPage').classList.remove('hidden');
+                initAntiCheat();
+                reqFullscreen();
+                tampilkanSoal();
+                return; // Langsung keluar dari window.onload agar tidak memuat form login
+            } else {
+                // Jika siswa memilih Cancel, hapus memori dan mulai dari awal
+                hapusProgress(); 
+            }
+        }
+
+        // --- JIKA TIDAK ADA SESI / MEMULAI BARU ---
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'action=getInitData'
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                allUsers = data.users;
+                
+                let kelasSet = new Set(allUsers.map(u => u.kelas));
+                kelasSet.forEach(k => {
+                    document.getElementById('kelas').innerHTML += `<option value="${k}">${k}</option>`;
+                });
+                
+                data.mapel.forEach(m => {
+                    document.getElementById('mapel').innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+            }
+        });
+    };
+
+    function filterNama() {
+        const kelasDipilih = document.getElementById('kelas').value;
+        const namaSelect = document.getElementById('nama');
+        namaSelect.innerHTML = '<option value="">[ PILIH NAMA ]</option>';
+        allUsers.filter(u => u.kelas == kelasDipilih).forEach(u => {
+            namaSelect.innerHTML += `<option value="${u.nama}">${u.nama}</option>`;
+        });
+    }
+
+    function doLogin() {
+        const btn = document.getElementById('btnLogin');
+        btn.innerText = '[ OTENTIKASI... ]';
+        btn.disabled = true;
+
+        userInfo.nama = document.getElementById('nama').value;
+        userInfo.kelas = document.getElementById('kelas').value;
+        userInfo.mapel = document.getElementById('mapel').value;
+        userInfo.rombel = document.getElementById('rombel').value; 
+        const pwd = document.getElementById('password').value;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=login&nama=${userInfo.nama}&password=${pwd}&mapel=${userInfo.mapel}`
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                ambilSoal();
+            } else {
+                alert(data.message);
+                btn.innerText = 'INISIALISASI UJIAN';
+                btn.disabled = false;
+            }
+        });
+    }
+
+    function ambilSoal() {
+        document.getElementById('btnLogin').innerText = '[ MENGUNDUH DATA SOAL... ]';
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=getSoal&mapel=${userInfo.mapel}&kelas=${userInfo.kelas}`
+        }).then(res => res.json()).then(data => {
+            if(data.success && data.data.length > 0) {
+                currentSoalData = data.data;
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('examPage').classList.remove('hidden');
+                
+                // --- SIMPAN PROGRESS AWAL SAAT SOAL BERHASIL DIUNDUH ---
+                simpanProgress();
+
+                initAntiCheat();
+                reqFullscreen();
+                tampilkanSoal();
+            } else {
+                alert('DATA KOSONG: Soal tidak ditemukan untuk Mapel dan Kelas ini di Server.');
+                document.getElementById('btnLogin').innerText = 'INISIALISASI UJIAN';
+                document.getElementById('btnLogin').disabled = false;
+            }
+        });
+    }
+
+    function tampilkanSoal() {
+        if(currentIndex >= currentSoalData.length) {
+            selesaiUjian();
+            return;
+        }
+
+        const soal = currentSoalData[currentIndex];
+        document.getElementById('nomorSoal').innerText = currentIndex + 1;
+        document.getElementById('statSisa').innerText = currentSoalData.length - currentIndex;
+        
+        let htmlSoal = `<p>${soal.soal}</p>`;
+        if (soal.gambar && soal.gambar.trim() !== "") {
+            let imgId = soal.gambar.match(/id=([^&]+)/) || soal.gambar.match(/d\/([^/]+)/);
+            if(imgId) {
+                htmlSoal += `<img src="https://drive.google.com/thumbnail?id=${imgId[1]}&sz=w800" alt="Grafik Pendukung"/>`;
+            }
+        }
+
+        const abcd = ['A', 'B', 'C', 'D'];
+        soal.opsi.forEach((o, i) => {
+            htmlSoal += `<label class="opsi-label"><input type="radio" name="jawaban" value="${abcd[i]}"> ${abcd[i]}. ${o}</label>`;
+        });
+
+        document.getElementById('soalKonten').innerHTML = htmlSoal;
+        MathJax.typesetPromise(); 
+
+        waktuSisa = parseInt(soal.timer);
+        document.getElementById('btnNext').disabled = true;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            waktuSisa--;
+            let m = Math.floor(waktuSisa / 60).toString().padStart(2, '0');
+            let s = (waktuSisa % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+            
+            if(waktuSisa <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('btnNext').disabled = false;
+            }
+        }, 1000);
+    }
+
+    function cekJawaban() {
+        const jawaban = document.querySelector('input[name="jawaban"]:checked');
+        const kunci = currentSoalData[currentIndex].kunci;
+        
+        if (!jawaban) score.kosong++;
+        else if (jawaban.value === kunci) score.benar++;
+        else score.salah++;
+
+        document.getElementById('statBenar').innerText = score.benar;
+        document.getElementById('statSalah').innerText = score.salah;
+
+        currentIndex++;
+        
+        // --- SIMPAN PROGRESS TERBARU SETIAP SELESAI MENJAWAB 1 SOAL ---
+        simpanProgress();
+
+        tampilkanSoal();
+    }
+
+    function selesaiUjian() {
+        document.getElementById('examPage').classList.add('hidden');
+        document.getElementById('resultPage').classList.remove('hidden');
+        
+        // Hentikan Pengawasan Anti-Cheat
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("blur", handleBlur);
+        
+        // --- HAPUS PROGRESS KARENA UJIAN SUDAH SELESAI ---
+        hapusProgress();
+
+        // Kalkulasi Nilai: (Benar / Total Soal) * 100
+        let totalSoal = currentSoalData.length;
+        let nilaiAkhir = Math.round((score.benar / totalSoal) * 100);
+        
+        // Tampilkan di Layar
+        document.getElementById('finalNilai').innerText = nilaiAkhir;
+        document.getElementById('finalBenar').innerText = score.benar;
+        document.getElementById('finalSalah').innerText = score.salah;
+        document.getElementById('finalKosong').innerText = score.kosong;
+        
+        // Kirim Data ke Sheet "HASIL" via Web App
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=simpanHasil&rombel=${userInfo.rombel}&nama=${userInfo.nama}&benar=${score.benar}&salah=${score.salah}&kosong=${score.kosong}&nilai=${nilaiAkhir}`
+        }).then(res => console.log('Data Nilai Berhasil Dikirim ke Server.'));
+    }
+
+    // --- SISTEM ANTI CHEAT ---
+    function initAntiCheat() {
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("blur", handleBlur);
+        document.addEventListener("keyup", (e) => {
+            if (e.key === 'PrintScreen') laporKecurangan('Mencoba Screenshot (PrintScreen)');
+        });
+    }
+
+    function handleVisibility() {
+        if (document.hidden) laporKecurangan('Pindah Tab / Minimize Browser');
+    }
+
+    function handleBlur() {
+        laporKecurangan('Aplikasi Kehilangan Fokus (Membuka Notif/Layar Lain)');
+    }
+
+    function laporKecurangan(jenis) {
+        cheatCount++;
+        
+        // Simpan hitungan cheat ke progress
+        simpanProgress();
+
+        const alertBox = document.getElementById('cheatAlert');
+        alertBox.innerText = `[ PERINGATAN SISTEM ] Kecurangan terdeteksi: ${jenis}. (Total: ${cheatCount}/5)`;
+        alertBox.classList.remove('hidden');
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=catatCurang&nama=${userInfo.nama}&kelas=${userInfo.kelas}&mapel=${userInfo.mapel}&keterangan=${jenis}&jumlah=${cheatCount}`
+        }).then(res => res.json()).then(data => {
+            if(data.blocked) {
+                alert('AKSES DIBLOKIR: Anda telah melakukan pelanggaran 5 kali. Ujian dihentikan.');
+                hapusProgress(); // Hapus progress jika diblokir agar tidak bisa dilanjut
+                window.location.reload(); 
+            }
+        });
+        
+        setTimeout(() => { alertBox.classList.add('hidden'); }, 5000);
+    }
+
+    function reqFullscreen() {
+        let elem = document.documentElement;
+        if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+        else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+    }
+</script>
+</body>
+</html>

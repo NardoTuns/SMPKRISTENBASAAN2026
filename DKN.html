@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-DKN SMP</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: auto; padding: 20px; background: white; min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2, h3 { text-align: center; color: #2c3e50; }
+        .header-sekolah { text-align: center; font-size: 14px; color: #7f8c8d; margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px;}
+        
+        /* Tombol Utama */
+        button { background-color: #2980b9; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-guru { background-color: #2980b9; height: 60px; font-size: 18px; margin-bottom: 15px;}
+        .btn-siswa { background-color: #8e44ad; height: 60px; font-size: 18px; }
+        .btn-back { background-color: #95a5a6; margin-top: 20px;}
+
+        .siswa-card { border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #fafafa; }
+        .siswa-name { font-weight: bold; margin-bottom: 10px; }
+        .input-nilai { display: flex; gap: 10px; }
+        .input-nilai input { flex: 1; text-align: center; font-weight: bold; }
+        
+        .sudah-dinilai { background-color: #e2e8f0; }
+        .tuntas { color: #2c3e50 !important; } 
+        .belum-tuntas { color: #e74c3c !important; } 
+
+        /* Table Ketuntasan Siswa */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #2c3e50; color: white; font-size: 14px;}
+        td.mapel-name { text-align: left; font-weight: bold; font-size: 14px;}
+
+        /* Manajemen Tampilan Layer */
+        #login-section, #dashboard-section, #input-section, #portal-siswa-section { display: none; }
+        .loader { text-align: center; font-style: italic; color: #e67e22; display: none; margin: 10px 0;}
+        .chart-container { position: relative; height:250px; width:100%; margin-bottom: 20px; border-bottom: 2px dashed #eee; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Portal Akademik</h2>
+    <div class="header-sekolah">SMP KRISTEN BASAAN</div>
+
+    <div id="welcome-section">
+        <button class="btn-guru" onclick="showSection('login-section')">👨‍🏫 Masuk sebagai Guru</button>
+        <button class="btn-siswa" onclick="showSection('portal-siswa-section')">🎓 Cek Ketuntasan Siswa</button>
+    </div>
+
+    <div id="portal-siswa-section">
+        <h3>Cek Nilai Siswa</h3>
+        <label>Pilih Kelas Anda:</label>
+        <select id="siswa-pilih-kelas" onchange="muatNamaSiswa()">
+            <option value="">-- Pilih Kelas --</option>
+            <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
+            <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
+            <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
+        </select>
+
+        <div id="siswa-nama-loader" class="loader">Mencari daftar nama...</div>
+
+        <div id="area-pilih-nama" style="display: none;">
+            <label>Pilih Nama Anda:</label>
+            <select id="siswa-pilih-nama"></select>
+            <button onclick="lihatKetuntasan()" style="background-color: #27ae60;">Lihat Hasil Ketuntasan</button>
+        </div>
+
+        <div id="hasil-loader" class="loader">Mengambil data nilai...</div>
+        <div id="hasil-ketuntasan-container"></div>
+
+        <button class="btn-back" onclick="showSection('welcome-section')">🔙 Kembali ke Menu Utama</button>
+    </div>
+
+
+    <div id="login-section">
+        <h3>Login Guru</h3>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Masuk</button>
+        <button class="btn-back" onclick="showSection('welcome-section')">Batal</button>
+        <div id="login-loader" class="loader">Memeriksa kredensial...</div>
+    </div>
+
+    <div id="dashboard-section">
+        <h3 id="welcome-msg"></h3>
+        
+        <div class="chart-container">
+            <canvas id="progresChart"></canvas>
+            <div id="chart-loader" class="loader" style="display: block;">Memuat grafik progres...</div>
+        </div>
+
+        <label>Pilih Kelas:</label>
+        <select id="pilih-kelas">
+            <option value="7A">Kelas 7A</option><option value="7B">Kelas 7B</option><option value="7C">Kelas 7C</option>
+            <option value="8A">Kelas 8A</option><option value="8B">Kelas 8B</option><option value="8C">Kelas 8C</option>
+            <option value="9A">Kelas 9A</option><option value="9B">Kelas 9B</option><option value="9C">Kelas 9C</option>
+        </select>
+
+        <label>Pilih Mata Pelajaran:</label>
+        <select id="pilih-mapel">
+            <option value="PAK">1. PAK</option><option value="PKN">2. PKN</option><option value="BAHASA INGGRIS">3. BAHASA INGGRIS</option>
+            <option value="BAHASA INDONESIA">4. BAHASA INDONESIA</option><option value="MATEMATIKA">5. MATEMATIKA</option><option value="IPA">6. IPA</option>
+            <option value="IPS">7. IPS</option><option value="PRAKARYA">8. PRAKARYA</option><option value="PJOK">9. PJOK</option>
+            <option value="INFORMATIKA">10. INFORMATIKA</option><option value="ANTI KORUPSI">11. ANTI KORUPSI</option><option value="BAHASA DAERAH">12. BAHASA DAERAH</option>
+        </select>
+        
+        <button onclick="mulaiIsiNilai()">Mulai Isi Nilai</button>
+        <button class="btn-back" onclick="showSection('welcome-section')">Keluar</button>
+        <div id="kelas-loader" class="loader">Mengambil data siswa...</div>
+    </div>
+
+    <div id="input-section">
+        <h3 id="info-header"></h3>
+        <div id="daftar-siswa-container"></div>
+        <button onclick="simpanKeSheet()" style="background-color: #27ae60;">💾 Simpan Nilai</button>
+        <button onclick="backToDash()" style="background-color: #95a5a6; margin-top: 5px;">Batal</button>
+        <div id="simpan-loader" class="loader">Menyimpan data...</div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ GANTI URL INI DENGAN URL DEPLOY ANDA YANG BARU ⚠️
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwgWg4Ao7bFCYTBIMbJneVFgu19k2nnIlIoRQEcGVlPD6S_hvxqASwtrjtcIcTHwvrLOA/exec'; 
+    
+    let currentUser = '', currentMapel = '', currentKelas = '', daftarSiswaCache = [];
+    const KKM_SEMENTARA = 75; 
+    let chartInstance = null; 
+
+    // Daftar 12 Mapel untuk cetak raport siswa
+    const DAFTAR_MAPEL = ['PAK', 'PKN', 'BAHASA INGGRIS', 'BAHASA INDONESIA', 'MATEMATIKA', 'IPA', 'IPS', 'PRAKARYA', 'PJOK', 'INFORMATIKA', 'ANTI KORUPSI', 'BAHASA DAERAH'];
+
+    async function fetchData(payload) {
+        let res = await fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload), redirect: 'follow' });
+        return await res.json();
+    }
+
+    // ==========================================
+    // LOGIKA SISWA
+    // ==========================================
+    async function muatNamaSiswa() {
+        let kelas = id('siswa-pilih-kelas').value;
+        if(!kelas) { id('area-pilih-nama').style.display = 'none'; return; }
+
+        id('siswa-nama-loader').style.display = 'block';
+        id('area-pilih-nama').style.display = 'none';
+        id('hasil-ketuntasan-container').innerHTML = ''; // Bersihkan hasil sebelumnya
+
+        let res = await fetchData({ action: 'getSiswaKelas', kelas: kelas });
+        id('siswa-nama-loader').style.display = 'none';
+
+        if(res.status === 'success') {
+            let selectNama = id('siswa-pilih-nama');
+            selectNama.innerHTML = '';
+            res.data.forEach(siswa => {
+                selectNama.innerHTML += `<option value="${siswa.nisn}">${siswa.nama}</option>`;
+            });
+            id('area-pilih-nama').style.display = 'block';
+        }
+    }
+
+    async function lihatKetuntasan() {
+        let nisn = id('siswa-pilih-nama').value;
+        let namaSiswa = id('siswa-pilih-nama').options[id('siswa-pilih-nama').selectedIndex].text;
+        
+        id('hasil-loader').style.display = 'block';
+        let res = await fetchData({ action: 'cekNilaiSiswa', nisn: nisn });
+        id('hasil-loader').style.display = 'none';
+
+        if(res.status === 'success') {
+            let dataNilai = res.data;
+            let html = `<hr><h4>Hasil: ${namaSiswa}</h4>
+                        <table>
+                            <tr><th>Mata Pelajaran</th><th>Teori</th><th>Praktek</th></tr>`;
+            
+            DAFTAR_MAPEL.forEach(mapel => {
+                let iconTeori = "➖"; // Default kosong
+                let iconPraktek = "➖"; // Default kosong
+
+                // Jika mapel ini ada di database siswa tersebut
+                if(dataNilai[mapel]) {
+                    let teori = dataNilai[mapel].teori;
+                    let praktek = dataNilai[mapel].praktek;
+
+                    if(teori !== "") iconTeori = parseInt(teori) >= KKM_SEMENTARA ? "✅" : "❌";
+                    if(praktek !== "") iconPraktek = parseInt(praktek) >= KKM_SEMENTARA ? "✅" : "❌";
+                }
+
+                html += `<tr>
+                            <td class="mapel-name">${mapel}</td>
+                            <td>${iconTeori}</td>
+                            <td>${iconPraktek}</td>
+                         </tr>`;
+            });
+            html += `</table>`;
+            id('hasil-ketuntasan-container').innerHTML = html;
+        }
+    }
+
+
+    // ==========================================
+    // LOGIKA GURU (Tidak Berubah)
+    // ==========================================
+    async function login() {
+        id('login-loader').style.display = 'block';
+        let res = await fetchData({ action: 'login', user: id('username').value, pass: id('password').value });
+        id('login-loader').style.display = 'none';
+        
+        if (res.status === 'success') {
+            currentUser = res.nama;
+            showSection('dashboard-section');
+            id('welcome-msg').innerText = 'Halo, ' + currentUser;
+            muatGrafik(); 
+        } else alert(res.message);
+    }
+
+    async function muatGrafik() {
+        id('chart-loader').style.display = 'block';
+        let res = await fetchData({ action: 'getChartData' });
+        id('chart-loader').style.display = 'none';
+
+        if (res.status === 'success') {
+            const ctx = document.getElementById('progresChart').getContext('2d');
+            if (chartInstance) { chartInstance.destroy(); }
+            if(res.labels.length === 0) { res.labels = ['Belum ada data']; res.data = [0]; }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: res.labels,
+                    datasets: [{ label: 'Jumlah Nilai Masuk', data: res.data, backgroundColor: '#3498db', borderColor: '#2980b9', borderWidth: 1, borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Progres Pengisian Nilai (Per Mapel)' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+    }
+
+    async function mulaiIsiNilai() {
+        currentKelas = id('pilih-kelas').value;
+        currentMapel = id('pilih-mapel').value;
+        id('kelas-loader').style.display = 'block';
+        let res = await fetchData({ action: 'getSiswa', kelas: currentKelas, mapel: currentMapel });
+        id('kelas-loader').style.display = 'none';
+        if (res.status === 'success') { daftarSiswaCache = res.data; tampilkanForm(); }
+    }
+
+    function validasiNilai(inputElement) {
+        let nilai = parseInt(inputElement.value);
+        if (nilai > 100) { inputElement.value = 100; nilai = 100; }
+        if (nilai < 0) { inputElement.value = 0; nilai = 0; }
+        inputElement.classList.remove('tuntas', 'belum-tuntas');
+        if (inputElement.value !== "") {
+            if (nilai >= KKM_SEMENTARA) { inputElement.classList.add('tuntas'); } 
+            else { inputElement.classList.add('belum-tuntas'); }
+        }
+    }
+
+    function tampilkanForm() {
+        showSection('input-section');
+        id('info-header').innerText = `${currentMapel} - ${currentKelas}`;
+        let container = id('daftar-siswa-container');
+        container.innerHTML = '';
+        daftarSiswaCache.forEach(s => {
+            let classT = s.teori !== "" ? "sudah-dinilai" : ""; let classP = s.praktek !== "" ? "sudah-dinilai" : "";
+            container.innerHTML += `
+                <div class="siswa-card">
+                    <div class="siswa-name">${s.nama}</div>
+                    <div class="input-nilai">
+                        <input type="number" id="t-${s.nisn}" class="${classT}" value="${s.teori}" placeholder="Teori" oninput="validasiNilai(this)">
+                        <input type="number" id="p-${s.nisn}" class="${classP}" value="${s.praktek}" placeholder="Praktek" oninput="validasiNilai(this)">
+                    </div>
+                </div>`;
+        });
+        daftarSiswaCache.forEach(s => {
+            if(s.teori !== "") validasiNilai(id(`t-${s.nisn}`));
+            if(s.praktek !== "") validasiNilai(id(`p-${s.nisn}`));
+        });
+    }
+
+    async function simpanKeSheet() {
+        let data = [];
+        daftarSiswaCache.forEach(s => {
+            let t = id(`t-${s.nisn}`).value, p = id(`p-${s.nisn}`).value;
+            if(t !== "" || p !== "") data.push({guru: currentUser, mapel: currentMapel, kelas: currentKelas, nisn: s.nisn, nama: s.nama, teori: t, praktek: p});
+        });
+        if (data.length === 0) return alert("Kosong!");
+        id('simpan-loader').style.display = 'block';
+        let res = await fetchData({ action: 'simpanNilai', data: data });
+        id('simpan-loader').style.display = 'none';
+        if(res.status === 'success') { alert("Tersimpan!"); showSection('dashboard-section'); muatGrafik(); }
+    }
+
+    // ==========================================
+    // UTILITAS NAVIGASI
+    // ==========================================
+    function id(e) { return document.getElementById(e); }
+    function showSection(s) { 
+        ['welcome-section', 'login-section', 'dashboard-section', 'input-section', 'portal-siswa-section'].forEach(sec => id(sec).style.display = 'none');
+        id(s).style.display = 'block';
+        
+        // Jika kembali ke welcome section, bersihkan data siswa sebelumnya agar rapi
+        if(s === 'welcome-section') {
+            id('siswa-pilih-kelas').value = "";
+            id('area-pilih-nama').style.display = 'none';
+            id('hasil-ketuntasan-container').innerHTML = '';
+        }
+    }
+    function backToDash() { showSection('dashboard-section'); }
+
+    // Saat web dibuka pertama kali, pastikan layar Welcome yang muncul
+    showSection('welcome-section');
+</script>
+</body>
+</html>

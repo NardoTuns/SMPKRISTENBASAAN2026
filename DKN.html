@@ -15,7 +15,8 @@
         /* Tombol Utama */
         button { background-color: #2980b9; color: white; border: none; cursor: pointer; font-weight: bold; }
         .btn-guru { background-color: #2980b9; height: 60px; font-size: 18px; margin-bottom: 15px;}
-        .btn-siswa { background-color: #8e44ad; height: 60px; font-size: 18px; }
+        .btn-siswa { background-color: #8e44ad; height: 60px; font-size: 18px; margin-bottom: 15px; }
+        .btn-home { background-color: #27ae60; height: 60px; font-size: 18px; } /* Gaya tambahan untuk tombol Home */
         .btn-back { background-color: #95a5a6; margin-top: 20px;}
 
         .siswa-card { border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #fafafa; }
@@ -48,6 +49,7 @@
     <div id="welcome-section">
         <button class="btn-guru" onclick="showSection('login-section')">👨‍🏫 Masuk sebagai Guru</button>
         <button class="btn-siswa" onclick="showSection('portal-siswa-section')">🎓 Cek Ketuntasan Siswa</button>
+        <button class="btn-home" onclick="window.location.href='index.html'">🏠 Home</button>
     </div>
 
     <div id="portal-siswa-section">

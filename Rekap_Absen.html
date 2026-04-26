@@ -3,151 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Absensi Siswa</title>
+    <title>Rekap Absen - Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        .filter-section { background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        :root {
+            --primary: #4F46E5;
+            --bg-color: #F0F2F5;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Header & Home Button */
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-home {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        /* Layout */
+        .container { padding: 16px; }
+
+        /* Filter Section */
+        .filter-section {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
         .filter-group { margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
-        input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 250px; }
-        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
-        .checkbox-group label { font-weight: normal; display: inline-flex; align-items: center; background: #fff; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
-        .checkbox-group input { margin-right: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #0056b3; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-        .status-hadir { color: green; font-weight: bold; }
-        .status-sakit { color: orange; font-weight: bold; }
-        .status-izin { color: blue; font-weight: bold; }
-        .status-alpa { color: red; font-weight: bold; }
-        #loading { text-align: center; font-style: italic; color: #666; }
+        .filter-label {
+            font-weight: bold;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        
+        /* Checkbox Styling */
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            background: #f9fafb;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .checkbox-item input { margin-right: 8px; width: 18px; height: 18px; }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        /* Card Layout */
+        .absen-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 5px solid var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .nama { font-weight: bold; font-size: 16px; margin: 0; }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+        }
+        .details { font-size: 13px; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        
+        /* Colors */
+        .bg-hadir { background: #10B981; }
+        .bg-sakit { background: #F59E0B; }
+        .bg-izin { background: #3B82F6; }
+        .bg-alpa { background: #EF4444; }
+
+        #loading { text-align: center; padding: 20px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Rekap Data Absensi</h2>
-    
-    <div class="filter-section">
-        <div class="filter-group">
-            <label for="filterTanggal">Pilih Tanggal:</label>
-            <input type="date" id="filterTanggal" onchange="terapkanFilter()">
-        </div>
-        <div class="filter-group">
-            <label>Centang Mata Pelajaran:</label>
-            <div class="checkbox-group" id="containerMapel">
+    <div class="header">
+        <a href="index.html" class="btn-home" style="text-decoration: none; display: inline-block; text-align: center;">🏠 Home</a>
+        <div style="font-weight: bold;">Rekap Presensi</div>
+        <div style="width: 50px;"></div> </div>
+
+    <div class="container">
+        <div class="filter-section">
+            <div class="filter-group">
+                <span class="filter-label">📅 Tanggal</span>
+                <input type="date" id="filterTanggal" onchange="applyFilters()">
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">📚 Mata Pelajaran (Bisa Pilih Banyak)</span>
+                <div id="mapelContainer" class="checkbox-grid">
+                    </div>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">📌 Status Kehadiran</span>
+                <div class="checkbox-grid">
+                    <label class="checkbox-item"><input type="checkbox" class="status-check" value="Hadir" onchange="applyFilters()"> Hadir</label>
+                    <label class="checkbox-item"><input type="checkbox" class="status-check" value="Sakit" onchange="applyFilters()"> Sakit</label>
+                    <label class="checkbox-item"><input type="checkbox" class="status-check" value="Izin" onchange="applyFilters()"> Izin</label>
+                    <label class="checkbox-item"><input type="checkbox" class="status-check" value="Alpa" onchange="applyFilters()"> Alpa</label>
                 </div>
+            </div>
         </div>
+
+        <div id="loading">Mengambil data...</div>
+        <div id="infoCount" style="font-size: 12px; margin-bottom: 10px; color: var(--text-muted); text-align: center;"></div>
+        <div id="dataContainer"></div>
     </div>
 
-    <div id="loading">Memuat data dari server...</div>
+    <script>
+        // GANTI DENGAN URL WEB APP ANDA
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVp05870UO36iekwuBm9bNH-B_TL5r6vvzKpk7a-qHQftnt6wuPUU5AL4hNeBtaLqi/exec';
+        
+        let allData = [];
 
-    <div style="overflow-x:auto;">
-        <table id="tabelAbsen" style="display:none;">
-            <thead>
-                <tr>
-                    <th>Waktu</th>
-                    <th>Kelas</th>
-                    <th>Mapel</th>
-                    <th>Tanggal</th>
-                    <th>ID Siswa</th>
-                    <th>Nama</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="bodyTabel">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    // MASUKAN URL WEB APP ANDA DI BAWAH INI (Tambahkan ?action=rekap di ujungnya)
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyHBP3NOzyeiK7Wo8_tqCuQa4aGVuJQ_F-C93AzwRHV6tBQsLi5R2L6G75TJv8NFI4Z/exec?action=rekap'; 
-    let dataAbsenGlobal = [];
-
-    // Fungsi untuk mengambil data saat halaman dibuka
-    window.onload = function() {
-        fetch(scriptUrl)
-            .then(response => response.json())
-            .then(data => {
-                dataAbsenGlobal = data;
-                buatCheckboxMapel(data);
+        async function loadData() {
+            try {
+                const res = await fetch(SCRIPT_URL + '?action=getAbsen');
+                allData = await res.json();
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('tabelAbsen').style.display = 'table';
-                terapkanFilter(); // Tampilkan semua data di awal
-            })
-            .catch(error => {
-                document.getElementById('loading').innerText = 'Gagal memuat data. Periksa koneksi atau URL script.';
-                console.error('Error:', error);
-            });
-    }
-
-    // Fungsi membuat checkbox otomatis berdasarkan data Mapel yang ada di database
-    function buatCheckboxMapel(data) {
-        const mapelUnik = [...new Set(data.map(item => item.mapel))].filter(m => m);
-        const container = document.getElementById('containerMapel');
-        
-        mapelUnik.forEach(mapel => {
-            const label = document.createElement('label');
-            label.innerHTML = `<input type="checkbox" value="${mapel}" onchange="terapkanFilter()" checked> ${mapel}`;
-            container.appendChild(label);
-        });
-    }
-
-    // Fungsi utama untuk memfilter dan menampilkan tabel
-    function terapkanFilter() {
-        const tanggalDipilih = document.getElementById('filterTanggal').value;
-        
-        // Ambil semua mapel yang dicentang
-        const checkboxMapel = document.querySelectorAll('#containerMapel input[type="checkbox"]:checked');
-        const mapelDipilih = Array.from(checkboxMapel).map(cb => cb.value);
-
-        const tbody = document.getElementById('bodyTabel');
-        tbody.innerHTML = ''; // Bersihkan tabel
-
-        // Filter data
-        const dataTersaring = dataAbsenGlobal.filter(item => {
-            const cocokTanggal = tanggalDipilih === "" || item.tanggal === tanggalDipilih;
-            const cocokMapel = mapelDipilih.includes(item.mapel);
-            return cocokTanggal && cocokMapel;
-        });
-
-        // Masukkan data ke tabel
-        dataTersaring.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            // Format waktu (opsional)
-            const waktuObj = new Date(item.waktu);
-            const waktuTeks = waktuObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
-            // Warna status
-            let classStatus = '';
-            if(item.status.toLowerCase() === 'hadir') classStatus = 'status-hadir';
-            else if(item.status.toLowerCase() === 'sakit') classStatus = 'status-sakit';
-            else if(item.status.toLowerCase() === 'izin') classStatus = 'status-izin';
-            else if(item.status.toLowerCase() === 'alpa') classStatus = 'status-alpa';
-
-            tr.innerHTML = `
-                <td>${waktuTeks}</td>
-                <td>${item.kelas}</td>
-                <td>${item.mapel}</td>
-                <td>${item.tanggal}</td>
-                <td>${item.id_siswa}</td>
-                <td>${item.nama}</td>
-                <td class="${classStatus}">${item.status}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        if(dataTersaring.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Tidak ada data yang sesuai dengan filter.</td></tr>';
+                
+                generateMapelCheckboxes();
+                applyFilters();
+            } catch (e) {
+                document.getElementById('loading').innerText = "Gagal memuat data.";
+            }
         }
-    }
-</script>
 
+        function generateMapelCheckboxes() {
+            const container = document.getElementById('mapelContainer');
+            const uniqueMapel = [...new Set(allData.map(item => item.mapel))].filter(Boolean);
+            
+            container.innerHTML = '';
+            uniqueMapel.forEach(m => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `<input type="checkbox" class="mapel-check" value="${m}" onchange="applyFilters()"> ${m}`;
+                container.appendChild(label);
+            });
+        }
+
+        function applyFilters() {
+            const tgl = document.getElementById('filterTanggal').value;
+            
+            // Ambil daftar Mapel yang dicentang
+            const selectedMapels = Array.from(document.querySelectorAll('.mapel-check:checked')).map(cb => cb.value);
+            
+            // Ambil daftar Status yang dicentang
+            const selectedStatus = Array.from(document.querySelectorAll('.status-check:checked')).map(cb => cb.value);
+
+            const filtered = allData.filter(item => {
+                const itemDate = String(item.tanggal).substring(0, 10);
+                const matchTgl = tgl === "" || itemDate === tgl;
+                const matchMapel = selectedMapels.length === 0 || selectedMapels.includes(item.mapel);
+                const matchStatus = selectedStatus.length === 0 || selectedStatus.includes(item.status);
+                
+                return matchTgl && matchMapel && matchStatus;
+            });
+
+            renderCards(filtered);
+        }
+
+        function renderCards(data) {
+            const container = document.getElementById('dataContainer');
+            const info = document.getElementById('infoCount');
+            container.innerHTML = '';
+            info.innerText = `Ditemukan ${data.length} data`;
+
+            if (data.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:gray; margin-top:20px;">Data tidak ditemukan.</div>';
+                return;
+            }
+
+            data.forEach(item => {
+                const s = String(item.status).toLowerCase();
+                const bgClass = s === 'hadir' ? 'bg-hadir' : s === 'sakit' ? 'bg-sakit' : s === 'izin' ? 'bg-izin' : 'bg-alpa';
+                
+                container.innerHTML += `
+                    <div class="absen-card">
+                        <div class="card-row">
+                            <p class="nama">${item.nama}</p>
+                            <span class="status-badge ${bgClass}">${item.status}</span>
+                        </div>
+                        <div class="details">
+                            <div><span style="font-size:10px; display:block">MAPEL</span><b>${item.mapel}</b></div>
+                            <div><span style="font-size:10px; display:block">KELAS</span><b>${item.kelas}</b></div>
+                            <div><span style="font-size:10px; display:block">TANGGAL</span>${String(item.tanggal).substring(0, 10)}</div>
+                            <div><span style="font-size:10px; display:block">WAKTU</span>${String(item.waktu).substring(11, 16)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function resetPage() {
+            // Reset input tanggal
+            document.getElementById('filterTanggal').value = '';
+            // Uncheck semua checkbox
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            // Jalankan filter ulang (menampilkan semua data)
+            applyFilters();
+            // Scroll ke atas
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        loadData();
+    </script>
 </body>
 </html>

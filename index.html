@@ -4,39 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SMP Kristen Basaan</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* --- Variabel Warna & Pengaturan Dasar --- */
+        /* --- Variabel Global --- */
         :root {
-            --primary-color: #0056b3;
-            --secondary-color: #ff9800;
-            --text-dark: #333;
-            --text-light: #fff;
-            --bg-light: #f4f7f6;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-light: #ffffff;
+            --text-dark: #1a202c;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
         body {
-            background-color: var(--bg-light);
-            color: var(--text-dark);
+            background: var(--primary-gradient);
+            background-attachment: fixed;
+            color: var(--text-light);
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        a {
-            text-decoration: none;
-            color: inherit;
+        /* --- Animasi Background Mengambang --- */
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #ff6a00; }
+        .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #00f2fe; animation-delay: -5s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
         }
 
-        /* --- Header & Navigasi --- */
+        /* --- Header / Navigasi --- */
         header {
-            background-color: #ffffff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--glass-border);
             position: fixed;
             width: 100%;
             top: 0;
@@ -54,303 +69,279 @@
 
         .logo {
             font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-color);
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
-        .nav-links {
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-links a {
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--secondary-color);
+        .logo span {
+            color: #00f2fe;
         }
 
         /* --- Hero Section --- */
         .hero {
-            background: linear-gradient(135deg, #1d1d1d 0%, #333333 100%);
-            color: var(--text-light);
+            padding: 180px 20px 100px;
             text-align: center;
-            padding: 150px 20px 100px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            display: inline-block;
         }
 
         .hero h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
             margin-bottom: 20px;
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-            color: #00a300; /* Sentuhan warna ala Windows */
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
 
         .hero p {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin-bottom: 40px;
             max-width: 600px;
+            opacity: 0.9;
         }
 
-        /* --- Tombol Bergaya Windows 8 (Metro UI Live Tiles) --- */
-        .win8-container {
+        /* Tombol Modern */
+        .btn-container {
             display: flex;
-            flex-wrap: wrap;
             gap: 15px;
+            flex-wrap: wrap;
             justify-content: center;
-            max-width: 700px;
         }
 
-        .win8-tile {
-            color: #ffffff !important;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+        .btn {
+            padding: 15px 35px;
+            border-radius: 50px;
             font-weight: 600;
-            font-size: 1.1rem;
-            padding: 20px;
-            transition: transform 0.3s ease, filter 0.3s ease;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        /* Ukuran Kotak (Tiles) */
-        .tile-wide {
-            width: 315px;
-            height: 150px;
+        .btn-primary {
+            background: #ffffff;
+            color: var(--text-dark);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
         }
 
-        .tile-square {
-            width: 150px;
-            height: 150px;
+        .btn-primary:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px rgba(255,255,255,0.3);
         }
 
-        /* Warna Khas Metro UI Windows 8 */
-        .bg-blue { background-color: #2d89ef; }
-        .bg-green { background-color: #00a300; }
-        .bg-orange { background-color: #e3a21a; }
-        .bg-purple { background-color: #9f00a7; }
-
-        /* Icon di dalam Tile */
-        .tile-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            transition: transform 0.3s ease;
+        .btn-glass {
+            background: var(--glass-bg);
+            color: var(--text-light);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
         }
 
-        /* Animasi Sorot (Hover) & Tekan (Active) */
-        .win8-tile:hover {
-            transform: scale(1.05); /* Membesar saat disorot */
-            filter: brightness(1.15); /* Menjadi sedikit lebih terang */
-            z-index: 10;
+        .btn-glass:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-5px);
         }
 
-        .win8-tile:hover .tile-icon {
-            transform: translateY(-5px); /* Ikon bergeser sedikit ke atas */
-        }
-
-        .win8-tile:active {
-            transform: scale(0.95); /* Efek tenggelam saat ditekan */
-            filter: brightness(0.9);
-        }
-
-        /* --- Fitur / Keunggulan --- */
+        /* --- Kartu Fitur (Glassmorphism) --- */
         .features {
-            padding: 80px 5%;
+            padding: 60px 5%;
             max-width: 1200px;
             margin: 0 auto;
-            text-align: center;
-        }
-
-        .features h2 {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            margin-bottom: 50px;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
         }
 
         .card {
-            background: #fff;
-            padding: 30px 20px;
-            border-radius: 0px; /* Dibuat tajam menyesuaikan tema Windows 8 */
-            border: 1px solid #ddd;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 40px 30px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform 0.4s ease, border-color 0.4s ease;
+            text-align: left;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-10px);
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.15);
         }
 
-        .card-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
+        .emoji-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            background: #ffffff;
+            width: 80px;
+            height: 80px;
+            line-height: 80px;
+            text-align: center;
+            border-radius: 20px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
         }
 
         .card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            color: var(--text-dark);
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            opacity: 0.8;
         }
 
         /* --- Footer --- */
         footer {
-            background-color: #111;
-            color: #ddd;
-            padding: 50px 5% 20px;
-            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            padding: 50px 5% 30px;
+            border-top: 1px solid var(--glass-border);
+            margin-top: 50px;
         }
 
-        .footer-content {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
             max-width: 1200px;
-            margin: 0 auto 30px;
-            text-align: left;
+            margin: 0 auto;
         }
 
-        .footer-section h3 {
-            color: var(--text-light);
-            margin-bottom: 15px;
-            font-size: 1.3rem;
+        .footer-col h4 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #00f2fe;
         }
 
-        .footer-section p {
+        .footer-col p, .footer-col a {
+            color: #ddd;
+            text-decoration: none;
+            display: block;
             margin-bottom: 10px;
+            font-size: 0.95rem;
         }
 
-        .copyright {
-            border-top: 1px solid #444;
+        .footer-col a:hover {
+            color: #fff;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            margin-top: 50px;
             padding-top: 20px;
-            font-size: 0.9rem;
-            color: #888;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.85rem;
+            color: #aaa;
         }
 
-        .creator {
-            color: #00a300;
+        .creator-tag {
+            color: #00f2fe;
             font-weight: 600;
         }
 
-        /* --- Responsif untuk HP --- */
+        /* --- Optimasi Khusus Layar HP --- */
         @media (max-width: 768px) {
-            .nav-links {
-                display: none; 
-            }
-            
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-
-            .hero p {
-                font-size: 1rem;
-            }
-
-            .win8-tile.tile-wide {
-                width: 100%; /* Kotak panjang akan penuh di layar HP */
-            }
-
-            .win8-tile.tile-square {
-                width: calc(50% - 10px); /* 2 Kotak kecil berjejer di HP */
-            }
-
-            .footer-content {
-                flex-direction: column;
-                text-align: center;
-            }
+            .hero h1 { font-size: 2.2rem; }
+            .hero p { font-size: 1rem; padding: 0 10px; }
+            .btn-container { flex-direction: column; width: 100%; padding: 0 20px; }
+            .btn { width: 100%; }
+            .card { padding: 30px 20px; text-align: center; }
+            .emoji-icon { width: 70px; height: 70px; line-height: 70px; font-size: 2.8rem; }
+            .footer-grid { text-align: center; }
         }
     </style>
 </head>
 <body>
 
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
     <header>
         <div class="navbar">
-            <div class="logo">SMP Kristen Basaan</div>
-            <nav class="nav-links">
-                <a href="#beranda">Beranda</a>
-                <a href="#tentang">Tentang Kami</a>
-                <a href="#kontak">Kontak</a>
-            </nav>
+            <div class="logo">SMP KRISTEN  <span>Basaan</span></div>
         </div>
     </header>
 
-    <section id="beranda" class="hero">
-        <h1>Selamat Datang di SMP Kristen Basaan</h1>
-        <p>Membentuk generasi penerus yang cerdas, berkarakter mulia, dan takut akan Tuhan. Mari bergabung dan raih masa depan gemilang bersama kami!</p>
+    <section class="hero">
+        <div class="hero-badge">🚀 Tahun Ajaran 2026/2027</div>
+        <h1>Masa Depan Hebat<br>Dimulai dari Sini.</h1>
+        <p>Bergabunglah dengan SMP Kristen Basaan. Kami membentuk generasi muda yang kreatif, inovatif, berkarakter mulia, dan siap menghadapi tantangan dunia digital.</p>
         
-        <div class="win8-container">
-            <a href="#" class="win8-tile tile-wide bg-blue">
-                <div class="tile-icon">📝</div>
-                Pendaftaran Siswa Baru
-            </a>
-            <a href="#" class="win8-tile tile-square bg-green">
-                <div class="tile-icon">👨‍🏫</div>
-                Portal Guru
-            </a>
-            <a href="#" class="win8-tile tile-square bg-orange">
-                <div class="tile-icon">💻</div>
-                E-Learning
-            </a>
-            <a href="#kontak" class="win8-tile tile-wide bg-purple">
-                <div class="tile-icon">📞</div>
-                Hubungi Kami
-            </a>
+        <div class="btn-container">
+            <a href="#" class="btn btn-primary">Daftar Sekarang 🎓</a>
+            <a href="#eksplor" class="btn btn-glass">Jelajahi Sekolah Kami ✨</a>
+            <a href="#eksplor" class="btn btn-glass">UJIAN ✍🏼</a>
+            <a href="#eksplor" class="btn btn-glass">INPUT NILAI (GURU) 👩🏼‍💻</a>
+            <a href="#eksplor" class="btn btn-glass">CEK NILAI SISWA 👩🏼‍💻</a>
         </div>
     </section>
 
-    <section id="tentang" class="features">
-        <h2>Kenapa Memilih Kami?</h2>
+    <section id="eksplor" class="features">
         <div class="grid">
             <div class="card">
-                <div class="card-icon">📚</div>
-                <h3>Kurikulum Modern</h3>
-                <p>Menerapkan metode pembelajaran yang adaptif, interaktif, dan sesuai dengan perkembangan zaman.</p>
+                <div class="emoji-icon">💻</div>
+                <h3>Belajar Interaktif</h3>
+                <p>Kurikulum modern yang tidak membosankan. Kami mengintegrasikan teknologi dalam setiap kelas agar belajar jadi lebih seru.</p>
             </div>
             <div class="card">
-                <div class="card-icon">🌱</div>
-                <h3>Pendidikan Karakter</h3>
-                <p>Fokus pada pembentukan moral dan iman Kristiani sebagai fondasi utama setiap siswa.</p>
+                <div class="emoji-icon">🏆</div>
+                <h3>Ekskul Kekinian</h3>
+                <p>Dari e-sports, desain grafis, hingga klub sains dan seni. Kembangkan bakat dan passion kamu secara maksimal.</p>
             </div>
             <div class="card">
-                <div class="card-icon">🏫</div>
-                <h3>Fasilitas Lengkap</h3>
-                <p>Lingkungan belajar yang nyaman didukung dengan fasilitas sekolah yang memadai.</p>
+                <div class="emoji-icon">🤝</div>
+                <h3>Karakter Positif</h3>
+                <p>Lingkungan persahabatan yang suportif berlandaskan iman Kristiani, anti-bullying, dan membentuk mental juara.</p>
             </div>
         </div>
     </section>
 
-    <footer id="kontak">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Hubungi Kami</h3>
-                <p>📧 Email: <a href="mailto:nardotuns@gmail.com">nardotuns@gmail.com</a></p>
-                <p>📞 HP/WA: <a href="tel:085399959869">085399959869</a></p>
-            </div>
-            <div class="footer-section">
-                <h3>Alamat</h3>
-                <p>SMP Kristen Basaan</p>
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>SMP Kristen Basaan</h4>
                 <p>Kabupaten Minahasa Tenggara</p>
                 <p>Sulawesi Utara, Indonesia</p>
             </div>
+            <div class="footer-col">
+                <h4>Hubungi Kami</h4>
+                <p>📧 <a href="mailto:nardotuns@gmail.com">nardotuns@gmail.com</a></p>
+                <p>📱 <a href="tel:085399959869">085399959869</a></p>
+            </div>
+            <div class="footer-col">
+                <h4>Akses Cepat</h4>
+                <a href="#">Portal Siswa</a>
+                <a href="#">E-Learning</a>
+                <a href="#">Galeri Kegiatan</a>
+            </div>
         </div>
-        <div class="copyright">
-            <p>&copy; 2026 SMP Kristen Basaan. All Rights Reserved.</p>
-            <p>Didesain & Dikembangkan oleh: <span class="creator">Mikhael Tunas, S.Pd</span></p>
+        <div class="footer-bottom">
+            <p>&copy; 2026 SMP Kristen Basaan. Hak Cipta Dilindungi.</p>
+            <p>Didesain dengan ❤️ oleh <span class="creator-tag">Mikhael Tunas, S.Pd</span></p>
         </div>
     </footer>
 

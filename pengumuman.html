@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengumuman Kelulusan Resmi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #fff;
+            --success-color: #00e676;
+            --warning-color: #ffb300;
+            --danger-color: #ff1744;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Background Gradient Bergerak */
+            background: linear-gradient(-45deg, #2b5876, #4e4376, #141e30, #243b55);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 40px 30px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            color: var(--text-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        h2 {
+            font-weight: 700;
+            font-size: 26px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        p.sub-header {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--glass-border);
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s;
+            letter-spacing: 2px;
+        }
+
+        input[type="text"]:focus {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: normal;
+            font-weight: 400;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            background: #fff;
+            color: #2b5876;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background: rgba(255,255,255,0.5);
+            color: #333;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Area Hasil */
+        #resultArea {
+            display: none;
+            margin-top: 30px;
+            padding: 25px 15px;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .nama-siswa {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 10px;
+        }
+
+        /* Spinner Animasi */
+        .spinner-viewport {
+            height: 50px;
+            overflow: hidden;
+            border-radius: 10px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .spinner-list {
+            list-style: none;
+            position: absolute;
+            width: 100%;
+            top: 0;
+            animation: spinVertical 0.1s linear infinite;
+            display: none; 
+        }
+
+        .spinner-list li {
+            height: 50px;
+            line-height: 50px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        @keyframes spinVertical {
+            0% { top: 0; }
+            100% { top: -150px; }
+        }
+
+        /* Hasil Akhir */
+        #finalResult {
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .status-icon {
+            font-size: 50px;
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .status-text {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Warna Status */
+        .status-lulus .status-icon, .status-lulus .status-text { 
+            color: var(--success-color); 
+            text-shadow: 0 0 20px rgba(0, 230, 118, 0.5); 
+        }
+        
+        .status-belum .status-icon, .status-belum .status-text { 
+            color: var(--warning-color); 
+            text-shadow: 0 0 20px rgba(255, 179, 0, 0.5); 
+        }
+        
+        .status-tidak .status-icon, .status-tidak .status-text { 
+            color: var(--danger-color); 
+            text-shadow: 0 0 20px rgba(255, 23, 68, 0.5); 
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 30px 20px; }
+            h2 { font-size: 22px; }
+            .status-text { font-size: 26px; }
+            .status-icon { font-size: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Informasi Kelulusan</h2>
+        <p class="sub-header">Masukkan NISN Anda untuk melihat hasil</p>
+        
+        <div class="input-group">
+            <input type="text" id="nisnInput" placeholder="Contoh: 12001" autocomplete="off">
+        </div>
+        
+        <button id="btnCek" onclick="cekKelulusan()">CEK HASIL</button>
+
+        <div id="resultArea">
+            <div class="nama-siswa" id="namaSiswa"></div>
+            
+            <div class="spinner-viewport">
+                <ul class="spinner-list" id="spinnerList">
+                    <li style="color: #00e676">LULUS</li>
+                    <li style="color: #ffb300">BELUM LULUS</li>
+                    <li style="color: #ff1744">TIDAK LULUS</li>
+                </ul>
+            </div>
+            
+            <div id="finalResult">
+                <div class="status-icon" id="finalIcon"></div>
+                <div class="status-text" id="finalText"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <script>
+        // 1. DATA SISWA
+        const dataSiswa = [
+            { nama: "Anggun", nisn: "12001", status: "Lulus" },
+            { nama: "Jodi", nisn: "12002", status: "Lulus" },
+            { nama: "Glori", nisn: "12003", status: "Belum Lulus" },
+            { nama: "Rio", nisn: "12004", status: "Tidak Lulus" }
+        ];
+
+        // 2. AUDIO SYNTHESIZER
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration, vol) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        let tickInterval;
+        function startTickSound() {
+            tickInterval = setInterval(() => { playTone(600, 'sine', 0.03, 0.1); }, 50);
+        }
+        function stopTickSound() { clearInterval(tickInterval); }
+
+        function playSuccessSound() { 
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((note, i) => { setTimeout(() => playTone(note, 'sine', 0.4, 0.2), i * 100); });
+        }
+        
+        function playFailSound() { 
+            playTone(200, 'sawtooth', 0.5, 0.2); 
+            setTimeout(() => playTone(150, 'sawtooth', 0.6, 0.2), 200); 
+        }
+
+        // 3. LOGIKA CEK & ANIMASI
+        function cekKelulusan() {
+            const inputNisn = document.getElementById("nisnInput").value.trim();
+            const btn = document.getElementById("btnCek");
+            const resultArea = document.getElementById("resultArea");
+            const namaEl = document.getElementById("namaSiswa");
+            const spinnerList = document.getElementById("spinnerList");
+            const finalResult = document.getElementById("finalResult");
+            const finalIcon = document.getElementById("finalIcon");
+            const finalText = document.getElementById("finalText");
+            const spinnerViewport = document.querySelector(".spinner-viewport");
+
+            if(inputNisn === "") {
+                alert("Harap masukkan NISN!");
+                return;
+            }
+
+            const siswa = dataSiswa.find(s => s.nisn === inputNisn);
+
+            if(!siswa) {
+                alert("NISN tidak ditemukan. Pastikan data benar.");
+                return;
+            }
+
+            // Persiapan Animasi
+            btn.disabled = true;
+            btn.innerText = "MEMPROSES...";
+            resultArea.style.display = "block";
+            namaEl.innerText = "Siswa: " + siswa.nama;
+            
+            // Tampilkan spinner, sembunyikan hasil akhir
+            spinnerViewport.style.display = "block";
+            spinnerList.style.display = "block";
+            finalResult.style.display = "none";
+            finalResult.className = ""; 
+            
+            startTickSound(); 
+
+            setTimeout(() => {
+                // Selesai Animasi
+                stopTickSound();
+                spinnerViewport.style.display = "none"; // Hilangkan box spinner
+                
+                const statusUps = siswa.status.toUpperCase();
+                
+                // Isi Teks & Atur Kelas Warna
+                finalText.innerText = statusUps;
+
+                if(statusUps === "LULUS") {
+                    finalResult.className = "status-lulus";
+                    finalIcon.innerText = "🎉";
+                    playSuccessSound();
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 999 });
+                } else if(statusUps === "BELUM LULUS") {
+                    finalResult.className = "status-belum";
+                    finalIcon.innerText = "⏳";
+                    playFailSound();
+                } else {
+                    finalResult.className = "status-tidak";
+                    finalIcon.innerText = "❌";
+                    playFailSound();
+                }
+
+                // Tampilkan Teks & Ikon hasil akhir
+                finalResult.style.display = "flex"; 
+                
+                // Kembalikan tombol
+                btn.disabled = false;
+                btn.innerText = "CEK HASIL LAGI";
+
+            }, 2500); // 2.5 Detik ketegangan
+        }
+    </script>
+</body>
+</html>

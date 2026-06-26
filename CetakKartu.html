@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Kartu Siswa SMP Basaan</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
@@ -72,7 +72,8 @@
         /* Area QR Code Tunggal (NIS) */
         .qr-wrapper { background: #fff; padding: 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-align: center; width: 100%; box-sizing: border-box; }
         .qr-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #000; letter-spacing: 1px; }
-        #qrCodeContainer { display: flex; justify-content: center; }
+        /* Tag img statis agar mudah ditangkap oleh alat screenshot */
+        #qrImage { width: 75px; height: 75px; margin: 0 auto; display: block; }
 
         #kartu-siswa * { box-sizing: border-box; }
     </style>
@@ -149,7 +150,7 @@
                     </div>
                     <div class="qr-wrapper">
                         <div class="qr-label">QR NIS</div>
-                        <div id="qrCodeContainer"></div>
+                        <img id="qrImage" alt="QR NIS">
                     </div>
                 </div>
             </div>
@@ -160,7 +161,6 @@
 </div>
 
 <script>
-    // URL Raw sudah disesuaikan persis dengan direktori repositori Anda
     const GITHUB_RAW_URL = "https://raw.githubusercontent.com/NardoTuns/SMPKRISTENBASAAN2026/main/MasterAbsenSiswa.CSV";
 
     let dataSiswa = [];
@@ -201,7 +201,6 @@
             btn.innerText = "⏳ Mengunduh data...";
             btn.disabled = true;
             
-            // Tambahkan timestamp anti-cache agar selalu mengambil data terupdate dari server
             const response = await fetch(GITHUB_RAW_URL + "?t=" + new Date().getTime());
             if(!response.ok) throw new Error("Gagal terhubung ke repositori GitHub.");
             
@@ -216,9 +215,8 @@
         }
     }
 
-    // --- Fungsi Ekstrak Teks CSV (Anti Hilang Nol) ---
+    // --- Fungsi Ekstrak Teks CSV ---
     function parseCSV(csvText) {
-        // Mendukung pemisah koma (,) maupun titik koma (;) dari Excel
         const lines = csvText.split(/\r?\n/);
         dataSiswa = [];
         const select = document.getElementById('siswaSelect');
@@ -229,7 +227,6 @@
             const cols = lines[i].split(/[,;]/); 
 
             if (cols.length >= 10) {
-                // Mengembalikan angka nol yang terpotong Excel menggunakan padStart
                 let rawNisn = cols[4].trim();
                 if (rawNisn.length > 0 && rawNisn.length < 10) {
                     rawNisn = rawNisn.padStart(10, '0');
@@ -263,7 +260,7 @@
         alert("Sistem berhasil memuat " + dataSiswa.length + " data siswa dari CSV.");
     }
 
-    // --- Logika Mengisi Data dan Render SATU QR Code (Dari NIS) ---
+    // --- Logika Mengisi Data dan Render QR Code Menggunakan QRious ---
     document.getElementById('siswaSelect').addEventListener('change', function(e) {
         const index = e.target.value;
         if (index === "") {
@@ -281,21 +278,20 @@
         document.getElementById('valNik').innerText = siswa.nik;
         document.getElementById('valTahun').innerText = siswa.tahun_masuk;
 
-        // Kosongkan QR Container sebelumnya
-        const qrContainer = document.getElementById('qrCodeContainer');
-        qrContainer.innerHTML = ""; 
-        
-        // Buat QR Code baru KHUSUS dari NIS
+        // Render QR Code baru langsung menjadi format Gambar
         const qrText = String(siswa.nis).trim();
+        const imgElement = document.getElementById('qrImage');
+        
         if(qrText !== "") {
-            new QRCode(qrContainer, {
-                text: qrText,
-                width: 75,
-                height: 75,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
+            new QRious({
+                element: imgElement,
+                value: qrText,
+                size: 150, // Dirender besar agar tajam saat dicetak
+                background: 'white',
+                foreground: 'black'
             });
+        } else {
+            imgElement.removeAttribute('src'); // Kosongkan jika tidak ada data
         }
 
         document.getElementById('btnSave').disabled = false;
@@ -382,7 +378,8 @@
         const namaValid = siswa.nama;
         const finalFileName = nisnValid + "_" + namaValid + ".jpg";
         
-        html2canvas(targetCard, { scale: 3, useCORS: true }).then(canvas => {
+        // Peningkatan rendering agar gambar QR Code terbaca sempurna
+        html2canvas(targetCard, { scale: 3, useCORS: true, allowTaint: true }).then(canvas => {
             const imgData = canvas.toDataURL('image/jpeg', 1.0);
             const downloadLink = document.createElement('a');
             downloadLink.download = finalFileName;
@@ -393,7 +390,6 @@
         });
     });
 
-    // Otomatis klik tombol sinkronisasi saat halaman pertama kali dibuka
     window.onload = function() {
         fetchDataFromGithub();
     };

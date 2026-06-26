@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Kartu Siswa</title>
-    <!-- Load Library QR Code dan HTML to Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* Pengaturan Layout Utama */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h2.title { text-align: center; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
@@ -23,23 +22,28 @@
         button.btn-success { background: #28a745; font-size: 18px; padding: 15px; }
         button.btn-success:hover { background: #218838; }
         button.btn-warning { background: #ffc107; color: black; }
+        button.btn-info { background: #17a2b8; }
+        button.btn-info:hover { background: #138496; }
+
+        .camera-controls { display: flex; gap: 10px; }
 
         /* Pengaturan Kamera */
         #video-container { text-align: center; margin-top: 15px; display: none; background: #000; border-radius: 8px; padding: 10px; }
-        video { width: 100%; max-width: 320px; border-radius: 8px; background: #333; }
+        video { width: 100%; max-width: 320px; border-radius: 8px; background: #333; transform: scaleX(1); }
+        /* Efek mirror otomatis jika kamera depan aktif */
+        video.mirror { transform: scaleX(-1); }
         canvas { display: none; }
 
         /* Desain Kartu (Dimensi Rasio KTP ~1.58:1) */
         .card-wrapper { margin: 30px 0; display: flex; justify-content: center; overflow-x: auto; padding: 20px; background: #fafafa; border: 1px dashed #ccc; }
         
         #kartu-siswa {
-            width: 540px; /* Lebar piksel proporsional KTP */
+            width: 540px; 
             height: 340px;
-            /* Background gradasi biru agar terlihat resmi */
             background: linear-gradient(135deg, #ffffff 0%, #d4f1f4 100%);
             border: 2px solid #444;
             border-radius: 12px;
-            padding: 15px;
+            padding: 12px 15px;
             box-sizing: border-box;
             position: relative;
             color: #000;
@@ -47,25 +51,29 @@
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
         }
 
-        .card-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 5px; margin-bottom: 15px; }
-        .card-header h3 { margin: 0; font-size: 14px; font-weight: bold; letter-spacing: 1px; }
-        .card-header h2 { margin: 3px 0; font-size: 20px; font-weight: bold; color: #000; }
-        .card-header p { margin: 0; font-size: 11px; }
+        .card-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 3px; margin-bottom: 12px; }
+        .card-header h3 { margin: 0; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+        .card-header h2 { margin: 2px 0; font-size: 19px; font-weight: bold; color: #000; }
+        .card-header p { margin: 0; font-size: 10px; }
         
-        .card-body { display: flex; gap: 15px; justify-content: space-between; }
+        .card-body { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
         
-        .data-area { flex-grow: 1; font-size: 13px; font-weight: bold; }
-        .data-row { display: flex; margin-bottom: 6px; }
-        .data-label { width: 110px; }
+        .data-area { flex-grow: 1; font-size: 12px; font-weight: bold; margin-top: 5px; }
+        .data-row { display: flex; margin-bottom: 5px; }
+        .data-label { width: 105px; }
         .data-colon { width: 15px; text-align: center; }
         .data-value { flex-grow: 1; text-transform: uppercase; color: #222; }
 
-        .foto-area { display: flex; flex-direction: column; align-items: center; width: 110px; }
-        /* Box frame untuk pas foto */
-        .foto-area img { width: 90px; height: 120px; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.4); background: #eee; }
-        .qr-area { margin-top: 15px; background: #fff; padding: 5px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .side-area { display: flex; flex-direction: column; align-items: center; width: 140px; gap: 8px; }
+        
+        .foto-container { display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; }
+        .foto-container img { width: 75px; height: 100px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); background: #eee; }
+        .qr-area { background: #fff; padding: 4px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
-        /* Normalisasi saat proses konversi ke gambar */
+        /* Area Barcode di bawah Foto + QR */
+        .barcode-area { width: 100%; text-align: center; background: transparent; padding: 2px 0; }
+        .barcode-area svg { width: 100%; max-height: 35px; }
+
         #kartu-siswa * { box-sizing: border-box; }
     </style>
 </head>
@@ -89,7 +97,11 @@
 
     <div class="control-group">
         <label>3. Ambil Foto Siswa</label>
-        <button type="button" id="btnStartCamera">Akses Kamera</button>
+        <div class="camera-controls">
+            <button type="button" id="btnStartCamera">Buka Kamera</button>
+            <button type="button" id="btnSwitchCamera" class="btn-info" style="display:none;">🔄 Ganti Kamera</button>
+        </div>
+        
         <div id="video-container">
             <video id="videoElement" autoplay playsinline></video>
             <button type="button" id="btnCapture" class="btn-warning">📸 Jepret Foto</button>
@@ -97,7 +109,6 @@
         <canvas id="canvasElement"></canvas>
     </div>
 
-    <!-- Preview Layout Kartu -->
     <div class="card-wrapper">
         <div id="kartu-siswa">
             <div class="card-header">
@@ -115,10 +126,15 @@
                     <div class="data-row"><div class="data-label">NIK</div><div class="data-colon">:</div><div class="data-value" id="valNik">-</div></div>
                     <div class="data-row"><div class="data-label">TAHUN MASUK</div><div class="data-colon">:</div><div class="data-value" id="valTahun">-</div></div>
                 </div>
-                <div class="foto-area">
-                    <!-- Default blank image base64 -->
-                    <img id="fotoSiswa" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Foto Siswa">
-                    <div class="qr-area" id="qrCodeContainer"></div>
+                
+                <div class="side-area">
+                    <div class="foto-container">
+                        <img id="fotoSiswa" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Foto Siswa">
+                        <div class="qr-area" id="qrCodeContainer"></div>
+                    </div>
+                    <div class="barcode-area">
+                        <svg id="barcodeContainer"></svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -128,10 +144,10 @@
 </div>
 
 <script>
-    // --- Variabel Global ---
     let dataSiswa = [];
-    let qrCodeInstance = null;
     let stream = null;
+    // Secara default, arahkan langsung ke kamera belakang ('environment')
+    let currentFacingMode = 'environment'; 
 
     // --- 1. Logika Import Data CSV ---
     document.getElementById('csvFileInput').addEventListener('change', function(e) {
@@ -140,24 +156,19 @@
 
         const reader = new FileReader();
         reader.onload = function(event) {
-            const text = event.target.result;
-            parseCSV(text);
+            parseCSV(event.target.result);
         };
         reader.readAsText(file);
     });
 
     function parseCSV(csvText) {
-        // Memecah baris, mengatasi enter bawaan Windows (\r\n) atau Linux (\n)
         const lines = csvText.split(/\r?\n/);
         dataSiswa = [];
         const select = document.getElementById('siswaSelect');
         select.innerHTML = '<option value="">-- Pilih Siswa --</option>';
 
-        // Mulai dari i = 1 dengan asumsi i = 0 adalah baris judul (header) tabel
         for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim() === '') continue; 
-            
-            // Catatan: Jika CSV dari Excel menggunakan titik koma, ubah ',' menjadi ';'
             const cols = lines[i].split(','); 
 
             if (cols.length >= 10) {
@@ -181,10 +192,10 @@
             }
         }
         select.disabled = false;
-        alert("Berhasil memuat " + dataSiswa.length + " data siswa dari CSV.");
+        alert("Berhasil memuat " + dataSiswa.length + " data siswa.");
     }
 
-    // --- 2. Logika Mengisi Kartu saat Siswa Dipilih ---
+    // --- 2. Logika Mengisi Data, QR Code, dan Barcode ---
     document.getElementById('siswaSelect').addEventListener('change', function(e) {
         const index = e.target.value;
         if (index === "") {
@@ -194,7 +205,6 @@
 
         const siswa = dataSiswa[index];
         
-        // Memasukkan teks ke dalam layout
         document.getElementById('valNama').innerText = siswa.nama;
         document.getElementById('valNis').innerText = siswa.nis + " / " + siswa.nisn;
         document.getElementById('valKelas').innerText = siswa.kelas;
@@ -203,64 +213,106 @@
         document.getElementById('valNik').innerText = siswa.nik;
         document.getElementById('valTahun').innerText = siswa.tahun_masuk;
 
-        // Membuat QR Code berdasarkan Nomor Induk Siswa (NIS)
+        // Render QR Code (Berdasarkan Data NIS)
         const qrContainer = document.getElementById('qrCodeContainer');
         qrContainer.innerHTML = ""; 
-        qrCodeInstance = new QRCode(qrContainer, {
+        new QRCode(qrContainer, {
             text: siswa.nis,
-            width: 70,
-            height: 70,
+            width: 55,
+            height: 55,
             colorDark : "#000000",
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.M
         });
 
+        // Render Barcode (Berdasarkan Data NISN)
+        // Jika data NISN kosong atau tidak valid, sistem mengisinya dengan default '0000000000'
+        const dataNisn = siswa.nisn || "0000000000";
+        JsBarcode("#barcodeContainer", dataNisn, {
+            format: "CODE128",
+            width: 1.5,
+            height: 30,
+            displayValue: true,
+            fontSize: 10,
+            margin: 0,
+            background: "transparent"
+        });
+
         document.getElementById('btnSave').disabled = false;
     });
 
-    // --- 3. Logika Kamera Terintegrasi ---
+    // --- 3. Logika Kamera (Mendukung Switch & Default Kamera Belakang) ---
     const video = document.getElementById('videoElement');
     const canvas = document.getElementById('canvasElement');
     const fotoSiswa = document.getElementById('fotoSiswa');
+    const btnStart = document.getElementById('btnStartCamera');
+    const btnSwitch = document.getElementById('btnSwitchCamera');
+    const videoContainer = document.getElementById('video-container');
 
-    document.getElementById('btnStartCamera').addEventListener('click', async function() {
-        const container = document.getElementById('video-container');
-        
-        if (container.style.display === 'block') {
-            // Matikan kamera
-            if(stream) stream.getTracks().forEach(track => track.stop());
-            container.style.display = 'none';
-            this.innerText = 'Akses Kamera';
-        } else {
-            // Nyalakan kamera
-            try {
-                // Konfigurasi agar merender kamera menghadap user jika di HP
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                container.style.display = 'block';
-                this.innerText = 'Tutup Kamera';
-            } catch (err) {
-                alert("Gagal mengakses kamera. Pastikan memberikan izin kamera pada browser: " + err.message);
+    async function startStream() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        try {
+            const constraints = {
+                video: { facingMode: currentFacingMode }
+            };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            
+            // Berikan efek cermin (mirror) hanya jika menggunakan kamera depan ('user')
+            if (currentFacingMode === 'user') {
+                video.classList.add('mirror');
+            } else {
+                video.classList.remove('mirror');
             }
+            
+            videoContainer.style.display = 'block';
+            btnStart.innerText = 'Tutup Kamera';
+            btnSwitch.style.display = 'inline-block';
+        } catch (err) {
+            alert("Gagal mengakses kamera: " + err.message);
+        }
+    }
+
+    function stopStream() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        videoContainer.style.display = 'none';
+        btnStart.innerText = 'Buka Kamera';
+        btnSwitch.style.display = 'none';
+    }
+
+    btnStart.addEventListener('click', function() {
+        if (videoContainer.style.display === 'block') {
+            stopStream();
+        } else {
+            startStream();
         }
     });
 
+    // Tombol untuk merubah arah kamera aktif
+    btnSwitch.addEventListener('click', function() {
+        currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+        startStream();
+    });
+
     document.getElementById('btnCapture').addEventListener('click', function() {
-        // Atur resolusi potrait (3:4) untuk Canvas
         canvas.width = 300;
         canvas.height = 400;
         const ctx = canvas.getContext('2d');
         
-        // Render tangkapan kamera ke dalam canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Memastikan hasil jepretan ikut bercermin jika kamera depan aktif
+        if (currentFacingMode === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
         
-        // Ubah canvas menjadi format data gambar (Base64 JPEG) lalu masukkan ke layout
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         fotoSiswa.src = canvas.toDataURL('image/jpeg', 0.9);
         
-        // Matikan kamera otomatis setelah selesai mengambil gambar
-        if(stream) stream.getTracks().forEach(track => track.stop());
-        document.getElementById('video-container').style.display = 'none';
-        document.getElementById('btnStartCamera').innerText = 'Akses Kamera';
+        stopStream();
     });
 
     // --- 4. Logika Simpan Layout Jadi Gambar (JPG) ---
@@ -268,14 +320,10 @@
         const targetCard = document.getElementById('kartu-siswa');
         const namaSiswa = document.getElementById('valNama').innerText.replace(/\s+/g, '_');
         
-        // Mengubah View HTML menjadi Gambar dengan html2canvas
-        // scale: 2 digunakan agar resolusi output tidak pecah (High-Definition)
-        html2canvas(targetCard, { scale: 2, useCORS: true }).then(canvas => {
+        html2canvas(targetCard, { scale: 3, useCORS: true }).then(canvas => {
             const imgData = canvas.toDataURL('image/jpeg', 1.0);
-            
-            // Perintah trigger download file pada Browser
             const downloadLink = document.createElement('a');
-            downloadLink.download = 'ID_Card_' + namaSiswa + '.jpg';
+            downloadLink.download = 'Kartu_' + namaSiswa + '.jpg';
             downloadLink.href = imgData;
             downloadLink.click();
         }).catch(err => {

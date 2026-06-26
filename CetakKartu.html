@@ -13,7 +13,7 @@
         
         .control-group { margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 6px; border-left: 4px solid #007bff; }
         label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
-        select, input[type="file"], input[type="text"], button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        select, input[type="file"], button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
         
         button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background: #0056b3; }
@@ -89,7 +89,7 @@
             <label for="srcLocal" style="display:inline; font-weight:normal; cursor:pointer;">File Lokal (Memori HP/PC)</label>
             &nbsp;&nbsp;&nbsp;
             <input type="radio" id="srcGithub" name="dataSource" value="github">
-            <label for="srcGithub" style="display:inline; font-weight:normal; cursor:pointer;">Dari GitHub</label>
+            <label for="srcGithub" style="display:inline; font-weight:normal; cursor:pointer;">Otomatis dari GitHub</label>
         </div>
 
         <div id="localInputGroup">
@@ -98,16 +98,15 @@
         </div>
 
         <div id="githubInputGroup" style="display:none;">
-            <p style="font-size: 12px; margin-top:0; color:#666;">Masukkan tautan <b>Raw</b> dari file MasterAbsenSiswa.CSV di repositori publik Anda.</p>
-            <input type="text" id="githubUrl" placeholder="https://raw.githubusercontent.com/username/repo/main/MasterAbsenSiswa.CSV">
-            <button type="button" id="btnFetchGithub" class="btn-info">⬇️ Ambil Data CSV dari GitHub</button>
+            <p style="font-size: 12px; margin-top:0; color:#666;">Menghubungkan langsung ke file <b>MasterAbsenSiswa.CSV</b> di repositori GitHub Anda.</p>
+            <button type="button" id="btnFetchGithub" class="btn-info">🔄 Ambil Data Terkini Dari GitHub</button>
         </div>
     </div>
 
     <div class="control-group">
         <label for="siswaSelect">2. Pilih Nama Siswa</label>
         <select id="siswaSelect" disabled>
-            <option value="">-- Import data terlebih dahulu --</option>
+            <option value="">-- Ambil data terlebih dahulu --</option>
         </select>
     </div>
 
@@ -161,11 +160,16 @@
 </div>
 
 <script>
+    // ==========================================
+    // PENTING: GANTI DENGAN URL RAW GITHUB ANDA
+    // ==========================================
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/NardoTuns/SMPKRISTENBASAAN2026/refs/heads/main/MasterAbsenSiswa.CSV";
+
     let dataSiswa = [];
     let stream = null;
     let currentFacingMode = 'environment'; 
 
-    // --- Logika Pilihan Sumber Data (Lokal vs GitHub) ---
+    // --- Logika Pilihan Sumber Data ---
     document.querySelectorAll('input[name="dataSource"]').forEach(radio => {
         radio.addEventListener('change', function() {
             if(this.value === 'local') {
@@ -174,6 +178,8 @@
             } else {
                 document.getElementById('localInputGroup').style.display = 'none';
                 document.getElementById('githubInputGroup').style.display = 'block';
+                // Trigger otomatis ambil data saat opsi dipilih
+                fetchDataFromGithub();
             }
         });
     });
@@ -190,31 +196,35 @@
         reader.readAsText(file);
     });
 
-    // --- Ambil Data dari GitHub ---
-    document.getElementById('btnFetchGithub').addEventListener('click', async function() {
-        const url = document.getElementById('githubUrl').value.trim();
-        if(!url) {
-            alert("Harap masukkan tautan Raw GitHub terlebih dahulu!");
+    // --- Ambil Data Terkini GitHub ---
+    document.getElementById('btnFetchGithub').addEventListener('click', fetchDataFromGithub);
+
+    async function fetchDataFromGithub() {
+        const btn = document.getElementById('btnFetchGithub');
+        
+        // Peringatan jika belum mengganti placeholder URL template bawaan
+        if(GITHUB_RAW_URL.includes("username-github-anda")) {
+            alert("Perhatian: Harap ubah variabel 'GITHUB_RAW_URL' di dalam baris kode JavaScript dengan alamat tautan Raw GitHub milik Anda yang asli.");
             return;
         }
 
         try {
-            this.innerText = "⏳ Mengambil data...";
-            this.disabled = true;
+            btn.innerText = "⏳ Sinkronisasi data...";
+            btn.disabled = true;
             
-            const response = await fetch(url);
-            if(!response.ok) throw new Error("Gagal mengambil file. Pastikan URL benar dan repositori bersifat publik.");
+            const response = await fetch(GITHUB_RAW_URL);
+            if(!response.ok) throw new Error("Gagal mengunduh file dari GitHub. Periksa kembali status repositori atau URL Anda.");
             
             const csvText = await response.text();
             parseCSV(csvText);
             
         } catch (error) {
-            alert("Terjadi kesalahan: " + error.message);
+            alert("Kesalahan Sistem: " + error.message);
         } finally {
-            this.innerText = "⬇️ Ambil Data CSV dari GitHub";
-            this.disabled = false;
+            btn.innerText = "🔄 Ambil Data Terkini Dari GitHub";
+            btn.disabled = false;
         }
-    });
+    }
 
     // --- Fungsi Ekstrak Teks CSV ---
     function parseCSV(csvText) {
@@ -248,7 +258,7 @@
             }
         }
         select.disabled = false;
-        alert("Berhasil memuat " + dataSiswa.length + " data siswa.");
+        alert("Sistem berhasil memuat " + dataSiswa.length + " data siswa.");
     }
 
     // --- Logika Mengisi Data dan Render QR Code ---
@@ -368,15 +378,12 @@
         stopStream();
     });
 
-    // --- UPDATE 2: Logika Simpan Layout Jadi Gambar (Format Penamaan) ---
+    // --- Logika Simpan Layout Jadi Gambar (Format Penamaan) ---
     document.getElementById('btnSave').addEventListener('click', function() {
         const targetCard = document.getElementById('kartu-siswa');
-        
-        // Ambil data siswa yang sedang dipilih saat ini
         const selectedIndex = document.getElementById('siswaSelect').value;
         const siswa = dataSiswa[selectedIndex];
         
-        // Buat format nama file: NISN_NAMA SISWA.jpg
         const nisnValid = siswa.nisn || "0000000000";
         const namaValid = siswa.nama;
         const finalFileName = nisnValid + "_" + namaValid + ".jpg";

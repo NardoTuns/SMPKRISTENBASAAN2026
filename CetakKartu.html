@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Kartu Siswa</title>
+    <title>Aplikasi Kartu Siswa SMP Basaan</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -59,19 +59,20 @@
         .card-body { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
         
         .data-area { flex-grow: 1; font-size: 12px; font-weight: bold; margin-top: 5px; }
-        .data-row { display: flex; margin-bottom: 5px; }
+        .data-row { display: flex; margin-bottom: 6px; }
         .data-label { width: 105px; }
         .data-colon { width: 15px; text-align: center; }
         .data-value { flex-grow: 1; text-transform: uppercase; color: #222; }
 
-        .side-area { display: flex; flex-direction: column; align-items: center; width: 140px; gap: 6px; }
+        .side-area { display: flex; flex-direction: column; align-items: center; width: 120px; gap: 10px; }
         
-        .foto-container { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: center; }
-        .foto-container img { width: 75px; height: 100px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); background: #eee; }
+        .foto-container { display: flex; align-items: center; width: 100%; justify-content: center; }
+        .foto-container img { width: 85px; height: 115px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); background: #eee; }
         
-        .qr-area { background: #fff; padding: 4px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .qr-nisn-wrapper { background: #fff; padding: 5px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); text-align: center; }
-        .qr-nisn-label { font-size: 9px; font-weight: bold; margin-bottom: 3px; color: #333; letter-spacing: 0.5px; }
+        /* Area QR Code Tunggal (NIS) */
+        .qr-wrapper { background: #fff; padding: 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-align: center; width: 100%; box-sizing: border-box; }
+        .qr-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #000; letter-spacing: 1px; }
+        #qrCodeContainer { display: flex; justify-content: center; }
 
         #kartu-siswa * { box-sizing: border-box; }
     </style>
@@ -85,28 +86,28 @@
         <label>1. Sumber Data CSV</label>
         
         <div class="radio-group">
-            <input type="radio" id="srcLocal" name="dataSource" value="local" checked>
-            <label for="srcLocal" style="display:inline; font-weight:normal; cursor:pointer;">File Lokal (Memori HP/PC)</label>
+            <input type="radio" id="srcGithub" name="dataSource" value="github" checked>
+            <label for="srcGithub" style="display:inline; font-weight:bold; cursor:pointer;">Otomatis dari GitHub</label>
             &nbsp;&nbsp;&nbsp;
-            <input type="radio" id="srcGithub" name="dataSource" value="github">
-            <label for="srcGithub" style="display:inline; font-weight:normal; cursor:pointer;">Otomatis dari GitHub</label>
+            <input type="radio" id="srcLocal" name="dataSource" value="local">
+            <label for="srcLocal" style="display:inline; font-weight:normal; cursor:pointer;">File Lokal (HP/PC)</label>
         </div>
 
-        <div id="localInputGroup">
-            <p style="font-size: 12px; margin-top:0; color:#666;">Format Baris: NO, NAMA, JK, NIS, NISN, TEMPAT LAHIR, TANGGAL LAHIR, NIK, TAHUN MASUK, KELAS</p>
+        <div id="githubInputGroup">
+            <p style="font-size: 12px; margin-top:0; color:#666;">Terhubung ke: <b>SMPKRISTENBASAAN2026/MasterAbsenSiswa.CSV</b></p>
+            <button type="button" id="btnFetchGithub" class="btn-info">🔄 Sinkronisasi Data CSV</button>
+        </div>
+
+        <div id="localInputGroup" style="display:none;">
+            <p style="font-size: 12px; margin-top:0; color:#666;">Pilih file CSV dari memori internal jika sedang offline.</p>
             <input type="file" id="csvFileInput" accept=".csv">
-        </div>
-
-        <div id="githubInputGroup" style="display:none;">
-            <p style="font-size: 12px; margin-top:0; color:#666;">Menghubungkan langsung ke file <b>MasterAbsenSiswa.CSV</b> di repositori GitHub Anda.</p>
-            <button type="button" id="btnFetchGithub" class="btn-info">🔄 Ambil Data Terkini Dari GitHub</button>
         </div>
     </div>
 
     <div class="control-group">
         <label for="siswaSelect">2. Pilih Nama Siswa</label>
         <select id="siswaSelect" disabled>
-            <option value="">-- Ambil data terlebih dahulu --</option>
+            <option value="">-- Sinkronisasi data terlebih dahulu --</option>
         </select>
     </div>
 
@@ -145,11 +146,10 @@
                 <div class="side-area">
                     <div class="foto-container">
                         <img id="fotoSiswa" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Foto Siswa">
-                        <div class="qr-area" id="qrCodeContainer" title="QR NIS"></div>
                     </div>
-                    <div class="qr-nisn-wrapper">
-                        <div class="qr-nisn-label">QR NISN</div>
-                        <div id="qrNisnContainer"></div>
+                    <div class="qr-wrapper">
+                        <div class="qr-label">QR NIS</div>
+                        <div id="qrCodeContainer"></div>
                     </div>
                 </div>
             </div>
@@ -160,10 +160,8 @@
 </div>
 
 <script>
-    // ==========================================
-    // PENTING: GANTI DENGAN URL RAW GITHUB ANDA
-    // ==========================================
-    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/NardoTuns/SMPKRISTENBASAAN2026/refs/heads/main/MasterAbsenSiswa.CSV";
+    // URL Raw sudah disesuaikan persis dengan direktori repositori Anda
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/NardoTuns/SMPKRISTENBASAAN2026/main/MasterAbsenSiswa.CSV";
 
     let dataSiswa = [];
     let stream = null;
@@ -178,8 +176,6 @@
             } else {
                 document.getElementById('localInputGroup').style.display = 'none';
                 document.getElementById('githubInputGroup').style.display = 'block';
-                // Trigger otomatis ambil data saat opsi dipilih
-                fetchDataFromGithub();
             }
         });
     });
@@ -201,33 +197,28 @@
 
     async function fetchDataFromGithub() {
         const btn = document.getElementById('btnFetchGithub');
-        
-        // Peringatan jika belum mengganti placeholder URL template bawaan
-        if(GITHUB_RAW_URL.includes("username-github-anda")) {
-            alert("Perhatian: Harap ubah variabel 'GITHUB_RAW_URL' di dalam baris kode JavaScript dengan alamat tautan Raw GitHub milik Anda yang asli.");
-            return;
-        }
-
         try {
-            btn.innerText = "⏳ Sinkronisasi data...";
+            btn.innerText = "⏳ Mengunduh data...";
             btn.disabled = true;
             
-            const response = await fetch(GITHUB_RAW_URL);
-            if(!response.ok) throw new Error("Gagal mengunduh file dari GitHub. Periksa kembali status repositori atau URL Anda.");
+            // Tambahkan timestamp anti-cache agar selalu mengambil data terupdate dari server
+            const response = await fetch(GITHUB_RAW_URL + "?t=" + new Date().getTime());
+            if(!response.ok) throw new Error("Gagal terhubung ke repositori GitHub.");
             
             const csvText = await response.text();
             parseCSV(csvText);
             
         } catch (error) {
-            alert("Kesalahan Sistem: " + error.message);
+            alert("Terjadi masalah jaringan: " + error.message);
         } finally {
-            btn.innerText = "🔄 Ambil Data Terkini Dari GitHub";
+            btn.innerText = "🔄 Sinkronisasi Data CSV";
             btn.disabled = false;
         }
     }
 
-    // --- Fungsi Ekstrak Teks CSV ---
+    // --- Fungsi Ekstrak Teks CSV (Anti Hilang Nol) ---
     function parseCSV(csvText) {
+        // Mendukung pemisah koma (,) maupun titik koma (;) dari Excel
         const lines = csvText.split(/\r?\n/);
         dataSiswa = [];
         const select = document.getElementById('siswaSelect');
@@ -235,17 +226,28 @@
 
         for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim() === '') continue; 
-            const cols = lines[i].split(','); 
+            const cols = lines[i].split(/[,;]/); 
 
             if (cols.length >= 10) {
+                // Mengembalikan angka nol yang terpotong Excel menggunakan padStart
+                let rawNisn = cols[4].trim();
+                if (rawNisn.length > 0 && rawNisn.length < 10) {
+                    rawNisn = rawNisn.padStart(10, '0');
+                }
+
+                let rawNik = cols[7].trim();
+                if (rawNik.length > 0 && rawNik.length < 16) {
+                    rawNik = rawNik.padStart(16, '0');
+                }
+
                 const siswa = {
                     nama: cols[1].trim(),
                     jk: cols[2].trim(),
                     nis: cols[3].trim(),
-                    nisn: cols[4].trim(),
+                    nisn: rawNisn,
                     tempat_lahir: cols[5].trim(),
                     tanggal_lahir: cols[6].trim(),
-                    nik: cols[7].trim(),
+                    nik: rawNik,
                     tahun_masuk: cols[8].trim(),
                     kelas: cols[9].trim()
                 };
@@ -258,10 +260,10 @@
             }
         }
         select.disabled = false;
-        alert("Sistem berhasil memuat " + dataSiswa.length + " data siswa.");
+        alert("Sistem berhasil memuat " + dataSiswa.length + " data siswa dari CSV.");
     }
 
-    // --- Logika Mengisi Data dan Render QR Code ---
+    // --- Logika Mengisi Data dan Render SATU QR Code (Dari NIS) ---
     document.getElementById('siswaSelect').addEventListener('change', function(e) {
         const index = e.target.value;
         if (index === "") {
@@ -279,30 +281,22 @@
         document.getElementById('valNik').innerText = siswa.nik;
         document.getElementById('valTahun').innerText = siswa.tahun_masuk;
 
-        // Render QR Code 1 (NIS)
+        // Kosongkan QR Container sebelumnya
         const qrContainer = document.getElementById('qrCodeContainer');
         qrContainer.innerHTML = ""; 
-        new QRCode(qrContainer, {
-            text: siswa.nis,
-            width: 55,
-            height: 55,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M
-        });
-
-        // Render QR Code 2 (NISN)
-        const qrNisnContainer = document.getElementById('qrNisnContainer');
-        qrNisnContainer.innerHTML = ""; 
-        const dataNisn = siswa.nisn || "0000000000";
-        new QRCode(qrNisnContainer, {
-            text: dataNisn,
-            width: 55,
-            height: 55,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M
-        });
+        
+        // Buat QR Code baru KHUSUS dari NIS
+        const qrText = String(siswa.nis).trim();
+        if(qrText !== "") {
+            new QRCode(qrContainer, {
+                text: qrText,
+                width: 75,
+                height: 75,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+        }
 
         document.getElementById('btnSave').disabled = false;
     });
@@ -378,7 +372,7 @@
         stopStream();
     });
 
-    // --- Logika Simpan Layout Jadi Gambar (Format Penamaan) ---
+    // --- Logika Simpan Layout Jadi Gambar ---
     document.getElementById('btnSave').addEventListener('click', function() {
         const targetCard = document.getElementById('kartu-siswa');
         const selectedIndex = document.getElementById('siswaSelect').value;
@@ -398,6 +392,11 @@
             alert("Terjadi kesalahan sistem saat menyimpan gambar: " + err);
         });
     });
+
+    // Otomatis klik tombol sinkronisasi saat halaman pertama kali dibuka
+    window.onload = function() {
+        fetchDataFromGithub();
+    };
 </script>
 </body>
 </html>

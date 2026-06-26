@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kartu Siswa</title>
+    <!-- Load Library QR Code dan HTML to Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Pengaturan Layout Utama */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2.title { text-align: center; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        
+        .control-group { margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 6px; border-left: 4px solid #007bff; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
+        select, input[type="file"], button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.btn-success { background: #28a745; font-size: 18px; padding: 15px; }
+        button.btn-success:hover { background: #218838; }
+        button.btn-warning { background: #ffc107; color: black; }
+
+        /* Pengaturan Kamera */
+        #video-container { text-align: center; margin-top: 15px; display: none; background: #000; border-radius: 8px; padding: 10px; }
+        video { width: 100%; max-width: 320px; border-radius: 8px; background: #333; }
+        canvas { display: none; }
+
+        /* Desain Kartu (Dimensi Rasio KTP ~1.58:1) */
+        .card-wrapper { margin: 30px 0; display: flex; justify-content: center; overflow-x: auto; padding: 20px; background: #fafafa; border: 1px dashed #ccc; }
+        
+        #kartu-siswa {
+            width: 540px; /* Lebar piksel proporsional KTP */
+            height: 340px;
+            /* Background gradasi biru agar terlihat resmi */
+            background: linear-gradient(135deg, #ffffff 0%, #d4f1f4 100%);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 15px;
+            box-sizing: border-box;
+            position: relative;
+            color: #000;
+            font-family: 'Arial', sans-serif;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .card-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 5px; margin-bottom: 15px; }
+        .card-header h3 { margin: 0; font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+        .card-header h2 { margin: 3px 0; font-size: 20px; font-weight: bold; color: #000; }
+        .card-header p { margin: 0; font-size: 11px; }
+        
+        .card-body { display: flex; gap: 15px; justify-content: space-between; }
+        
+        .data-area { flex-grow: 1; font-size: 13px; font-weight: bold; }
+        .data-row { display: flex; margin-bottom: 6px; }
+        .data-label { width: 110px; }
+        .data-colon { width: 15px; text-align: center; }
+        .data-value { flex-grow: 1; text-transform: uppercase; color: #222; }
+
+        .foto-area { display: flex; flex-direction: column; align-items: center; width: 110px; }
+        /* Box frame untuk pas foto */
+        .foto-area img { width: 90px; height: 120px; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.4); background: #eee; }
+        .qr-area { margin-top: 15px; background: #fff; padding: 5px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+        /* Normalisasi saat proses konversi ke gambar */
+        #kartu-siswa * { box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="title">Sistem Pembuat Kartu Siswa</h2>
+
+    <div class="control-group">
+        <label for="csvFileInput">1. Import Data CSV</label>
+        <p style="font-size: 12px; margin-top:0; color:#666;">Format Baris: NO, NAMA, JENIS KELAMIN, NIS, NISN, TEMPAT LAHIR, TANGGAL LAHIR, NIK, TAHUN MASUK, KELAS</p>
+        <input type="file" id="csvFileInput" accept=".csv">
+    </div>
+
+    <div class="control-group">
+        <label for="siswaSelect">2. Pilih Nama Siswa</label>
+        <select id="siswaSelect" disabled>
+            <option value="">-- Import file CSV terlebih dahulu --</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>3. Ambil Foto Siswa</label>
+        <button type="button" id="btnStartCamera">Akses Kamera</button>
+        <div id="video-container">
+            <video id="videoElement" autoplay playsinline></video>
+            <button type="button" id="btnCapture" class="btn-warning">📸 Jepret Foto</button>
+        </div>
+        <canvas id="canvasElement"></canvas>
+    </div>
+
+    <!-- Preview Layout Kartu -->
+    <div class="card-wrapper">
+        <div id="kartu-siswa">
+            <div class="card-header">
+                <h3>YAYASAN DS. A .Z WENAS</h3>
+                <h2>SMP KRISTEN BASAAN</h2>
+                <p>KEC. RATATOTOK KAB. MINAHASA TENGGARA.</p>
+            </div>
+            <div class="card-body">
+                <div class="data-area">
+                    <div class="data-row"><div class="data-label">NAMA</div><div class="data-colon">:</div><div class="data-value" id="valNama">-</div></div>
+                    <div class="data-row"><div class="data-label">NIS / NISN</div><div class="data-colon">:</div><div class="data-value" id="valNis">-</div></div>
+                    <div class="data-row"><div class="data-label">KELAS</div><div class="data-colon">:</div><div class="data-value" id="valKelas">-</div></div>
+                    <div class="data-row"><div class="data-label">JK</div><div class="data-colon">:</div><div class="data-value" id="valJk">-</div></div>
+                    <div class="data-row"><div class="data-label">TTL</div><div class="data-colon">:</div><div class="data-value" id="valTtl">-</div></div>
+                    <div class="data-row"><div class="data-label">NIK</div><div class="data-colon">:</div><div class="data-value" id="valNik">-</div></div>
+                    <div class="data-row"><div class="data-label">TAHUN MASUK</div><div class="data-colon">:</div><div class="data-value" id="valTahun">-</div></div>
+                </div>
+                <div class="foto-area">
+                    <!-- Default blank image base64 -->
+                    <img id="fotoSiswa" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Foto Siswa">
+                    <div class="qr-area" id="qrCodeContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" id="btnSave" class="btn-success" disabled>💾 Simpan Kartu Siswa (JPG)</button>
+</div>
+
+<script>
+    // --- Variabel Global ---
+    let dataSiswa = [];
+    let qrCodeInstance = null;
+    let stream = null;
+
+    // --- 1. Logika Import Data CSV ---
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const text = event.target.result;
+            parseCSV(text);
+        };
+        reader.readAsText(file);
+    });
+
+    function parseCSV(csvText) {
+        // Memecah baris, mengatasi enter bawaan Windows (\r\n) atau Linux (\n)
+        const lines = csvText.split(/\r?\n/);
+        dataSiswa = [];
+        const select = document.getElementById('siswaSelect');
+        select.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+
+        // Mulai dari i = 1 dengan asumsi i = 0 adalah baris judul (header) tabel
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue; 
+            
+            // Catatan: Jika CSV dari Excel menggunakan titik koma, ubah ',' menjadi ';'
+            const cols = lines[i].split(','); 
+
+            if (cols.length >= 10) {
+                const siswa = {
+                    nama: cols[1].trim(),
+                    jk: cols[2].trim(),
+                    nis: cols[3].trim(),
+                    nisn: cols[4].trim(),
+                    tempat_lahir: cols[5].trim(),
+                    tanggal_lahir: cols[6].trim(),
+                    nik: cols[7].trim(),
+                    tahun_masuk: cols[8].trim(),
+                    kelas: cols[9].trim()
+                };
+                dataSiswa.push(siswa);
+                
+                const option = document.createElement('option');
+                option.value = dataSiswa.length - 1; 
+                option.text = siswa.nama + " (" + siswa.kelas + ")";
+                select.appendChild(option);
+            }
+        }
+        select.disabled = false;
+        alert("Berhasil memuat " + dataSiswa.length + " data siswa dari CSV.");
+    }
+
+    // --- 2. Logika Mengisi Kartu saat Siswa Dipilih ---
+    document.getElementById('siswaSelect').addEventListener('change', function(e) {
+        const index = e.target.value;
+        if (index === "") {
+            document.getElementById('btnSave').disabled = true;
+            return;
+        }
+
+        const siswa = dataSiswa[index];
+        
+        // Memasukkan teks ke dalam layout
+        document.getElementById('valNama').innerText = siswa.nama;
+        document.getElementById('valNis').innerText = siswa.nis + " / " + siswa.nisn;
+        document.getElementById('valKelas').innerText = siswa.kelas;
+        document.getElementById('valJk').innerText = siswa.jk;
+        document.getElementById('valTtl').innerText = siswa.tempat_lahir + ", " + siswa.tanggal_lahir;
+        document.getElementById('valNik').innerText = siswa.nik;
+        document.getElementById('valTahun').innerText = siswa.tahun_masuk;
+
+        // Membuat QR Code berdasarkan Nomor Induk Siswa (NIS)
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = ""; 
+        qrCodeInstance = new QRCode(qrContainer, {
+            text: siswa.nis,
+            width: 70,
+            height: 70,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M
+        });
+
+        document.getElementById('btnSave').disabled = false;
+    });
+
+    // --- 3. Logika Kamera Terintegrasi ---
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const fotoSiswa = document.getElementById('fotoSiswa');
+
+    document.getElementById('btnStartCamera').addEventListener('click', async function() {
+        const container = document.getElementById('video-container');
+        
+        if (container.style.display === 'block') {
+            // Matikan kamera
+            if(stream) stream.getTracks().forEach(track => track.stop());
+            container.style.display = 'none';
+            this.innerText = 'Akses Kamera';
+        } else {
+            // Nyalakan kamera
+            try {
+                // Konfigurasi agar merender kamera menghadap user jika di HP
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                container.style.display = 'block';
+                this.innerText = 'Tutup Kamera';
+            } catch (err) {
+                alert("Gagal mengakses kamera. Pastikan memberikan izin kamera pada browser: " + err.message);
+            }
+        }
+    });
+
+    document.getElementById('btnCapture').addEventListener('click', function() {
+        // Atur resolusi potrait (3:4) untuk Canvas
+        canvas.width = 300;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        
+        // Render tangkapan kamera ke dalam canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Ubah canvas menjadi format data gambar (Base64 JPEG) lalu masukkan ke layout
+        fotoSiswa.src = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Matikan kamera otomatis setelah selesai mengambil gambar
+        if(stream) stream.getTracks().forEach(track => track.stop());
+        document.getElementById('video-container').style.display = 'none';
+        document.getElementById('btnStartCamera').innerText = 'Akses Kamera';
+    });
+
+    // --- 4. Logika Simpan Layout Jadi Gambar (JPG) ---
+    document.getElementById('btnSave').addEventListener('click', function() {
+        const targetCard = document.getElementById('kartu-siswa');
+        const namaSiswa = document.getElementById('valNama').innerText.replace(/\s+/g, '_');
+        
+        // Mengubah View HTML menjadi Gambar dengan html2canvas
+        // scale: 2 digunakan agar resolusi output tidak pecah (High-Definition)
+        html2canvas(targetCard, { scale: 2, useCORS: true }).then(canvas => {
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            
+            // Perintah trigger download file pada Browser
+            const downloadLink = document.createElement('a');
+            downloadLink.download = 'ID_Card_' + namaSiswa + '.jpg';
+            downloadLink.href = imgData;
+            downloadLink.click();
+        }).catch(err => {
+            alert("Terjadi kesalahan sistem saat menyimpan gambar: " + err);
+        });
+    });
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
         /* Mencegah layar ter-zoom saat input di HP */
@@ -132,22 +133,87 @@
         </div>
 
         <!-- MENU NAVIGASI BAWAH (Khusus Mobile) -->
-        <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around p-2 pb-4 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
-            <button onclick="showPage('page-scan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
-                <span class="text-2xl mb-1">📷</span>
-                <span class="text-[10px] font-bold">SCAN QR</span>
+         <!-- HALAMAN REKAP LAPORAN -->
+        <div id="page-rekap" class="hidden-page p-4">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Rekap Laporan</h2>
+            
+            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 shadow-sm text-sm">
+                <label class="block font-bold text-gray-600 mb-1">RENTANG TANGGAL</label>
+                <div class="flex gap-2 mb-3">
+                    <input type="date" id="rekap-start" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                    <span class="self-center font-bold">-</span>
+                    <input type="date" id="rekap-end" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                </div>
+
+                <label class="block font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                <div id="filter-kelas" class="flex flex-wrap gap-2 mb-3"></div>
+
+                <label class="block font-bold text-gray-600 mb-1">PILIH MAPEL</label>
+                <div id="filter-mapel" class="flex flex-wrap gap-2 mb-3"></div>
+
+                <label class="block font-bold text-gray-600 mb-1">PILIH STATUS</label>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-green-700"><input type="checkbox" value="Hadir" class="chk-status mr-1" checked> Hadir</label>
+                    <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-yellow-700"><input type="checkbox" value="Sakit" class="chk-status mr-1" checked> Sakit</label>
+                    <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-blue-700"><input type="checkbox" value="Izin" class="chk-status mr-1" checked> Izin</label>
+                    <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-red-700"><input type="checkbox" value="Alpa" class="chk-status mr-1" checked> Alpa</label>
+                </div>
+
+                <button onclick="buatLaporan()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold active:bg-blue-700 shadow-md">Tampilkan Laporan</button>
+            </div>
+
+            <!-- AREA HASIL LAPORAN -->
+            <div id="area-laporan" class="hidden mb-6">
+                <!-- Tabel ini yang akan di-capture jadi PNG -->
+                <div id="tabel-laporan" class="bg-white p-4 border rounded-xl shadow-sm mb-4">
+                    <div class="text-center mb-4 border-b pb-2">
+                        <h3 class="font-bold text-lg text-gray-800">LAPORAN ABSENSI</h3>
+                        <p id="laporan-subtitle" class="text-xs text-gray-500"></p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-2 border font-bold">Nama</th>
+                                    <th class="p-2 border font-bold">Kls</th>
+                                    <th class="p-2 border font-bold">Tgl</th>
+                                    <th class="p-2 border font-bold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="laporan-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <button onclick="exportPNG()" class="w-full bg-green-600 text-white p-4 rounded-xl font-bold active:bg-green-700 flex justify-center items-center gap-2 shadow-md">
+                    <span class="text-xl">🖼️</span> Export & Download PNG
+                </button>
+            </div>
+        </div>
+<!-- MENU NAVIGASI BAWAH (6 Tombol) -->
+        <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
+            <a href="/" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+                <span class="text-xl mb-1">🏠</span>
+                <span class="text-[9px] font-bold">HOME</span>
+            </a>
+            <button onclick="showPage('page-scan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+                <span class="text-xl mb-1">📷</span>
+                <span class="text-[9px] font-bold">SCAN</span>
             </button>
-            <button onclick="showPage('page-manual')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
-                <span class="text-2xl mb-1">✍️</span>
-                <span class="text-[10px] font-bold">MANUAL</span>
+            <button onclick="showPage('page-manual')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+                <span class="text-xl mb-1">✍️</span>
+                <span class="text-[9px] font-bold">MANUAL</span>
             </button>
-            <button onclick="showPage('page-laporan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
-                <span class="text-2xl mb-1">📊</span>
-                <span class="text-[10px] font-bold">EDIT</span>
+            <button onclick="showPage('page-laporan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+                <span class="text-xl mb-1">📝</span>
+                <span class="text-[9px] font-bold">EDIT</span>
             </button>
-            <button onclick="syncData()" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
-                <span class="text-2xl mb-1">🔄</span>
-                <span class="text-[10px] font-bold">SYNC</span>
+            <button onclick="showPage('page-rekap')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+                <span class="text-xl mb-1">📊</span>
+                <span class="text-[9px] font-bold">LAPORAN</span>
+            </button>
+            <button onclick="syncData()" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6 relative">
+                <span class="text-xl mb-1">🔄</span>
+                <span class="text-[9px] font-bold">SYNC</span>
             </button>
         </nav>
 
@@ -173,7 +239,7 @@
 
         // Navigasi
         function showPage(pageId) {
-            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan').forEach(div => {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap').forEach(div => {
                 div.classList.add('hidden-page');
             });
             document.getElementById(pageId).classList.remove('hidden-page');
@@ -186,6 +252,9 @@
             updateBadge();
             loadMapel();
             loadSiswaList();
+            
+            // Generate checkbox otomatis saat buka menu laporan
+            if(pageId === 'page-rekap') loadFilters(); 
         }
 
         async function login() {
@@ -523,6 +592,123 @@
             } else {
                 showPage('page-login');
             }
+        }
+        // ==========================================
+        // FITUR REKAP LAPORAN & EXPORT PNG
+        // ==========================================
+        document.getElementById('rekap-start').value = today;
+        document.getElementById('rekap-end').value = today;
+
+        async function loadFilters() {
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            
+            // Ambil nama kelas apa saja yang unik
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            let kelasHtml = '';
+            kelasList.forEach(k => {
+                kelasHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${k}" class="chk-kelas mr-1" checked> ${k}</label>`;
+            });
+            document.getElementById('filter-kelas').innerHTML = kelasHtml;
+
+            // Ambil nama mapel apa saja yang ada
+            let mapelHtml = '';
+            mapels.forEach(m => {
+                mapelHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${m.nama}" class="chk-mapel mr-1" checked> ${m.nama}</label>`;
+            });
+            document.getElementById('filter-mapel').innerHTML = mapelHtml;
+        }
+
+        async function buatLaporan() {
+            const tglMulai = document.getElementById('rekap-start').value;
+            const tglAkhir = document.getElementById('rekap-end').value;
+            
+            if(!tglMulai || !tglAkhir) return Swal.fire('Error', 'Pilih rentang tanggal!', 'warning');
+
+            // Ambil semua checkbox yang dicentang
+            const checkedKelas = Array.from(document.querySelectorAll('.chk-kelas:checked')).map(cb => cb.value);
+            const checkedMapel = Array.from(document.querySelectorAll('.chk-mapel:checked')).map(cb => cb.value);
+            const checkedStatus = Array.from(document.querySelectorAll('.chk-status:checked')).map(cb => cb.value);
+
+            if(checkedKelas.length === 0 || checkedMapel.length === 0 || checkedStatus.length === 0) {
+                return Swal.fire('Peringatan', 'Harus memilih minimal 1 Kelas, 1 Mapel, dan 1 Status!', 'warning');
+            }
+
+            Swal.fire({title: 'Menarik Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            try {
+                // Tarik data mentah dari Apps Script
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'get_laporan', tglMulai: tglMulai, tglAkhir: tglAkhir })
+                });
+                const res = await response.json();
+                Swal.close();
+
+                if (res.status === 'success') {
+                    // Filter Data Menggunakan JavaScript (Sesuai centang)
+                    const filteredData = res.data.filter(item => 
+                        checkedKelas.includes(item.kelas) &&
+                        checkedMapel.includes(item.mapel) &&
+                        checkedStatus.includes(item.status)
+                    );
+                    
+                    renderTabelLaporan(filteredData, tglMulai, tglAkhir);
+                }
+            } catch(err) {
+                Swal.fire('Gagal', 'Pastikan koneksi internet aktif.', 'error');
+            }
+        }
+
+        function renderTabelLaporan(data, mulai, akhir) {
+            document.getElementById('area-laporan').classList.remove('hidden');
+            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} \n Total Data: ${data.length}`;
+            
+            const tbody = document.getElementById('laporan-body');
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-500 font-bold">Tidak ada data sesuai filter</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                let statusColor = 'text-gray-800';
+                if(item.status == 'Hadir') statusColor = 'text-green-600';
+                if(item.status == 'Sakit') statusColor = 'text-yellow-600';
+                if(item.status == 'Izin') statusColor = 'text-blue-600';
+                if(item.status == 'Alpa') statusColor = 'text-red-600';
+
+                html += `
+                <tr class="border-b active:bg-gray-50">
+                    <td class="p-2 border">
+                        <span class="font-bold block">${item.nama}</span>
+                        <span class="text-[10px] text-gray-500">${item.mapel}</span>
+                    </td>
+                    <td class="p-2 border text-center font-bold text-gray-600">${item.kelas}</td>
+                    <td class="p-2 border text-center whitespace-nowrap text-[10px]">${item.tanggal}</td>
+                    <td class="p-2 border text-center font-bold ${statusColor}">${item.status}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // FUNGSI MEMBUAT GAMBAR (PNG)
+        function exportPNG() {
+            const tabel = document.getElementById('tabel-laporan');
+            Swal.fire({title: 'Membuat Gambar...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            // scale: 2 berfungsi untuk membuat hasil PNG lebih tajam (High Definition)
+            html2canvas(tabel, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                Swal.close();
+                const link = document.createElement('a');
+                link.download = `Laporan_Absensi_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
+            });
         }
     </script>
     <script>

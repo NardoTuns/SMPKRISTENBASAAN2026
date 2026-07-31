@@ -355,19 +355,27 @@
 // ==========================================
         // FITUR EDIT ABSEN
         // ==========================================
+        // ==========================================
+        // FITUR EDIT ABSEN (VERSI GROUPING MAPEL)
+        // ==========================================
         document.getElementById('tgl-edit').value = today;
+
+        let currentEditData = []; // Menyimpan data sementara di RAM
+        let currentEditMode = '';
+        let currentEditMapel = '';
 
         async function tampilkanEdit(mode) {
             const tgl = document.getElementById('tgl-edit').value;
             const container = document.getElementById('list-edit');
-            container.innerHTML = `<p class="text-center text-gray-500 mt-5">Memuat data...</p>`;
+            container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold animate-pulse">Memuat data...</p>`;
+            
+            currentEditMode = mode;
+            currentEditData = [];
 
             if (mode === 'offline') {
-                // Tarik data dari HP (DexieDB)
-                const data = await db.absen.where('tanggal').equals(tgl).toArray();
-                renderListEdit(data, mode);
+                currentEditData = await db.absen.where('tanggal').equals(tgl).toArray();
+                renderListMapel();
             } else if (mode === 'online') {
-                // Tarik data dari Spreadsheet
                 Swal.fire({title: 'Menarik Data...', text: 'Butuh internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
                 try {
                     const response = await fetch(SCRIPT_URL, {
@@ -378,7 +386,8 @@
                     const res = await response.json();
                     Swal.close();
                     if (res.status === 'success') {
-                        renderListEdit(res.data, mode);
+                        currentEditData = res.data;
+                        renderListMapel();
                     }
                 } catch (err) {
                     Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
@@ -387,31 +396,63 @@
             }
         }
 
-        function renderListEdit(data, mode) {
+        function renderListMapel() {
             const container = document.getElementById('list-edit');
-            if (data.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold">Data tidak ditemukan.</p>`;
+            if (currentEditData.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold">Data absen tidak ditemukan.</p>`;
                 return;
             }
 
-            let html = '';
-            data.forEach(item => {
-                // Warna badge status
+            // Ambil nama mapel apa saja yang ada di hari tersebut (menghapus duplikat)
+            const uniqueMapel = [...new Set(currentEditData.map(item => item.mapel))];
+
+            let html = `<p class="text-sm font-bold text-gray-500 mb-3">Pilih Mata Pelajaran:</p>`;
+            
+            uniqueMapel.forEach(mapel => {
+                // Hitung jumlah siswa yang absen di mapel ini
+                const jumlahSiswa = currentEditData.filter(item => item.mapel === mapel).length;
+                
+                html += `
+                <div class="bg-white border-2 border-purple-200 p-4 rounded-xl shadow-sm mb-3 flex justify-between items-center active:bg-purple-50" 
+                     onclick="tampilkanSiswaMapel('${mapel}')">
+                    <span class="font-bold text-purple-700 text-lg">${mapel}</span>
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">${jumlahSiswa} Data</span>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function tampilkanSiswaMapel(mapel) {
+            currentEditMapel = mapel;
+            const container = document.getElementById('list-edit');
+            
+            // Filter data khusus untuk mapel yang diklik
+            const dataMapel = currentEditData.filter(item => item.mapel === mapel);
+
+            let html = `
+            <div class="flex items-center mb-4 sticky top-0 bg-white py-2 z-10 border-b border-gray-100">
+                <button onclick="renderListMapel()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold mr-3 active:bg-gray-300">⬅ Kembali</button>
+                <h3 class="text-lg font-bold text-gray-800 truncate">${mapel}</h3>
+            </div>
+            `;
+
+            dataMapel.forEach(item => {
                 let color = 'bg-gray-100 text-gray-800';
                 if(item.status == 'Hadir') color = 'bg-green-100 text-green-800';
                 if(item.status == 'Sakit') color = 'bg-yellow-100 text-yellow-800';
                 if(item.status == 'Izin') color = 'bg-blue-100 text-blue-800';
                 if(item.status == 'Alpa') color = 'bg-red-100 text-red-800';
 
-                // ID bergantung pada mode (IndexedDB pakai 'id', Spreadsheet pakai 'rowNum')
-                const idData = mode === 'offline' ? item.id : item.rowNum;
+                // Menentukan ID yang dipakai sesuai mode
+                const idData = currentEditMode === 'offline' ? item.id : item.rowNum;
 
                 html += `
-                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex justify-between items-center active:bg-gray-50" 
-                     onclick="bukaModalEdit('${idData}', '${mode}', '${item.nama}', '${item.mapel}', '${item.status}')">
+                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex justify-between items-center mb-3 active:bg-gray-50" 
+                     onclick="bukaModalEdit('${idData}', '${item.nama}', '${item.mapel}', '${item.status}')">
                     <div>
                         <p class="font-bold text-gray-800">${item.nama}</p>
-                        <p class="text-xs text-gray-500">${item.mapel} | NIS: ${item.nis}</p>
+                        <p class="text-xs text-gray-500">Kelas: ${item.kelas} | NIS: ${item.nis}</p>
                     </div>
                     <span class="${color} px-3 py-1 rounded-full text-xs font-bold">${item.status}</span>
                 </div>
@@ -420,9 +461,9 @@
             container.innerHTML = html;
         }
 
-        function bukaModalEdit(id, mode, nama, mapel, status) {
+        // Buka modal (sudah disesuaikan agar tidak perlu parameter 'mode' lagi)
+        function bukaModalEdit(id, nama, mapel, status) {
             document.getElementById('edit-id').value = id;
-            document.getElementById('edit-mode').value = mode;
             document.getElementById('edit-nama').innerText = nama;
             document.getElementById('edit-detail').innerText = `Pelajaran: ${mapel}`;
             document.getElementById('edit-status').value = status;
@@ -436,30 +477,38 @@
 
         async function simpanEdit() {
             const id = document.getElementById('edit-id').value;
-            const mode = document.getElementById('edit-mode').value;
             const newStatus = document.getElementById('edit-status').value;
             
             tutupModal();
             Swal.fire({title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
 
-            if (mode === 'offline') {
+            if (currentEditMode === 'offline') {
                 // Update ke database HP
                 await db.absen.update(parseInt(id), { status: newStatus });
-                Swal.fire('Berhasil', 'Status diperbarui di memori HP.', 'success');
-                tampilkanEdit('offline'); // Refresh list
+                
+                // Ubah status di memori lokal agar tidak perlu fetch ulang, lalu render ulang
+                const index = currentEditData.findIndex(item => item.id == id);
+                if (index !== -1) currentEditData[index].status = newStatus;
+                
+                Swal.fire({icon: 'success', title: 'Tersimpan (Offline)', timer: 1000, showConfirmButton: false});
+                tampilkanSiswaMapel(currentEditMapel); // Kembali ke list siswa mapel tersebut
             } 
-            else if (mode === 'online') {
+            else if (currentEditMode === 'online') {
                 // Update ke Spreadsheet
                 try {
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
+                        body: newSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
                     });
                     const res = await response.json();
                     if (res.status === 'success') {
-                        Swal.fire('Berhasil', 'Status diperbarui di Spreadsheet.', 'success');
-                        tampilkanEdit('online'); // Refresh list
+                        // Ubah status di memori lokal
+                        const index = currentEditData.findIndex(item => item.rowNum == id);
+                        if (index !== -1) currentEditData[index].status = newStatus;
+                        
+                        Swal.fire({icon: 'success', title: 'Tersimpan (Online)', timer: 1000, showConfirmButton: false});
+                        tampilkanSiswaMapel(currentEditMapel);
                     }
                 } catch (err) {
                     Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');

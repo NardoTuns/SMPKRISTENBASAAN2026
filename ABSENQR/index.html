@@ -1,1 +1,338 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Absensi Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* Mencegah layar ter-zoom saat input di HP */
+        input, select { font-size: 16px !important; }
+        .hidden-page { display: none; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20"> <!-- pb-20 memberi ruang untuk menu bawah -->
 
+    <!-- SUARA BEEP -->
+    <audio id="beep-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+    <!-- CONTAINER UTAMA (Maksimal selebar HP) -->
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
+
+        <!-- HEADER -->
+        <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
+            <h1 class="text-lg font-bold">Absensi Offline</h1>
+            <span id="badge-sync-header" class="bg-red-500 text-xs px-2 py-1 rounded-full font-bold">0 Belum Sync</span>
+        </header>
+
+        <!-- HALAMAN LOGIN -->
+        <div id="page-login" class="p-6 mt-10">
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-2">🏫</div>
+                <h2 class="text-xl font-bold text-gray-700">Login Guru</h2>
+                <p class="text-sm text-gray-500">Koneksi internet diperlukan saat login</p>
+            </div>
+            <input type="password" id="password" class="w-full border-2 border-gray-300 p-4 rounded-xl mb-4 text-center tracking-widest" placeholder="Password">
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg active:bg-blue-700 transition">Masuk & Unduh Data</button>
+        </div>
+
+        <!-- HALAMAN SCAN BARCODE -->
+        <div id="page-scan" class="hidden-page p-4">
+            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
+                <label class="block text-xs font-bold text-gray-500 mb-1">TANGGAL</label>
+                <input type="date" id="tgl-scan" class="w-full bg-white border border-gray-300 p-3 mb-3 rounded-lg font-semibold">
+                
+                <label class="block text-xs font-bold text-gray-500 mb-1">MATA PELAJARAN</label>
+                <select id="mapel-scan" class="w-full bg-white border border-gray-300 p-3 rounded-lg font-semibold"></select>
+            </div>
+            
+            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 bg-black"></div>
+            
+            <button id="btn-start-scan" onclick="startScan()" class="w-full bg-green-500 text-white p-4 rounded-xl font-bold text-lg shadow-md active:bg-green-600">📸 Mulai Kamera</button>
+            <button id="btn-stop-scan" onclick="stopScan()" class="w-full bg-red-500 text-white p-4 rounded-xl font-bold text-lg shadow-md hidden active:bg-red-600">Tutup Kamera</button>
+        </div>
+
+        <!-- HALAMAN MANUAL -->
+        <div id="page-manual" class="hidden-page p-4">
+            <div class="bg-yellow-50 p-4 rounded-xl mb-4 border border-yellow-100">
+                <input type="date" id="tgl-manual" class="w-full border border-gray-300 p-3 mb-3 rounded-lg">
+                <select id="mapel-manual" class="w-full border border-gray-300 p-3 rounded-lg"></select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Cari Siswa (Ketik Nama/NIS)</label>
+                <input list="list-siswa" id="input-siswa" class="w-full border-2 border-gray-300 p-4 rounded-xl text-lg" placeholder="Contoh: 12345 atau Budi...">
+                <datalist id="list-siswa"></datalist>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <label class="flex items-center justify-center p-3 border-2 border-green-500 bg-green-50 rounded-xl font-bold text-green-700">
+                    <input type="radio" name="status-manual" value="Hadir" checked class="mr-2 w-5 h-5"> Hadir
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-yellow-500 bg-yellow-50 rounded-xl font-bold text-yellow-700">
+                    <input type="radio" name="status-manual" value="Sakit" class="mr-2 w-5 h-5"> Sakit
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-blue-500 bg-blue-50 rounded-xl font-bold text-blue-700">
+                    <input type="radio" name="status-manual" value="Izin" class="mr-2 w-5 h-5"> Izin
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-red-500 bg-red-50 rounded-xl font-bold text-red-700">
+                    <input type="radio" name="status-manual" value="Alpa" class="mr-2 w-5 h-5"> Alpa
+                </label>
+            </div>
+
+            <button onclick="simpanManual()" class="w-full bg-yellow-500 text-white p-4 rounded-xl font-bold text-lg active:bg-yellow-600 shadow-md">Simpan Absen</button>
+        </div>
+        
+        <!-- HALAMAN EDIT & LAPORAN (Placeholder Sementara) -->
+        <div id="page-laporan" class="hidden-page p-4 text-center mt-10">
+            <div class="text-4xl mb-4">🚧</div>
+            <h2 class="text-lg font-bold">Fitur Laporan & Edit</h2>
+            <p class="text-gray-500 text-sm">Akan dikembangkan setelah fitur utama berjalan lancar.</p>
+        </div>
+
+        <!-- MENU NAVIGASI BAWAH (Khusus Mobile) -->
+        <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around p-2 pb-4 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
+            <button onclick="showPage('page-scan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
+                <span class="text-2xl mb-1">📷</span>
+                <span class="text-[10px] font-bold">SCAN QR</span>
+            </button>
+            <button onclick="showPage('page-manual')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
+                <span class="text-2xl mb-1">✍️</span>
+                <span class="text-[10px] font-bold">MANUAL</span>
+            </button>
+            <button onclick="showPage('page-laporan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
+                <span class="text-2xl mb-1">📊</span>
+                <span class="text-[10px] font-bold">EDIT</span>
+            </button>
+            <button onclick="syncData()" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-2">
+                <span class="text-2xl mb-1">🔄</span>
+                <span class="text-[10px] font-bold">SYNC</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // GANTI DENGAN URL WEB APP TERBARU ANDA
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcOfiqrrLO9C8t4B3_masso1zFc5pbk9OPNf01DirSFhqffTwJoQwmUwgSPxuNCdRs/exec'; 
+
+        // Database Offline (Dexie) - Versi 2 (Ada kolom KELAS)
+        const db = new Dexie("AbsensiDB");
+        db.version(2).stores({
+            siswa: 'nis, nama, kelas',
+            mapel: 'id, nama',
+            absen: '++id, nis, nama, kelas, tanggal, jam, mapel, status'
+        });
+
+        let html5QrcodeScanner;
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('tgl-scan').value = today;
+        document.getElementById('tgl-manual').value = today;
+
+        // Navigasi
+        function showPage(pageId) {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan').forEach(div => {
+                div.classList.add('hidden-page');
+            });
+            document.getElementById(pageId).classList.remove('hidden-page');
+            
+            if(pageId !== 'page-login') {
+                document.getElementById('bottom-nav').classList.remove('hidden-page');
+                document.getElementById('bottom-nav').classList.add('flex');
+            }
+            
+            updateBadge();
+            loadMapel();
+            loadSiswaList();
+        }
+
+        async function login() {
+            const pass = document.getElementById('password').value;
+            if(!pass) return Swal.fire('Error', 'Masukkan password!', 'error');
+
+            Swal.fire({title: 'Mengunduh Data...', text: 'Pastikan sinyal stabil', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'login', password: pass })
+                });
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    await db.siswa.clear();
+                    await db.mapel.clear();
+                    await db.siswa.bulkAdd(res.siswa);
+                    await db.mapel.bulkAdd(res.mapel);
+                    
+                    Swal.fire('Berhasil!', 'Data Siswa & Mapel tersimpan di HP.', 'success');
+                    showPage('page-scan');
+                } else {
+                    Swal.fire('Gagal', res.message, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error Jaringan', 'Tidak ada internet / link script salah.', 'error');
+            }
+        }
+
+        async function loadMapel() {
+            const mapels = await db.mapel.toArray();
+            const options = mapels.map(m => `<option value="${m.nama}">${m.nama}</option>`).join('');
+            document.getElementById('mapel-scan').innerHTML = options;
+            document.getElementById('mapel-manual').innerHTML = options;
+        }
+
+        async function loadSiswaList() {
+            const siswas = await db.siswa.toArray();
+            const options = siswas.map(s => `<option value="${s.nis} - ${s.nama}">`).join('');
+            document.getElementById('list-siswa').innerHTML = options;
+        }
+
+        function startScan() {
+            const tgl = document.getElementById('tgl-scan').value;
+            const mapel = document.getElementById('mapel-scan').value;
+            
+            document.getElementById('btn-start-scan').classList.add('hidden');
+            document.getElementById('btn-stop-scan').classList.remove('hidden');
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            // Konfigurasi agar pas di HP
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                async (decodedText) => { 
+                    // decodedText = NIS dari QR Code
+                    await prosesAbsen(decodedText.trim(), tgl, mapel, 'Hadir');
+                },
+                (errorMessage) => { }
+            ).catch(err => Swal.fire('Error', 'Izin kamera ditolak atau HTTPS belum aktif', 'error'));
+        }
+
+        function stopScan() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('btn-start-scan').classList.remove('hidden');
+                    document.getElementById('btn-stop-scan').classList.add('hidden');
+                });
+            }
+        }
+
+        async function simpanManual() {
+            const tgl = document.getElementById('tgl-manual').value;
+            const mapel = document.getElementById('mapel-manual').value;
+            const input = document.getElementById('input-siswa').value;
+            
+            // Ambil status dari radio button yang dipilih
+            const status = document.querySelector('input[name="status-manual"]:checked').value;
+            
+            const nis = input.split(' - ')[0].trim(); 
+            if(!nis) return Swal.fire('Error', 'Pilih siswa terlebih dahulu', 'warning');
+            
+            await prosesAbsen(nis, tgl, mapel, status);
+            document.getElementById('input-siswa').value = ''; 
+        }
+
+        async function prosesAbsen(nis, tgl, mapel, status) {
+            // Cek NIS ke DB Lokal Siswa
+            const siswa = await db.siswa.get(nis);
+            if (!siswa) {
+                Swal.fire({ icon: 'error', title: 'Tidak Ditemukan', text: `NIS ${nis} tidak terdaftar di database!`, timer: 2000 });
+                return;
+            }
+
+            const cekGanda = await db.absen.where({nis: nis, tanggal: tgl, mapel: mapel}).first();
+            if (cekGanda) {
+                Swal.fire({ icon: 'warning', title: 'Sudah Absen', text: `${siswa.nama} sudah absen mapel ini.`, timer: 1500 });
+                return;
+            }
+
+            document.getElementById('beep-sound').play();
+
+            const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            // MASUKKAN KELAS KE DATABASE LOKAL
+            await db.absen.add({
+                nis: nis,
+                nama: siswa.nama,
+                kelas: siswa.kelas, // Diambil otomatis dari profil siswa
+                tanggal: tgl,
+                jam: jam,
+                mapel: mapel,
+                status: status
+            });
+
+            // Tampilkan Popup Cantik di Tengah Layar
+            Swal.fire({
+                icon: 'success',
+                title: `${siswa.nama}`,
+                text: `Kelas ${siswa.kelas} - ${status}`,
+                showConfirmButton: false, 
+                timer: 1500
+            });
+            updateBadge();
+        }
+
+        async function updateBadge() {
+            const count = await db.absen.count();
+            const badge = document.getElementById('badge-sync-header');
+            badge.innerText = `${count} Belum Sync`;
+            if(count > 0) {
+                badge.classList.remove('bg-green-500');
+                badge.classList.add('bg-red-500');
+            } else {
+                badge.classList.remove('bg-red-500');
+                badge.classList.add('bg-green-500');
+                badge.innerText = 'Sync Selesai';
+            }
+        }
+
+        async function syncData() {
+            const dataBelumSync = await db.absen.toArray();
+            if (dataBelumSync.length === 0) return Swal.fire('Info', 'Semua data sudah tersinkronisasi.', 'info');
+
+            Swal.fire({title: 'Mengirim Data...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'sync', data: JSON.stringify(dataBelumSync) })
+                });
+                
+                const res = await response.json();
+                if (res.status === 'success') {
+                    await db.absen.clear(); 
+                    updateBadge();
+                    Swal.fire('Sukses!', `${dataBelumSync.length} data absen terkirim ke Spreadsheet.`, 'success');
+                }
+            } catch (err) {
+                Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+            }
+        }
+
+        // Cek jika guru sudah login sebelumnya
+        window.onload = async () => {
+            const count = await db.siswa.count();
+            if (count > 0) {
+                showPage('page-scan');
+            } else {
+                showPage('page-login');
+            }
+        }
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js');
+        });
+    }
+</script>
+</body>
+</html>

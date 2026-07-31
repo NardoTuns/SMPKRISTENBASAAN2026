@@ -89,10 +89,46 @@
         </div>
         
         <!-- HALAMAN EDIT & LAPORAN (Placeholder Sementara) -->
-        <div id="page-laporan" class="hidden-page p-4 text-center mt-10">
-            <div class="text-4xl mb-4">🚧</div>
-            <h2 class="text-lg font-bold">Fitur Laporan & Edit</h2>
-            <p class="text-gray-500 text-sm">Akan dikembangkan setelah fitur utama berjalan lancar.</p>
+        <!-- HALAMAN EDIT ABSEN -->
+        <div id="page-laporan" class="hidden-page p-4">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Edit Absensi</h2>
+            
+            <div class="bg-purple-50 p-4 rounded-xl mb-4 border border-purple-100 shadow-sm">
+                <label class="block text-xs font-bold text-gray-500 mb-1">PILIH TANGGAL</label>
+                <input type="date" id="tgl-edit" class="w-full bg-white border border-gray-300 p-3 mb-3 rounded-lg font-semibold">
+                
+                <div class="flex gap-2">
+                    <button onclick="tampilkanEdit('offline')" class="flex-1 bg-gray-500 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-gray-600">Lokal (Offline)</button>
+                    <button onclick="tampilkanEdit('online')" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-purple-700">Server (Online)</button>
+                </div>
+            </div>
+
+            <!-- Tempat List Data Absen Muncul -->
+            <div id="list-edit" class="space-y-3 pb-4"></div>
+        </div>
+
+        <!-- MODAL EDIT STATUS (Tersembunyi di awal) -->
+        <div id="modal-edit" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+                <h3 class="text-lg font-bold mb-1 text-gray-800">Ubah Status</h3>
+                <p id="edit-nama" class="font-semibold text-purple-600 mb-1 text-xl"></p>
+                <p id="edit-detail" class="text-sm text-gray-500 mb-4"></p>
+                
+                <input type="hidden" id="edit-id"> <!-- Menyimpan ID offline atau Row online -->
+                <input type="hidden" id="edit-mode"> <!-- 'offline' atau 'online' -->
+                
+                <select id="edit-status" class="w-full border-2 border-purple-200 p-4 rounded-xl mb-6 font-bold text-lg bg-purple-50">
+                    <option value="Hadir">Hadir</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Izin">Izin</option>
+                    <option value="Alpa">Alpa</option>
+                </select>
+                
+                <div class="flex gap-3">
+                    <button onclick="tutupModal()" class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-xl font-bold">Batal</button>
+                    <button onclick="simpanEdit()" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-bold shadow-md">Simpan</button>
+                </div>
+            </div>
         </div>
 
         <!-- MENU NAVIGASI BAWAH (Khusus Mobile) -->
@@ -316,7 +352,120 @@
                 Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
             }
         }
+// ==========================================
+        // FITUR EDIT ABSEN
+        // ==========================================
+        document.getElementById('tgl-edit').value = today;
 
+        async function tampilkanEdit(mode) {
+            const tgl = document.getElementById('tgl-edit').value;
+            const container = document.getElementById('list-edit');
+            container.innerHTML = `<p class="text-center text-gray-500 mt-5">Memuat data...</p>`;
+
+            if (mode === 'offline') {
+                // Tarik data dari HP (DexieDB)
+                const data = await db.absen.where('tanggal').equals(tgl).toArray();
+                renderListEdit(data, mode);
+            } else if (mode === 'online') {
+                // Tarik data dari Spreadsheet
+                Swal.fire({title: 'Menarik Data...', text: 'Butuh internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'get_absen', tanggal: tgl })
+                    });
+                    const res = await response.json();
+                    Swal.close();
+                    if (res.status === 'success') {
+                        renderListEdit(res.data, mode);
+                    }
+                } catch (err) {
+                    Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+                    container.innerHTML = '';
+                }
+            }
+        }
+
+        function renderListEdit(data, mode) {
+            const container = document.getElementById('list-edit');
+            if (data.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold">Data tidak ditemukan.</p>`;
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                // Warna badge status
+                let color = 'bg-gray-100 text-gray-800';
+                if(item.status == 'Hadir') color = 'bg-green-100 text-green-800';
+                if(item.status == 'Sakit') color = 'bg-yellow-100 text-yellow-800';
+                if(item.status == 'Izin') color = 'bg-blue-100 text-blue-800';
+                if(item.status == 'Alpa') color = 'bg-red-100 text-red-800';
+
+                // ID bergantung pada mode (IndexedDB pakai 'id', Spreadsheet pakai 'rowNum')
+                const idData = mode === 'offline' ? item.id : item.rowNum;
+
+                html += `
+                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex justify-between items-center active:bg-gray-50" 
+                     onclick="bukaModalEdit('${idData}', '${mode}', '${item.nama}', '${item.mapel}', '${item.status}')">
+                    <div>
+                        <p class="font-bold text-gray-800">${item.nama}</p>
+                        <p class="text-xs text-gray-500">${item.mapel} | NIS: ${item.nis}</p>
+                    </div>
+                    <span class="${color} px-3 py-1 rounded-full text-xs font-bold">${item.status}</span>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function bukaModalEdit(id, mode, nama, mapel, status) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-mode').value = mode;
+            document.getElementById('edit-nama').innerText = nama;
+            document.getElementById('edit-detail').innerText = `Pelajaran: ${mapel}`;
+            document.getElementById('edit-status').value = status;
+            
+            document.getElementById('modal-edit').classList.remove('hidden');
+        }
+
+        function tutupModal() {
+            document.getElementById('modal-edit').classList.add('hidden');
+        }
+
+        async function simpanEdit() {
+            const id = document.getElementById('edit-id').value;
+            const mode = document.getElementById('edit-mode').value;
+            const newStatus = document.getElementById('edit-status').value;
+            
+            tutupModal();
+            Swal.fire({title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            if (mode === 'offline') {
+                // Update ke database HP
+                await db.absen.update(parseInt(id), { status: newStatus });
+                Swal.fire('Berhasil', 'Status diperbarui di memori HP.', 'success');
+                tampilkanEdit('offline'); // Refresh list
+            } 
+            else if (mode === 'online') {
+                // Update ke Spreadsheet
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
+                    });
+                    const res = await response.json();
+                    if (res.status === 'success') {
+                        Swal.fire('Berhasil', 'Status diperbarui di Spreadsheet.', 'success');
+                        tampilkanEdit('online'); // Refresh list
+                    }
+                } catch (err) {
+                    Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+                }
+            }
+        }
         // Cek jika guru sudah login sebelumnya
         window.onload = async () => {
             const count = await db.siswa.count();

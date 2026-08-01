@@ -568,7 +568,7 @@
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: newSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
+                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
                     });
                     const res = await response.json();
                     if (res.status === 'success') {

@@ -25,9 +25,12 @@
     <!-- CONTAINER UTAMA (Maksimal selebar HP) -->
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
 
-        <!-- HEADER -->
+<!-- HEADER -->
         <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
-            <h1 class="text-lg font-bold">Absensi Offline</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-lg font-bold">Absensi Offline</h1>
+                <button onclick="logout()" class="bg-white/20 text-white px-2 py-1 rounded text-xs font-bold hover:bg-white/30 active:bg-white/40">🔄 Update Data</button>
+            </div>
             <span id="badge-sync-header" class="bg-red-500 text-xs px-2 py-1 rounded-full font-bold">0 Belum Sync</span>
         </header>
 
@@ -323,6 +326,31 @@
                 Swal.fire('Error Jaringan', 'Tidak ada internet / link script salah.', 'error');
             }
         }
+        function logout() {
+            Swal.fire({
+                title: 'Update Data Induk?',
+                text: "Anda akan diarahkan ke halaman login untuk mengunduh ulang data Siswa & Mapel terbaru dari Spreadsheet.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Update!',
+                cancelButtonText: 'Batal'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    // Hapus data siswa dan mapel lama dari memori HP
+                    await db.siswa.clear();
+                    await db.mapel.clear();
+                    
+                    // Arahkan kembali ke halaman login
+                    showPage('page-login');
+                    
+                    // Sembunyikan menu bawah agar rapi saat login
+                    document.getElementById('bottom-nav').classList.remove('flex');
+                    document.getElementById('bottom-nav').classList.add('hidden-page');
+                }
+            })
+        }
 
         async function loadMapel() {
             const mapels = await db.mapel.toArray();
@@ -337,6 +365,10 @@
             document.getElementById('list-siswa').innerHTML = options;
         }
 
+        // Variabel penahan scan ganda
+        let lastScanTime = 0;
+        let lastScannedNis = '';
+
         function startScan() {
             const tgl = document.getElementById('tgl-scan').value;
             const mapel = document.getElementById('mapel-scan').value;
@@ -350,8 +382,20 @@
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
                 async (decodedText) => { 
-                    // decodedText = NIS dari QR Code
-                    await prosesAbsen(decodedText.trim(), tgl, mapel, 'Hadir');
+                    const nis = decodedText.trim();
+                    const currentTime = new Date().getTime();
+
+                    // LOGIKA ANTI-DOUBLE SCAN:
+                    // Jika barcode yang discan SAMA dengan sebelumnya, dan belum lewat 3 detik (3000 ms), abaikan!
+                    if (nis === lastScannedNis && (currentTime - lastScanTime) < 3000) {
+                        return;
+                    }
+
+                    // Catat NIS dan Waktu scan saat ini
+                    lastScannedNis = nis;
+                    lastScanTime = currentTime;
+
+                    await prosesAbsen(nis, tgl, mapel, 'Hadir');
                 },
                 (errorMessage) => { }
             ).catch(err => Swal.fire('Error', 'Izin kamera ditolak atau HTTPS belum aktif', 'error'));

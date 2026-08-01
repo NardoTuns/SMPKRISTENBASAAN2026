@@ -309,21 +309,29 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({ action: 'login', password: pass })
                 });
-                const res = await response.json();
                 
-                if (res.status === 'success') {
-                    await db.siswa.clear();
-                    await db.mapel.clear();
-                    await db.siswa.bulkAdd(res.siswa);
-                    await db.mapel.bulkAdd(res.mapel);
+                const textResponse = await response.text(); // Ambil balasan mentah
+                
+                try {
+                    const res = JSON.parse(textResponse);
                     
-                    Swal.fire('Berhasil!', 'Data Siswa & Mapel tersimpan di HP.', 'success');
-                    showPage('page-scan');
-                } else {
-                    Swal.fire('Gagal', res.message, 'error');
+                    if (res.status === 'success') {
+                        await db.siswa.clear();
+                        await db.mapel.clear();
+                        await db.siswa.bulkPut(res.siswa); // Menggunakan bulkPut agar anti-crash
+                        await db.mapel.bulkPut(res.mapel); // Menggunakan bulkPut agar anti-crash
+                        
+                        Swal.fire('Berhasil!', 'Data Siswa & Mapel tersimpan di HP.', 'success');
+                        showPage('page-scan');
+                    } else {
+                        Swal.fire('Gagal', res.message, 'error');
+                    }
+                } catch (jsonError) {
+                    console.error("ERROR GOOGLE:", textResponse);
+                    Swal.fire('Error Script', 'Buka Inspect > Console (F12) untuk melihat pesan aslinya.', 'error');
                 }
             } catch (err) {
-                Swal.fire('Error Jaringan', 'Tidak ada internet / link script salah.', 'error');
+                Swal.fire('Error Jaringan', 'Gagal terhubung ke server Google sama sekali.', 'error');
             }
         }
         function logout() {

@@ -189,34 +189,67 @@
                 </button>
             </div>
         </div>
+        <!-- HALAMAN ABSEN KELAS (MAPEL) -->
+        <div id="page-absen-mapel" class="hidden-page p-4 pb-24">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Absen Kelas (Mapel)</h2>
+            
+            <div class="bg-indigo-50 p-4 rounded-xl mb-4 border border-indigo-100 shadow-sm text-sm">
+                <label class="block font-bold text-gray-600 mb-1">TANGGAL</label>
+                <input type="date" id="tgl-absen-mapel" class="w-full border border-gray-300 p-2 rounded-lg bg-white mb-3">
+
+                <label class="block font-bold text-gray-600 mb-1">MATA PELAJARAN</label>
+                <select id="select-mapel-absen" class="w-full border border-gray-300 p-2 rounded-lg bg-white mb-3"></select>
+
+                <label class="block font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                <div id="checkbox-kelas-absen" class="flex flex-wrap gap-2 mb-4"></div>
+
+                <button onclick="tampilkanSiswaUntukAbsen()" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold active:bg-indigo-700 shadow-md">Tampilkan Siswa</button>
+            </div>
+            
+            <!-- AREA DAFTAR SISWA (Muncul setelah diklik) -->
+            <div id="area-absen-mapel" class="hidden mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-800">Daftar Siswa</h3>
+                    <button onclick="setSemuaHadir()" class="bg-white text-green-700 px-3 py-1 rounded-lg text-xs font-bold border border-green-300 shadow-sm active:bg-green-50">Set Semua Hadir</button>
+                </div>
+                <!-- List siswa yang akan dimuat oleh Javascript -->
+                <div id="list-siswa-absen" class="space-y-3 mb-4"></div>
+                
+                <button onclick="simpanAbsenMassal()" class="w-full bg-green-500 text-white p-4 rounded-xl font-bold text-lg active:bg-green-600 shadow-md">💾 Simpan Absen</button>
+            </div>
+        </div>
 <!-- MENU NAVIGASI BAWAH (6 Tombol) -->
+       <!-- MENU NAVIGASI BAWAH (7 Tombol Otomatis) -->
         <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
-            <a href="/" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+            <a href="/" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">🏠</span>
                 <span class="text-[9px] font-bold">HOME</span>
             </a>
-            <button onclick="showPage('page-scan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+            <button onclick="showPage('page-scan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">📷</span>
                 <span class="text-[9px] font-bold">SCAN</span>
             </button>
-            <button onclick="showPage('page-manual')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+            <button onclick="showPage('page-manual')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">✍️</span>
                 <span class="text-[9px] font-bold">MANUAL</span>
             </button>
-            <button onclick="showPage('page-laporan')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+            <button onclick="showPage('page-absen-mapel')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-indigo-600 focus:text-indigo-600 p-1">
                 <span class="text-xl mb-1">📝</span>
+                <span class="text-[9px] font-bold text-center leading-tight">ABSEN<br>MAPEL</span>
+            </button>
+            <button onclick="showPage('page-laporan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">✏️</span>
                 <span class="text-[9px] font-bold">EDIT</span>
             </button>
-            <button onclick="showPage('page-rekap')" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6">
+            <button onclick="showPage('page-rekap')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">📊</span>
                 <span class="text-[9px] font-bold">LAPORAN</span>
             </button>
-            <button onclick="syncData()" class="flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 w-1/6 relative">
+            <button onclick="syncData()" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 relative">
                 <span class="text-xl mb-1">🔄</span>
                 <span class="text-[9px] font-bold">SYNC</span>
             </button>
         </nav>
-
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
@@ -239,7 +272,7 @@
 
         // Navigasi
         function showPage(pageId) {
-            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap').forEach(div => {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel').forEach(div => {
                 div.classList.add('hidden-page');
             });
             document.getElementById(pageId).classList.remove('hidden-page');
@@ -253,8 +286,12 @@
             loadMapel();
             loadSiswaList();
             
-            // Generate checkbox otomatis saat buka menu laporan
             if(pageId === 'page-rekap') loadFilters(); 
+            // Trigger load data jika membuka tab Absen Mapel
+            if(pageId === 'page-absen-mapel') {
+                document.getElementById('tgl-absen-mapel').value = new Date().toISOString().split('T')[0];
+                loadKelasMapelAbsen();
+            }
         }
 
         async function login() {
@@ -709,6 +746,137 @@
             }).catch(err => {
                 Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
             });
+        }
+        // ==========================================
+        // FITUR ABSEN MAPEL BATCH (MULTI-SISWA)
+        // ==========================================
+
+        async function loadKelasMapelAbsen() {
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            
+            // Render Checkbox Kelas
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            let kelasHtml = '';
+            kelasList.forEach(k => {
+                kelasHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${k}" class="chk-kelas-absen mr-1"> ${k}</label>`;
+            });
+            document.getElementById('checkbox-kelas-absen').innerHTML = kelasHtml;
+
+            // Render Select Mapel
+            const options = mapels.map(m => `<option value="${m.nama}">${m.nama}</option>`).join('');
+            document.getElementById('select-mapel-absen').innerHTML = options;
+        }
+
+        async function tampilkanSiswaUntukAbsen() {
+            const checkedKelas = Array.from(document.querySelectorAll('.chk-kelas-absen:checked')).map(cb => cb.value);
+            
+            if(checkedKelas.length === 0) return Swal.fire('Peringatan', 'Mohon pilih minimal 1 kelas!', 'warning');
+
+            // Tarik data siswa yang kelasnya dicentang
+            const semuaSiswa = await db.siswa.toArray();
+            const siswaTerpilih = semuaSiswa.filter(s => checkedKelas.includes(s.kelas));
+
+            if(siswaTerpilih.length === 0) {
+                return Swal.fire('Kosong', 'Tidak ada data siswa pada kelas terpilih.', 'info');
+            }
+
+            // Urutkan berdasarkan kelas, lalu nama (A-Z)
+            siswaTerpilih.sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
+
+            let html = '';
+            siswaTerpilih.forEach(s => {
+                // UI menggunakan teknik Tailwind Peer untuk Radio Button custom yang interaktif
+                html += `
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 student-absen-row" data-nis="${s.nis}" data-nama="${s.nama}" data-kelas="${s.kelas}">
+                    <div class="font-bold text-gray-800">${s.nama}</div>
+                    <div class="text-xs text-gray-500 mb-2">Kelas: ${s.kelas} | NIS: ${s.nis}</div>
+                    
+                    <div class="flex gap-2 w-full">
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Hadir" class="peer hidden" id="h-${s.nis}" checked>
+                            <label for="h-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-green-100 peer-checked:text-green-700 peer-checked:border-green-400 transition">Hadir</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Sakit" class="peer hidden" id="s-${s.nis}">
+                            <label for="s-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-yellow-100 peer-checked:text-yellow-700 peer-checked:border-yellow-400 transition">Sakit</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Izin" class="peer hidden" id="i-${s.nis}">
+                            <label for="i-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-blue-100 peer-checked:text-blue-700 peer-checked:border-blue-400 transition">Izin</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Alpa" class="peer hidden" id="a-${s.nis}">
+                            <label for="a-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-red-100 peer-checked:text-red-700 peer-checked:border-red-400 transition">Alpa</label>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('list-siswa-absen').innerHTML = html;
+            document.getElementById('area-absen-mapel').classList.remove('hidden');
+        }
+
+        // Fungsi mempercepat absen (semua diset Hadir)
+        function setSemuaHadir() {
+            document.querySelectorAll('input[type="radio"][value="Hadir"]').forEach(radio => radio.checked = true);
+        }
+
+        // Simpan semua data di layar sekaligus ke dalam memory HP (DexieDB)
+        async function simpanAbsenMassal() {
+            const tgl = document.getElementById('tgl-absen-mapel').value;
+            const mapel = document.getElementById('select-mapel-absen').value;
+            const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            const rows = document.querySelectorAll('.student-absen-row');
+            let dataUntukDisimpan = [];
+            let jumlahDilewati = 0;
+
+            Swal.fire({title: 'Menyimpan Absen...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            for (let row of rows) {
+                const nis = row.getAttribute('data-nis');
+                const nama = row.getAttribute('data-nama');
+                const kelas = row.getAttribute('data-kelas');
+                
+                // Ambil radio button yang tercentang pada baris siswa ini
+                const status = row.querySelector(`input[name="st-${nis}"]:checked`).value;
+
+                // Cek ganda: Jangan simpan jika anak ini sudah diabsen hari ini di mapel yang sama
+                const cekGanda = await db.absen.where({nis: nis, tanggal: tgl, mapel: mapel}).first();
+                if (cekGanda) {
+                    jumlahDilewati++;
+                    continue; 
+                }
+
+                dataUntukDisimpan.push({
+                    nis: nis,
+                    nama: nama,
+                    kelas: kelas,
+                    tanggal: tgl,
+                    jam: jam,
+                    mapel: mapel,
+                    status: status
+                });
+            }
+
+            if (dataUntukDisimpan.length > 0) {
+                await db.absen.bulkAdd(dataUntukDisimpan);
+                updateBadge();
+                
+                let pesan = `${dataUntukDisimpan.length} Absensi berhasil disimpan ke memori HP.`;
+                if(jumlahDilewati > 0) pesan += `\n(${jumlahDilewati} siswa dilewati karena sudah ada datanya).`;
+                
+                Swal.fire('Berhasil', pesan, 'success');
+                document.getElementById('area-absen-mapel').classList.add('hidden'); // Tutup area setelah simpan
+                
+            } else {
+                if (jumlahDilewati > 0) {
+                    Swal.fire('Selesai', 'Tidak ada data baru. Semua siswa di daftar ini sudah diabsen sebelumnya.', 'info');
+                } else {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem, data kosong.', 'error');
+                }
+            }
         }
     </script>
     <script>

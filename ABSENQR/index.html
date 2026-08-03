@@ -934,40 +934,99 @@
         }
 
         // ==========================================
+        // ==========================================
         // FITUR KUNCI ABSEN (GENERATE ALPA OTOMATIS)
         // ==========================================
         async function kunciAbsen() {
-            const { value: password } = await Swal.fire({
-                title: 'Kunci Absensi',
-                input: 'password',
-                inputLabel: 'Masukkan password untuk memproses siswa Alpa otomatis hari ini',
-                inputPlaceholder: 'Password',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Kunci & Proses Alpa'
+            // Pengecekan krusial: Pastikan tidak ada data offline yang belum terkirim
+            const count = await db.absen.count();
+            if(count > 0) {
+                return Swal.fire('Peringatan!', 'Silakan SYNC data absen yang tertunda di HP ini terlebih dahulu sebelum mengunci absen.', 'warning');
+            }
+
+            // Ambil opsi kelas dan mapel dari database offline
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            
+            // Buat HTML Dropdown Mapel (Default: Pulang)
+            let mapelOptions = `<option value="Pulang" selected>Pulang</option>`;
+            mapelOptions += `<option value="DATANG">DATANG</option>`;
+            mapels.forEach(m => {
+                if(m.nama !== "Pulang" && m.nama !== "DATANG") {
+                    mapelOptions += `<option value="${m.nama}">${m.nama}</option>`;
+                }
             });
 
-            if (password) {
-                if (password === '123') {
-                    // Pengecekan krusial: Pastikan tidak ada data offline yang belum terkirim
-                    const count = await db.absen.count();
-                    if(count > 0) {
-                        return Swal.fire('Peringatan!', 'Silakan SYNC data absen yang tertunda di HP ini terlebih dahulu sebelum mengunci absen.', 'warning');
-                    }
+            // Buat HTML Dropdown Kelas (Default: SEMUA KELAS)
+            let kelasOptions = `<option value="SEMUA KELAS" selected>SEMUA KELAS</option>`;
+            kelasList.forEach(k => {
+                kelasOptions += `<option value="${k}">${k}</option>`;
+            });
 
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            // Tampilkan Custom Form SweetAlert2
+            const { value: formValues } = await Swal.fire({
+                title: 'Kunci Absensi',
+                html:
+                    `<div class="text-left mb-2">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PILIH TANGGAL</label>
+                        <input id="swal-tgl" type="date" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3" value="${todayDate}">
+                        
+                        <label class="block text-xs font-bold text-gray-600 mb-1">MATA PELAJARAN</label>
+                        <select id="swal-mapel" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3 font-semibold">
+                            ${mapelOptions}
+                        </select>
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                        <select id="swal-kelas" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3 font-semibold">
+                            ${kelasOptions}
+                        </select>
+                        
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PASSWORD (Wajib)</label>
+                        <input id="swal-pass" type="password" class="w-full border border-gray-300 p-3 rounded-xl text-center tracking-widest text-lg" placeholder="***">
+                    </div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Kunci & Proses Alpa',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const tgl = document.getElementById('swal-tgl').value;
+                    const mapel = document.getElementById('swal-mapel').value;
+                    const kelas = document.getElementById('swal-kelas').value;
+                    const pass = document.getElementById('swal-pass').value;
+                    
+                    if (!pass) {
+                        Swal.showValidationMessage('Password tidak boleh kosong!');
+                        return false;
+                    }
+                    return { tgl, mapel, kelas, pass };
+                }
+            });
+
+            // Logika Setelah Tombol Diklik
+            if (formValues) {
+                if (formValues.pass === '123') {
                     Swal.fire({title: 'Memproses Alpa Otomatis...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
                     
                     try {
-                        const tglHariIni = new Date().toISOString().split('T')[0];
                         const response = await fetch(SCRIPT_URL, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({ action: 'generate_alpa', tanggal: tglHariIni })
+                            body: new URLSearchParams({ 
+                                action: 'generate_alpa', 
+                                tanggal: formValues.tgl,
+                                mapel: formValues.mapel,
+                                kelas: formValues.kelas
+                            })
                         });
                         const res = await response.json();
                         
                         if (res.status === 'success') {
-                            Swal.fire('Berhasil!', res.message || 'Siswa yang belum absen hari ini telah tercatat sebagai Alpa di server.', 'success');
+                            Swal.fire('Berhasil!', res.message, 'success');
                         } else {
                             Swal.fire('Gagal', res.message || 'Terjadi kesalahan pada server.', 'error');
                         }
@@ -979,6 +1038,7 @@
                 }
             }
         }
+    
     </script>
     <script>
     if ('serviceWorker' in navigator) {

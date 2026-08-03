@@ -13,7 +13,7 @@
         
         .control-group { margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 6px; border-left: 4px solid #007bff; }
         label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
-        select, input[type="file"], button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        input[type="text"], input[type="file"], button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
         
         button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background: #0056b3; }
@@ -27,6 +27,34 @@
         .camera-controls { display: flex; gap: 10px; }
         .radio-group { margin-bottom: 10px; font-size: 15px; }
         .radio-group input { width: auto; margin-right: 5px; }
+
+        /* Autocomplete Styles */
+        .autocomplete-wrapper { position: relative; width: 100%; }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 0 0 6px 6px;
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #ccc;
+            font-size: 14px;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+            color: #007bff;
+        }
 
         /* Pengaturan Kamera */
         #video-container { text-align: center; margin-top: 15px; display: none; background: #000; border-radius: 8px; padding: 10px; }
@@ -72,7 +100,6 @@
         /* Area QR Code Tunggal (NIS) */
         .qr-wrapper { background: #fff; padding: 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-align: center; width: 100%; box-sizing: border-box; }
         .qr-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #000; letter-spacing: 1px; }
-        /* Tag img statis agar mudah ditangkap oleh alat screenshot */
         #qrImage { width: 75px; height: 75px; margin: 0 auto; display: block; }
 
         #kartu-siswa * { box-sizing: border-box; }
@@ -105,11 +132,13 @@
         </div>
     </div>
 
+    <!-- AREA PENCARIAN BARU -->
     <div class="control-group">
-        <label for="siswaSelect">2. Pilih Nama Siswa</label>
-        <select id="siswaSelect" disabled>
-            <option value="">-- Sinkronisasi data terlebih dahulu --</option>
-        </select>
+        <label for="siswaSearch">2. Cari Nama Siswa / NIS / NISN</label>
+        <div class="autocomplete-wrapper">
+            <input type="text" id="siswaSearch" placeholder="Ketik nama atau NIS untuk mencari..." disabled autocomplete="off">
+            <div id="autocompleteList" class="autocomplete-items"></div>
+        </div>
     </div>
 
     <div class="control-group">
@@ -164,6 +193,7 @@
     const GITHUB_RAW_URL = "https://raw.githubusercontent.com/NardoTuns/SMPKRISTENBASAAN2026/main/MasterAbsenSiswa.CSV";
 
     let dataSiswa = [];
+    let currentSiswaIndex = null; // Menyimpan index siswa yang sedang dipilih
     let stream = null;
     let currentFacingMode = 'environment'; 
 
@@ -219,8 +249,10 @@
     function parseCSV(csvText) {
         const lines = csvText.split(/\r?\n/);
         dataSiswa = [];
-        const select = document.getElementById('siswaSelect');
-        select.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+        currentSiswaIndex = null; // Reset pilihan
+        
+        const searchInput = document.getElementById('siswaSearch');
+        searchInput.value = ''; // Kosongkan pencarian
 
         for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim() === '') continue; 
@@ -249,25 +281,65 @@
                     kelas: cols[9].trim()
                 };
                 dataSiswa.push(siswa);
-                
-                const option = document.createElement('option');
-                option.value = dataSiswa.length - 1; 
-                option.text = siswa.nama + " (" + siswa.kelas + ")";
-                select.appendChild(option);
             }
         }
-        select.disabled = false;
+        
+        searchInput.disabled = false; // Aktifkan input pencarian
+        searchInput.placeholder = "Ketik nama atau NIS untuk mencari...";
         alert("Sistem berhasil memuat " + dataSiswa.length + " data siswa dari CSV.");
     }
 
-    // --- Logika Mengisi Data dan Render QR Code Menggunakan QRious ---
-    document.getElementById('siswaSelect').addEventListener('change', function(e) {
-        const index = e.target.value;
-        if (index === "") {
-            document.getElementById('btnSave').disabled = true;
-            return;
-        }
+    // --- LOGIKA AUTOCOMPLETE PENCARIAN SISWA ---
+    const searchInput = document.getElementById('siswaSearch');
+    const autoList = document.getElementById('autocompleteList');
 
+    searchInput.addEventListener('input', function() {
+        const val = this.value.toLowerCase();
+        autoList.innerHTML = ''; // Kosongkan daftar setiap mengetik
+        
+        if (!val) return;
+
+        // Filter data siswa (Mencari berdasarkan Nama, NIS, atau NISN)
+        const matches = dataSiswa.map((siswa, index) => ({siswa, index})).filter(item => {
+            return item.siswa.nama.toLowerCase().includes(val) || 
+                   item.siswa.nis.toLowerCase().includes(val) || 
+                   item.siswa.nisn.toLowerCase().includes(val);
+        });
+
+        // Tampilkan maksimal 10 hasil agar tidak berat
+        matches.slice(0, 10).forEach(match => {
+            const div = document.createElement('div');
+            // Format tampilan: Nama (Kelas) - NIS
+            div.innerHTML = `<strong>${match.siswa.nama}</strong> <span style="color:#666;">(${match.siswa.kelas}) - NIS: ${match.siswa.nis}</span>`;
+            
+            // Saat diklik
+            div.addEventListener('click', function() {
+                searchInput.value = match.siswa.nama;
+                autoList.innerHTML = ''; // Tutup daftar
+                selectSiswa(match.index); // Render ke kartu
+            });
+            autoList.appendChild(div);
+        });
+
+        if(matches.length === 0) {
+            const div = document.createElement('div');
+            div.innerHTML = `<em>Data tidak ditemukan</em>`;
+            div.style.color = 'red';
+            div.style.cursor = 'default';
+            autoList.appendChild(div);
+        }
+    });
+
+    // Menutup daftar autocomplete jika mengklik di luar area
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput && e.target !== autoList) {
+            autoList.innerHTML = '';
+        }
+    });
+
+    // --- Logika Mengisi Data ke Kartu ---
+    function selectSiswa(index) {
+        currentSiswaIndex = index;
         const siswa = dataSiswa[index];
         
         document.getElementById('valNama').innerText = siswa.nama;
@@ -294,8 +366,8 @@
             imgElement.removeAttribute('src'); // Kosongkan jika tidak ada data
         }
 
-        document.getElementById('btnSave').disabled = false;
-    });
+        document.getElementById('btnSave').disabled = false; // Aktifkan tombol simpan
+    }
 
     // --- Logika Kamera ---
     const video = document.getElementById('videoElement');
@@ -370,9 +442,13 @@
 
     // --- Logika Simpan Layout Jadi Gambar ---
     document.getElementById('btnSave').addEventListener('click', function() {
+        if (currentSiswaIndex === null) {
+            alert("Silakan cari dan pilih siswa terlebih dahulu!");
+            return;
+        }
+
         const targetCard = document.getElementById('kartu-siswa');
-        const selectedIndex = document.getElementById('siswaSelect').value;
-        const siswa = dataSiswa[selectedIndex];
+        const siswa = dataSiswa[currentSiswaIndex];
         
         const nisnValid = siswa.nisn || "0000000000";
         const namaValid = siswa.nama;

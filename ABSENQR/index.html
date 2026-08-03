@@ -950,8 +950,8 @@
             
             const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
             
-            // Buat HTML Dropdown Mapel (Default: Pulang)
-            let mapelOptions = `<option value="Pulang" selected>Pulang</option>`;
+            // Buat HTML Dropdown Mapel (Default: DATANG)
+            let mapelOptions = `<option value="DATANG" selected>DATANG</option>`;
             mapelOptions += `<option value="DATANG">DATANG</option>`;
             mapels.forEach(m => {
                 if(m.nama !== "Pulang" && m.nama !== "DATANG") {

@@ -30,6 +30,7 @@
             <div class="flex items-center gap-2">
                 <h1 class="text-lg font-bold">Absensi Offline</h1>
                 <button onclick="logout()" class="bg-white/20 text-white px-2 py-1 rounded text-xs font-bold hover:bg-white/30 active:bg-white/40">🔄 Update Data</button>
+                <button onclick="kunciAbsen()" class="bg-red-500/90 text-white px-2 py-1 rounded text-xs font-bold border border-red-400 hover:bg-red-600 shadow-sm active:bg-red-700">🔒 Kunci Absen</button>
             </div>
             <span id="badge-sync-header" class="bg-red-500 text-xs px-2 py-1 rounded-full font-bold">0 Belum Sync</span>
         </header>
@@ -752,7 +753,8 @@
 
         function renderTabelLaporan(data, mulai, akhir) {
             document.getElementById('area-laporan').classList.remove('hidden');
-            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} \n Total Data: ${data.length}`;
+            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} 
+ Total Data: ${data.length}`;
             
             const tbody = document.getElementById('laporan-body');
             
@@ -927,6 +929,53 @@
                     Swal.fire('Selesai', 'Tidak ada data baru. Semua siswa di daftar ini sudah diabsen sebelumnya.', 'info');
                 } else {
                     Swal.fire('Error', 'Terjadi kesalahan sistem, data kosong.', 'error');
+                }
+            }
+        }
+
+        // ==========================================
+        // FITUR KUNCI ABSEN (GENERATE ALPA OTOMATIS)
+        // ==========================================
+        async function kunciAbsen() {
+            const { value: password } = await Swal.fire({
+                title: 'Kunci Absensi',
+                input: 'password',
+                inputLabel: 'Masukkan password untuk memproses siswa Alpa otomatis hari ini',
+                inputPlaceholder: 'Password',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Kunci & Proses Alpa'
+            });
+
+            if (password) {
+                if (password === '123') {
+                    // Pengecekan krusial: Pastikan tidak ada data offline yang belum terkirim
+                    const count = await db.absen.count();
+                    if(count > 0) {
+                        return Swal.fire('Peringatan!', 'Silakan SYNC data absen yang tertunda di HP ini terlebih dahulu sebelum mengunci absen.', 'warning');
+                    }
+
+                    Swal.fire({title: 'Memproses Alpa Otomatis...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                    
+                    try {
+                        const tglHariIni = new Date().toISOString().split('T')[0];
+                        const response = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({ action: 'generate_alpa', tanggal: tglHariIni })
+                        });
+                        const res = await response.json();
+                        
+                        if (res.status === 'success') {
+                            Swal.fire('Berhasil!', res.message || 'Siswa yang belum absen hari ini telah tercatat sebagai Alpa di server.', 'success');
+                        } else {
+                            Swal.fire('Gagal', res.message || 'Terjadi kesalahan pada server.', 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+                    }
+                } else {
+                    Swal.fire('Gagal', 'Password salah!', 'error');
                 }
             }
         }

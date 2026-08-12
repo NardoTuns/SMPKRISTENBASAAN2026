@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absen Wajah AI</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #eef2f3; text-align: center; padding: 10px; margin: 0; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        video { width: 100%; border-radius: 10px; background: #000; border: 3px solid #ddd; margin-bottom: 10px; }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 15px; }
+        button { border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; }
+        button:disabled { background-color: #aaa !important; cursor: not-allowed; }
+        .btn-sync { background-color: #2196F3; }
+        .btn-daftar { background-color: #FF9800; }
+        .btn-absen { background-color: #4CAF50; }
+        .btn-tukar { background-color: #607D8B; } /* Tambahan CSS untuk tombol tukar kamera */
+        #form-daftar { display: none; background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffcc80; }
+        #status { font-weight: bold; margin-top: 10px; padding: 10px; border-radius: 5px; }
+        .offline-badge { background-color: #f44336; color: white; padding: 8px; border-radius: 5px; display: none; margin-bottom: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>📷 Absen Wajah Pintar</h2>
+        <div id="network-status" class="offline-badge">⚡ OFFLINE: Menggunakan Data Lokal</div>
+        
+        <!-- Tambahan Tombol Tukar Kamera -->
+        <button class="btn-tukar" id="btn-tukar-kamera" onclick="tukarKamera()">🔄 Tukar Kamera (Selfie / Belakang)</button>
+
+        <video id="video" autoplay muted playsinline></video>
+        <p id="status" style="background: #e3f2fd; color: #1976d2;">Memuat AI Model... Mohon tunggu.</p>
+
+        <!-- Menu Tombol Utama -->
+        <div id="menu-utama" style="display: none;">
+            <button class="btn-sync" id="btn-sync" onclick="sinkronisasiData()">🔄 1. Sinkronisasi Data Master (Wajib Saat Online)</button>
+            <button class="btn-daftar" id="btn-tampil-daftar" onclick="tampilkanFormDaftar()">👤 2. Daftarkan Wajah Baru</button>
+            <button class="btn-absen" id="btn-mulai-absen" onclick="mulaiScanAbsen()">🟢 3. Mulai Scan Absen Otomatis</button>
+        </div>
+
+        <!-- Form Pendaftaran Wajah -->
+        <div id="form-daftar">
+            <h3>Pendaftaran Wajah</h3>
+            <input type="text" id="nis" placeholder="NIS Siswa">
+            <input type="text" id="nama" placeholder="Nama Lengkap">
+            <select id="mapel">
+                <option value="" disabled selected>-- Mata Pelajaran --</option>
+                <option value="Matematika">Matematika</option>
+                <option value="IPA">IPA</option>
+                <option value="Bahasa Inggris">Bahasa Inggris</option>
+            </select>
+            <button class="btn-daftar" id="btn-simpan-wajah" onclick="simpanWajahBaru()">📸 Simpan Wajah ke Database</button>
+            <button style="background: #ccc; color: black;" onclick="tampilkanFormDaftar(false)">Batal</button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const statusText = document.getElementById('status');
+        const menuUtama = document.getElementById('menu-utama');
+        const formDaftar = document.getElementById('form-daftar');
+        const networkStatus = document.getElementById('network-status');
+        
+        // --- PASTE URL APPS SCRIPT ANDA DI BAWAH INI ---
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymVkLLH35ycayVr0MR9shinOWJqb1OPNxfhIQ24gBaRlpl78dbmL2RSzkDjw6wfzQK/exec';
+        
+        let faceMatcher = null; // Menyimpan memori wajah
+        let intervalScan = null;
+        let waktuTerakhirAbsen = {}; // Mencegah spam absen orang yang sama
+        let currentFacingMode = 'user'; // Tambahan variabel untuk menyimpan mode kamera (depan/belakang)
+
+        // 1. Inisialisasi PWA & AI
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+        Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('./models')
+        ]).then(startVideo).catch(err => {
+            ubahStatus("Gagal memuat AI. Pastikan folder /models lengkap!", "red");
+        });
+
+        // Modifikasi fungsi startVideo untuk mendukung perpindahan kamera
+        function startVideo() {
+            // Hentikan stream kamera sebelumnya jika ada sebelum memulai yang baru
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } })
+                .then(stream => { 
+                    video.srcObject = stream; 
+                    ubahStatus("AI Siap. Silakan Sinkronisasi Data terlebih dahulu.", "green");
+                    menuUtama.style.display = "block";
+                    siapkanFaceMatcherLokal(); // Load data wajah dari memori HP
+                }).catch(() => ubahStatus("Akses kamera ditolak!", "red"));
+        }
+
+        // Tambahan Fungsi untuk Menukar Kamera
+        function tukarKamera() {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            ubahStatus("Menukar kamera...", "blue");
+            startVideo();
+        }
+
+        // 2. Fungsi Sinkronisasi (Menarik Data Master dari Google Sheets)
+// 2. Fungsi Sinkronisasi (Menarik Data Master dari Google Sheets)
+        async function sinkronisasiData() {
+            if (!navigator.onLine) return alert("Anda harus ONLINE untuk sinkronisasi!");
+            ubahStatus("Sedang mengunduh data Master Siswa...", "blue");
+            
+            try {
+                // Kita ganti cara fetch-nya agar tidak diblokir CORS oleh Google
+                const response = await fetch(SCRIPT_URL);
+                
+                // Jika error CORS terjadi, biasanya response type-nya 'opaque'.
+                // Google Apps Script meredirect output JSON ke url lain yang kadang diblokir browser saat fetch langsung.
+                // Pendekatan paling aman adalah memastikan URL Anda sudah benar dan Apps Script mengembalikan teks.
+                const textResult = await response.text(); 
+                
+                try {
+                    const result = JSON.parse(textResult);
+                    
+                    if(result.status === "success") {
+                        localStorage.setItem('master_siswa', JSON.stringify(result.data));
+                        siapkanFaceMatcherLokal();
+                        ubahStatus(`Berhasil sinkronisasi ${result.data.length} siswa!`, "green");
+                    } else {
+                        ubahStatus(`Gagal: ${result.message}`, "red");
+                    }
+                } catch(e) {
+                     console.error("Format balikan bukan JSON:", textResult);
+                     ubahStatus("Gagal membaca data dari Google Sheets. Cek URL Anda.", "red");
+                }
+                
+            } catch (err) {
+                console.error("Fetch error:", err);
+                // Ini terjadi jika browser benar-benar memblokir request (CORS error)
+                ubahStatus("Gagal sinkronisasi data karena CORS/Jaringan.", "red");
+            }
+        }
+
+        // 3. Menyiapkan Memori Pengenalan Wajah dari LocalStorage
+        function siapkanFaceMatcherLokal() {
+            let dataSiswa = JSON.parse(localStorage.getItem('master_siswa')) || [];
+            if (dataSiswa.length === 0) return;
+
+            let labeledDescriptors = dataSiswa.map(siswa => {
+                let descriptorArray = JSON.parse(siswa.data_wajah);
+                let float32Data = new Float32Array(descriptorArray);
+                // Nama di dalam FaceMatcher disisipkan NIS dan Mapel agar mudah ditarik nanti
+                let label = `${siswa.nis}||${siswa.nama}||${siswa.mapel}`;
+                return new faceapi.LabeledFaceDescriptors(label, [float32Data]);
+            });
+
+            // Akurasi pencocokan (0.6 adalah standar baik)
+            faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6); 
+        }
+
+        // 4. Mendaftarkan Wajah Baru
+        function tampilkanFormDaftar(show = true) {
+            formDaftar.style.display = show ? "block" : "none";
+            if(intervalScan) clearInterval(intervalScan); // Hentikan scan absen jika sedang daftar
+        }
+
+        async function simpanWajahBaru() {
+            let nis = document.getElementById('nis').value;
+            let nama = document.getElementById('nama').value;
+            let mapel = document.getElementById('mapel').value;
+            if(!nis || !nama || !mapel) return alert("Isi form dengan lengkap!");
+
+            ubahStatus("Tahan posisi... sedang memindai lekuk wajah...", "blue");
+            
+            // Deteksi 1 wajah paling jelas + Landmark + Descriptor (Kode Wajah)
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                                           .withFaceLandmarks().withFaceDescriptor();
+            
+            if (!detection) return ubahStatus("Wajah tidak terdeteksi! Coba lagi.", "red");
+
+            // Ubah kode wajah (Float32Array) menjadi Array biasa agar bisa dikirim
+            const descriptorArray = Array.from(detection.descriptor);
+            
+            const payload = {
+                action: "register_wajah",
+                nis: nis,
+                nama: nama,
+                mapel: mapel,
+                data_wajah: JSON.stringify(descriptorArray)
+            };
+
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    ubahStatus("Wajah berhasil didaftarkan! Silakan Sinkronisasi Ulang.", "green");
+                    tampilkanFormDaftar(false);
+                });
+            } else {
+                alert("Pendaftaran wajah baru membutuhkan koneksi internet!");
+            }
+        }
+
+        // 5. Logika Scan Absen Otomatis (Face Recognition)
+        async function mulaiScanAbsen() {
+            if (!faceMatcher) return alert("Data Master kosong! Lakukan Sinkronisasi Data dulu.");
+            ubahStatus("Mode Absen Aktif. Silakan menghadap kamera...", "blue");
+            
+            // Melakukan scan setiap 1.5 detik
+            intervalScan = setInterval(async () => {
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                                               .withFaceLandmarks().withFaceDescriptor();
+                
+                if (detection) {
+                    const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                    
+                    if (bestMatch.label !== "unknown") {
+                        // Memecah label menjadi data terpisah
+                        let [nis, nama, mapel] = bestMatch.label.split("||");
+                        
+                        // Anti-Spam: Cek apakah siswa ini sudah absen dalam 1 menit terakhir
+                        let waktuSekarang = new Date().getTime();
+                        if (waktuTerakhirAbsen[nis] && (waktuSekarang - waktuTerakhirAbsen[nis] < 60000)) {
+                            return; // Lewati jika belum 1 menit
+                        }
+                        
+                        waktuTerakhirAbsen[nis] = waktuSekarang; // Catat waktu absen
+                        prosesAbsen(nis, nama, mapel);
+                    } else {
+                        ubahStatus("Wajah tidak dikenali dalam database!", "red");
+                    }
+                }
+            }, 1500);
+        }
+
+        function prosesAbsen(nis, nama, mapel) {
+            const date = new Date();
+            const dataAbsen = {
+                action: "absen", nis: nis, nama: nama, mapel: mapel, status: "Hadir",
+                tanggal: date.toLocaleDateString('id-ID'), jam: date.toLocaleTimeString('id-ID')
+            };
+
+            if (navigator.onLine) {
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataAbsen) });
+                ubahStatus(`✅ Absen Sukses: ${nama}`, "green");
+            } else {
+                let queue = JSON.parse(localStorage.getItem('absen_queue')) || [];
+                queue.push(dataAbsen);
+                localStorage.setItem('absen_queue', JSON.stringify(queue));
+                ubahStatus(`⚡ OFFLINE Absen Sukses: ${nama} (Disimpan lokal)`, "orange");
+            }
+        }
+
+        function ubahStatus(teks, warna) {
+            statusText.innerText = teks;
+            statusText.style.background = warna === "red" ? "#ffebee" : (warna === "green" ? "#e8f5e9" : (warna === "orange" ? "#fff3e0" : "#e3f2fd"));
+            statusText.style.color = warna === "red" ? "#c62828" : (warna === "green" ? "#2e7d32" : (warna === "orange" ? "#ef6c00" : "#1976d2"));
+        }
+
+        // Listener Jaringan (Kirim data antrean saat kembali online)
+        window.addEventListener('online', () => {
+            networkStatus.style.display = 'none';
+            let queue = JSON.parse(localStorage.getItem('absen_queue')) || [];
+            if (queue.length > 0) {
+                ubahStatus(`Menyinkronkan ${queue.length} absen tertunda...`, "blue");
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(queue) })
+                    .then(() => { localStorage.removeItem('absen_queue'); ubahStatus("Sinkronisasi Selesai!", "green"); });
+            }
+        });
+        window.addEventListener('offline', () => networkStatus.style.display = 'block');
+        if (!navigator.onLine) networkStatus.style.display = 'block';
+
+    </script>
+</body>
+</html>

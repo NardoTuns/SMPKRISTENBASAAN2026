@@ -16,6 +16,7 @@
         .btn-sync { background-color: #2196F3; }
         .btn-daftar { background-color: #FF9800; }
         .btn-absen { background-color: #4CAF50; }
+        .btn-tukar { background-color: #607D8B; } /* Tambahan CSS untuk tombol tukar kamera */
         #form-daftar { display: none; background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffcc80; }
         #status { font-weight: bold; margin-top: 10px; padding: 10px; border-radius: 5px; }
         .offline-badge { background-color: #f44336; color: white; padding: 8px; border-radius: 5px; display: none; margin-bottom: 10px; font-weight: bold; }
@@ -27,6 +28,9 @@
         <h2>📷 Absen Wajah Pintar</h2>
         <div id="network-status" class="offline-badge">⚡ OFFLINE: Menggunakan Data Lokal</div>
         
+        <!-- Tambahan Tombol Tukar Kamera -->
+        <button class="btn-tukar" id="btn-tukar-kamera" onclick="tukarKamera()">🔄 Tukar Kamera (Selfie / Belakang)</button>
+
         <video id="video" autoplay muted playsinline></video>
         <p id="status" style="background: #e3f2fd; color: #1976d2;">Memuat AI Model... Mohon tunggu.</p>
 
@@ -66,6 +70,7 @@
         let faceMatcher = null; // Menyimpan memori wajah
         let intervalScan = null;
         let waktuTerakhirAbsen = {}; // Mencegah spam absen orang yang sama
+        let currentFacingMode = 'user'; // Tambahan variabel untuk menyimpan mode kamera (depan/belakang)
 
         // 1. Inisialisasi PWA & AI
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
@@ -78,14 +83,27 @@
             ubahStatus("Gagal memuat AI. Pastikan folder /models lengkap!", "red");
         });
 
+        // Modifikasi fungsi startVideo untuk mendukung perpindahan kamera
         function startVideo() {
-            navigator.mediaDevices.getUserMedia({ video: true })
+            // Hentikan stream kamera sebelumnya jika ada sebelum memulai yang baru
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } })
                 .then(stream => { 
                     video.srcObject = stream; 
                     ubahStatus("AI Siap. Silakan Sinkronisasi Data terlebih dahulu.", "green");
                     menuUtama.style.display = "block";
                     siapkanFaceMatcherLokal(); // Load data wajah dari memori HP
                 }).catch(() => ubahStatus("Akses kamera ditolak!", "red"));
+        }
+
+        // Tambahan Fungsi untuk Menukar Kamera
+        function tukarKamera() {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            ubahStatus("Menukar kamera...", "blue");
+            startVideo();
         }
 
         // 2. Fungsi Sinkronisasi (Menarik Data Master dari Google Sheets)

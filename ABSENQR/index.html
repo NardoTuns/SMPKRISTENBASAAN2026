@@ -11,21 +11,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* Mencegah layar ter-zoom saat input di HP */
         input, select { font-size: 16px !important; }
         .hidden-page { display: none; }
         body { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans pb-20"> <!-- pb-20 memberi ruang untuk menu bawah -->
+<body class="bg-gray-100 text-gray-800 font-sans pb-20"> 
 
-    <!-- SUARA BEEP -->
     <audio id="beep-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
-    <!-- CONTAINER UTAMA (Maksimal selebar HP) -->
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
 
-<!-- HEADER -->
         <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <h1 class="text-lg font-bold">Absensi Offline</h1>
@@ -35,7 +31,6 @@
             <span id="badge-sync-header" class="bg-red-500 text-xs px-2 py-1 rounded-full font-bold">0 Belum Sync</span>
         </header>
 
-        <!-- HALAMAN LOGIN -->
         <div id="page-login" class="p-6 mt-10">
             <div class="text-center mb-8">
                 <div class="text-5xl mb-2">🏫</div>
@@ -46,7 +41,6 @@
             <button onclick="login()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg active:bg-blue-700 transition">Masuk & Unduh Data</button>
         </div>
 
-        <!-- HALAMAN SCAN BARCODE -->
         <div id="page-scan" class="hidden-page p-4">
             <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
                 <label class="block text-xs font-bold text-gray-500 mb-1">TANGGAL</label>
@@ -62,7 +56,6 @@
             <button id="btn-stop-scan" onclick="stopScan()" class="w-full bg-red-500 text-white p-4 rounded-xl font-bold text-lg shadow-md hidden active:bg-red-600">Tutup Kamera</button>
         </div>
 
-        <!-- HALAMAN MANUAL -->
         <div id="page-manual" class="hidden-page p-4">
             <div class="bg-yellow-50 p-4 rounded-xl mb-4 border border-yellow-100">
                 <input type="date" id="tgl-manual" class="w-full border border-gray-300 p-3 mb-3 rounded-lg">
@@ -75,7 +68,7 @@
                 <datalist id="list-siswa"></datalist>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="grid grid-cols-2 gap-3 mb-4">
                 <label class="flex items-center justify-center p-3 border-2 border-green-500 bg-green-50 rounded-xl font-bold text-green-700">
                     <input type="radio" name="status-manual" value="Hadir" checked class="mr-2 w-5 h-5"> Hadir
                 </label>
@@ -90,11 +83,22 @@
                 </label>
             </div>
 
+            <!-- [BARU] Bagian Input Keterangan di Absen Manual -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Keterangan (Opsional)</label>
+                <select id="ket-manual" class="w-full border-2 border-gray-300 p-3 rounded-xl font-bold mb-2 text-gray-600" onchange="toggleLainnya('ket-manual', 'ket-manual-lainnya')">
+                    <option value="">-- Kosong --</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Bolos">Bolos</option>
+                    <option value="Pulang Cepat">Pulang Cepat</option>
+                    <option value="Lainnya">Lainnya (Ketik Manual)</option>
+                </select>
+                <input type="text" id="ket-manual-lainnya" class="w-full border-2 border-gray-300 p-3 rounded-xl hidden" placeholder="Ketik keterangan di sini...">
+            </div>
+
             <button onclick="simpanManual()" class="w-full bg-yellow-500 text-white p-4 rounded-xl font-bold text-lg active:bg-yellow-600 shadow-md">Simpan Absen</button>
         </div>
         
-        <!-- HALAMAN EDIT & LAPORAN (Placeholder Sementara) -->
-        <!-- HALAMAN EDIT ABSEN -->
         <div id="page-laporan" class="hidden-page p-4">
             <h2 class="text-xl font-bold text-gray-700 mb-4">Edit Absensi</h2>
             
@@ -108,26 +112,36 @@
                 </div>
             </div>
 
-            <!-- Tempat List Data Absen Muncul -->
             <div id="list-edit" class="space-y-3 pb-4"></div>
         </div>
 
-        <!-- MODAL EDIT STATUS (Tersembunyi di awal) -->
         <div id="modal-edit" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
                 <h3 class="text-lg font-bold mb-1 text-gray-800">Ubah Status</h3>
                 <p id="edit-nama" class="font-semibold text-purple-600 mb-1 text-xl"></p>
                 <p id="edit-detail" class="text-sm text-gray-500 mb-4"></p>
                 
-                <input type="hidden" id="edit-id"> <!-- Menyimpan ID offline atau Row online -->
-                <input type="hidden" id="edit-mode"> <!-- 'offline' atau 'online' -->
+                <input type="hidden" id="edit-id"> 
+                <input type="hidden" id="edit-mode"> 
                 
-                <select id="edit-status" class="w-full border-2 border-purple-200 p-4 rounded-xl mb-6 font-bold text-lg bg-purple-50">
+                <label class="block text-xs font-bold text-gray-500 mb-1">Status Kehadiran</label>
+                <select id="edit-status" class="w-full border-2 border-purple-200 p-4 rounded-xl mb-3 font-bold text-lg bg-purple-50">
                     <option value="Hadir">Hadir</option>
                     <option value="Sakit">Sakit</option>
                     <option value="Izin">Izin</option>
                     <option value="Alpa">Alpa</option>
                 </select>
+
+                <!-- [BARU] Input Keterangan di Modal Edit -->
+                <label class="block text-xs font-bold text-gray-500 mb-1">Keterangan</label>
+                <select id="edit-keterangan" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-2 font-bold bg-purple-50" onchange="toggleLainnya('edit-keterangan', 'edit-keterangan-lainnya')">
+                    <option value="">-- Kosong --</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Bolos">Bolos</option>
+                    <option value="Pulang Cepat">Pulang Cepat</option>
+                    <option value="Lainnya">Lainnya (Ketik Manual)</option>
+                </select>
+                <input type="text" id="edit-keterangan-lainnya" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-6 hidden" placeholder="Ketik Keterangan...">
                 
                 <div class="flex gap-3">
                     <button onclick="tutupModal()" class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-xl font-bold">Batal</button>
@@ -136,8 +150,6 @@
             </div>
         </div>
 
-        <!-- MENU NAVIGASI BAWAH (Khusus Mobile) -->
-         <!-- HALAMAN REKAP LAPORAN -->
         <div id="page-rekap" class="hidden-page p-4">
             <h2 class="text-xl font-bold text-gray-700 mb-4">Rekap Laporan</h2>
             
@@ -166,9 +178,7 @@
                 <button onclick="buatLaporan()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold active:bg-blue-700 shadow-md">Tampilkan Laporan</button>
             </div>
 
-            <!-- AREA HASIL LAPORAN -->
             <div id="area-laporan" class="hidden mb-6">
-                <!-- Tabel ini yang akan di-capture jadi PNG -->
                 <div id="tabel-laporan" class="bg-white p-4 border rounded-xl shadow-sm mb-4">
                     <div class="text-center mb-4 border-b pb-2">
                         <h3 class="font-bold text-lg text-gray-800">LAPORAN ABSENSI</h3>
@@ -182,6 +192,7 @@
                                     <th class="p-2 border font-bold">Kls</th>
                                     <th class="p-2 border font-bold">Tgl</th>
                                     <th class="p-2 border font-bold">Status</th>
+                                    <th class="p-2 border font-bold text-center">Ket</th> <!-- [BARU] Header Kolom Ket -->
                                 </tr>
                             </thead>
                             <tbody id="laporan-body"></tbody>
@@ -193,7 +204,7 @@
                 </button>
             </div>
         </div>
-        <!-- HALAMAN ABSEN KELAS (MAPEL) -->
+
         <div id="page-absen-mapel" class="hidden-page p-4 pb-24">
             <h2 class="text-xl font-bold text-gray-700 mb-4">Absen Kelas (Mapel)</h2>
             
@@ -210,20 +221,17 @@
                 <button onclick="tampilkanSiswaUntukAbsen()" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold active:bg-indigo-700 shadow-md">Tampilkan Siswa</button>
             </div>
             
-            <!-- AREA DAFTAR SISWA (Muncul setelah diklik) -->
             <div id="area-absen-mapel" class="hidden mb-6">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-gray-800">Daftar Siswa</h3>
                     <button onclick="setSemuaHadir()" class="bg-white text-green-700 px-3 py-1 rounded-lg text-xs font-bold border border-green-300 shadow-sm active:bg-green-50">Set Semua Hadir</button>
                 </div>
-                <!-- List siswa yang akan dimuat oleh Javascript -->
                 <div id="list-siswa-absen" class="space-y-3 mb-4"></div>
                 
                 <button onclick="simpanAbsenMassal()" class="w-full bg-green-500 text-white p-4 rounded-xl font-bold text-lg active:bg-green-600 shadow-md">💾 Simpan Absen</button>
             </div>
         </div>
-<!-- MENU NAVIGASI BAWAH (6 Tombol) -->
-       <!-- MENU NAVIGASI BAWAH (7 Tombol Otomatis) -->
+
         <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
             <a href="../index.html" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">🏠</span>
@@ -256,17 +264,15 @@
         </nav>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // GANTI DENGAN URL WEB APP TERBARU ANDA
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcOfiqrrLO9C8t4B3_masso1zFc5pbk9OPNf01DirSFhqffTwJoQwmUwgSPxuNCdRs/exec'; 
 
-        // Database Offline (Dexie) - Versi 2 (Ada kolom KELAS)
+        // [BARU] Versi Dexie dinaikkan ke versi 3 untuk menambahkan indeks Keterangan dengan aman
         const db = new Dexie("AbsensiDB");
-        db.version(2).stores({
+        db.version(3).stores({
             siswa: 'nis, nama, kelas',
             mapel: 'id, nama',
-            absen: '++id, nis, nama, kelas, tanggal, jam, mapel, status'
+            absen: '++id, nis, nama, kelas, tanggal, jam, mapel, status, keterangan' 
         });
 
         let html5QrcodeScanner;
@@ -274,7 +280,23 @@
         document.getElementById('tgl-scan').value = today;
         document.getElementById('tgl-manual').value = today;
 
-        // Navigasi
+        // [BARU] Helper Function untuk membuka input Lainnya
+        function toggleLainnya(selectId, inputId) {
+            const val = document.getElementById(selectId).value;
+            const inputEl = document.getElementById(inputId);
+            if (val === 'Lainnya') {
+                inputEl.classList.remove('hidden');
+            } else {
+                inputEl.classList.add('hidden');
+            }
+        }
+        
+        // [BARU] Helper Function untuk mendapatkan nilai final keterangan
+        function getKeteranganValue(selectId, inputId) {
+            const val = document.getElementById(selectId).value;
+            return val === 'Lainnya' ? document.getElementById(inputId).value : val;
+        }
+
         function showPage(pageId) {
             document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel').forEach(div => {
                 div.classList.add('hidden-page');
@@ -291,7 +313,6 @@
             loadSiswaList();
             
             if(pageId === 'page-rekap') loadFilters(); 
-            // Trigger load data jika membuka tab Absen Mapel
             if(pageId === 'page-absen-mapel') {
                 document.getElementById('tgl-absen-mapel').value = new Date().toISOString().split('T')[0];
                 loadKelasMapelAbsen();
@@ -311,7 +332,7 @@
                     body: new URLSearchParams({ action: 'login', password: pass })
                 });
                 
-                const textResponse = await response.text(); // Ambil balasan mentah
+                const textResponse = await response.text(); 
                 
                 try {
                     const res = JSON.parse(textResponse);
@@ -319,8 +340,8 @@
                     if (res.status === 'success') {
                         await db.siswa.clear();
                         await db.mapel.clear();
-                        await db.siswa.bulkPut(res.siswa); // Menggunakan bulkPut agar anti-crash
-                        await db.mapel.bulkPut(res.mapel); // Menggunakan bulkPut agar anti-crash
+                        await db.siswa.bulkPut(res.siswa); 
+                        await db.mapel.bulkPut(res.mapel); 
                         
                         Swal.fire('Berhasil!', 'Data Siswa & Mapel tersimpan di HP.', 'success');
                         showPage('page-scan');
@@ -328,13 +349,13 @@
                         Swal.fire('Gagal', res.message, 'error');
                     }
                 } catch (jsonError) {
-                    console.error("ERROR GOOGLE:", textResponse);
                     Swal.fire('Error Script', 'Buka Inspect > Console (F12) untuk melihat pesan aslinya.', 'error');
                 }
             } catch (err) {
                 Swal.fire('Error Jaringan', 'Gagal terhubung ke server Google sama sekali.', 'error');
             }
         }
+        
         function logout() {
             Swal.fire({
                 title: 'Update Data Induk?',
@@ -347,14 +368,9 @@
                 cancelButtonText: 'Batal'
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    // Hapus data siswa dan mapel lama dari memori HP
                     await db.siswa.clear();
                     await db.mapel.clear();
-                    
-                    // Arahkan kembali ke halaman login
                     showPage('page-login');
-                    
-                    // Sembunyikan menu bawah agar rapi saat login
                     document.getElementById('bottom-nav').classList.remove('flex');
                     document.getElementById('bottom-nav').classList.add('hidden-page');
                 }
@@ -374,7 +390,6 @@
             document.getElementById('list-siswa').innerHTML = options;
         }
 
-        // Variabel penahan scan ganda
         let lastScanTime = 0;
         let lastScannedNis = '';
 
@@ -386,7 +401,6 @@
             document.getElementById('btn-stop-scan').classList.remove('hidden');
 
             html5QrcodeScanner = new Html5Qrcode("reader");
-            // Konfigurasi agar pas di HP
             html5QrcodeScanner.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
@@ -394,17 +408,14 @@
                     const nis = decodedText.trim();
                     const currentTime = new Date().getTime();
 
-                    // LOGIKA ANTI-DOUBLE SCAN:
-                    // Jika barcode yang discan SAMA dengan sebelumnya, dan belum lewat 3 detik (3000 ms), abaikan!
                     if (nis === lastScannedNis && (currentTime - lastScanTime) < 3000) {
                         return;
                     }
 
-                    // Catat NIS dan Waktu scan saat ini
                     lastScannedNis = nis;
                     lastScanTime = currentTime;
 
-                    await prosesAbsen(nis, tgl, mapel, 'Hadir');
+                    await prosesAbsen(nis, tgl, mapel, 'Hadir', ""); // Scan default keterangan = kosong
                 },
                 (errorMessage) => { }
             ).catch(err => Swal.fire('Error', 'Izin kamera ditolak atau HTTPS belum aktif', 'error'));
@@ -423,19 +434,20 @@
             const tgl = document.getElementById('tgl-manual').value;
             const mapel = document.getElementById('mapel-manual').value;
             const input = document.getElementById('input-siswa').value;
-            
-            // Ambil status dari radio button yang dipilih
             const status = document.querySelector('input[name="status-manual"]:checked').value;
+            
+            // [BARU] Menarik data Keterangan saat Simpan Manual
+            const keterangan = getKeteranganValue('ket-manual', 'ket-manual-lainnya');
             
             const nis = input.split(' - ')[0].trim(); 
             if(!nis) return Swal.fire('Error', 'Pilih siswa terlebih dahulu', 'warning');
             
-            await prosesAbsen(nis, tgl, mapel, status);
+            await prosesAbsen(nis, tgl, mapel, status, keterangan); // Mengirim keterangan
             document.getElementById('input-siswa').value = ''; 
         }
 
-        async function prosesAbsen(nis, tgl, mapel, status) {
-            // Cek NIS ke DB Lokal Siswa
+        // [BARU] Fungsi ditambahkan parameter `keterangan`
+        async function prosesAbsen(nis, tgl, mapel, status, keterangan = "") {
             const siswa = await db.siswa.get(nis);
             if (!siswa) {
                 Swal.fire({ icon: 'error', title: 'Tidak Ditemukan', text: `NIS ${nis} tidak terdaftar di database!`, timer: 2000 });
@@ -449,21 +461,19 @@
             }
 
             document.getElementById('beep-sound').play();
-
             const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
             
-            // MASUKKAN KELAS KE DATABASE LOKAL
             await db.absen.add({
                 nis: nis,
                 nama: siswa.nama,
-                kelas: siswa.kelas, // Diambil otomatis dari profil siswa
+                kelas: siswa.kelas, 
                 tanggal: tgl,
                 jam: jam,
                 mapel: mapel,
-                status: status
+                status: status,
+                keterangan: keterangan // [BARU] Simpan keterangan ke Database Lokal
             });
 
-            // Tampilkan Popup Cantik di Tengah Layar
             Swal.fire({
                 icon: 'success',
                 title: `${siswa.nama}`,
@@ -511,15 +521,9 @@
                 Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
             }
         }
-// ==========================================
-        // FITUR EDIT ABSEN
-        // ==========================================
-        // ==========================================
-        // FITUR EDIT ABSEN (VERSI GROUPING MAPEL)
-        // ==========================================
-        document.getElementById('tgl-edit').value = today;
 
-        let currentEditData = []; // Menyimpan data sementara di RAM
+        document.getElementById('tgl-edit').value = today;
+        let currentEditData = []; 
         let currentEditMode = '';
         let currentEditMapel = '';
 
@@ -562,15 +566,11 @@
                 return;
             }
 
-            // Ambil nama mapel apa saja yang ada di hari tersebut (menghapus duplikat)
             const uniqueMapel = [...new Set(currentEditData.map(item => item.mapel))];
-
             let html = `<p class="text-sm font-bold text-gray-500 mb-3">Pilih Mata Pelajaran:</p>`;
             
             uniqueMapel.forEach(mapel => {
-                // Hitung jumlah siswa yang absen di mapel ini
                 const jumlahSiswa = currentEditData.filter(item => item.mapel === mapel).length;
-                
                 html += `
                 <div class="bg-white border-2 border-purple-200 p-4 rounded-xl shadow-sm mb-3 flex justify-between items-center active:bg-purple-50" 
                      onclick="tampilkanSiswaMapel('${mapel}')">
@@ -582,7 +582,6 @@
             container.innerHTML = html;
         }
 
-        // FUNGSI PENCARIAN SISWA DI HALAMAN EDIT
         function cariSiswaEdit(keyword) {
             const barisSiswa = document.querySelectorAll('.baris-edit-siswa');
             const keywordLower = keyword.toLowerCase();
@@ -602,8 +601,6 @@
         function tampilkanSiswaMapel(mapel) {
             currentEditMapel = mapel;
             const container = document.getElementById('list-edit');
-            
-            // Filter data khusus untuk mapel yang diklik
             const dataMapel = currentEditData.filter(item => item.mapel === mapel);
 
             let html = `
@@ -612,7 +609,6 @@
                     <button onclick="renderListMapel()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold mr-3 active:bg-gray-300">⬅ Kembali</button>
                     <h3 class="text-lg font-bold text-gray-800 truncate">${mapel}</h3>
                 </div>
-                <!-- KOTAK PENCARIAN DITAMBAHKAN DI SINI -->
                 <input type="text" id="input-cari-edit" onkeyup="cariSiswaEdit(this.value)" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-2 text-sm focus:outline-none focus:border-purple-400" placeholder="Cari nama atau NIS siswa...">
             </div>
             <div id="wadah-siswa-edit">
@@ -625,14 +621,15 @@
                 if(item.status == 'Izin') color = 'bg-blue-100 text-blue-800';
                 if(item.status == 'Alpa') color = 'bg-red-100 text-red-800';
 
-                // Menentukan ID yang dipakai sesuai mode
                 const idData = currentEditMode === 'offline' ? item.id : item.rowNum;
+                
+                // [BARU] Menghindari String Petik pada keterangan
+                const ketSafe = (item.keterangan || '').replace(/'/g, "\\'"); 
 
-                // Menambahkan class 'baris-edit-siswa' dan data-atribut untuk fitur pencarian
                 html += `
                 <div class="baris-edit-siswa bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex justify-between items-center mb-3 active:bg-gray-50" 
                      data-nama="${item.nama}" data-nis="${item.nis}"
-                     onclick="bukaModalEdit('${idData}', '${item.nama}', '${item.mapel}', '${item.status}')">
+                     onclick="bukaModalEdit('${idData}', '${item.nama}', '${item.mapel}', '${item.status}', '${ketSafe}')">
                     <div>
                         <p class="font-bold text-gray-800">${item.nama}</p>
                         <p class="text-xs text-gray-500">Kelas: ${item.kelas} | NIS: ${item.nis}</p>
@@ -641,17 +638,30 @@
                 </div>
                 `;
             });
-            html += `</div>`; // Tutup wadah-siswa-edit
+            html += `</div>`; 
             container.innerHTML = html;
         }
 
-        // Buka modal (sudah disesuaikan agar tidak perlu parameter 'mode' lagi)
-        function bukaModalEdit(id, nama, mapel, status) {
+        // [BARU] Parameter ditambah keterangan
+        function bukaModalEdit(id, nama, mapel, status, keterangan) {
             document.getElementById('edit-id').value = id;
             document.getElementById('edit-nama').innerText = nama;
             document.getElementById('edit-detail').innerText = `Pelajaran: ${mapel}`;
             document.getElementById('edit-status').value = status;
             
+            // [BARU] Mengisi Nilai Keterangan ke Modal
+            const ketSelect = document.getElementById('edit-keterangan');
+            const ketInput = document.getElementById('edit-keterangan-lainnya');
+            if (!keterangan || ['Terlambat', 'Bolos', 'Pulang Cepat'].includes(keterangan)) {
+                ketSelect.value = keterangan || '';
+                ketInput.classList.add('hidden');
+                ketInput.value = '';
+            } else {
+                ketSelect.value = 'Lainnya';
+                ketInput.classList.remove('hidden');
+                ketInput.value = keterangan;
+            }
+
             document.getElementById('modal-edit').classList.remove('hidden');
         }
 
@@ -662,34 +672,37 @@
         async function simpanEdit() {
             const id = document.getElementById('edit-id').value;
             const newStatus = document.getElementById('edit-status').value;
+            const newKeterangan = getKeteranganValue('edit-keterangan', 'edit-keterangan-lainnya'); // [BARU] Menangkap Keterangan baru
             
             tutupModal();
             Swal.fire({title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
 
             if (currentEditMode === 'offline') {
-                // Update ke database HP
-                await db.absen.update(parseInt(id), { status: newStatus });
+                await db.absen.update(parseInt(id), { status: newStatus, keterangan: newKeterangan }); // [BARU] Simpan Keterangan
                 
-                // Ubah status di memori lokal agar tidak perlu fetch ulang, lalu render ulang
                 const index = currentEditData.findIndex(item => item.id == id);
-                if (index !== -1) currentEditData[index].status = newStatus;
+                if (index !== -1) {
+                    currentEditData[index].status = newStatus;
+                    currentEditData[index].keterangan = newKeterangan; // [BARU] Update Memori Array
+                }
                 
                 Swal.fire({icon: 'success', title: 'Tersimpan (Offline)', timer: 1000, showConfirmButton: false});
-                tampilkanSiswaMapel(currentEditMapel); // Kembali ke list siswa mapel tersebut
+                tampilkanSiswaMapel(currentEditMapel); 
             } 
             else if (currentEditMode === 'online') {
-                // Update ke Spreadsheet
                 try {
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus })
+                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus, keterangan: newKeterangan }) // [BARU] Update ke GS
                     });
                     const res = await response.json();
                     if (res.status === 'success') {
-                        // Ubah status di memori lokal
                         const index = currentEditData.findIndex(item => item.rowNum == id);
-                        if (index !== -1) currentEditData[index].status = newStatus;
+                        if (index !== -1) {
+                            currentEditData[index].status = newStatus;
+                            currentEditData[index].keterangan = newKeterangan; // [BARU] Update Memori Array
+                        }
                         
                         Swal.fire({icon: 'success', title: 'Tersimpan (Online)', timer: 1000, showConfirmButton: false});
                         tampilkanSiswaMapel(currentEditMapel);
@@ -699,7 +712,7 @@
                 }
             }
         }
-        // Cek jika guru sudah login sebelumnya
+
         window.onload = async () => {
             const count = await db.siswa.count();
             if (count > 0) {
@@ -708,9 +721,7 @@
                 showPage('page-login');
             }
         }
-        // ==========================================
-        // FITUR REKAP LAPORAN & EXPORT PNG
-        // ==========================================
+
         document.getElementById('rekap-start').value = today;
         document.getElementById('rekap-end').value = today;
 
@@ -718,7 +729,6 @@
             const siswas = await db.siswa.toArray();
             const mapels = await db.mapel.toArray();
             
-            // Ambil nama kelas apa saja yang unik
             const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
             let kelasHtml = '';
             kelasList.forEach(k => {
@@ -726,7 +736,6 @@
             });
             document.getElementById('filter-kelas').innerHTML = kelasHtml;
 
-            // Ambil nama mapel apa saja yang ada
             let mapelHtml = '';
             mapels.forEach(m => {
                 mapelHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${m.nama}" class="chk-mapel mr-1" checked> ${m.nama}</label>`;
@@ -740,7 +749,6 @@
             
             if(!tglMulai || !tglAkhir) return Swal.fire('Error', 'Pilih rentang tanggal!', 'warning');
 
-            // Ambil semua checkbox yang dicentang
             const checkedKelas = Array.from(document.querySelectorAll('.chk-kelas:checked')).map(cb => cb.value);
             const checkedMapel = Array.from(document.querySelectorAll('.chk-mapel:checked')).map(cb => cb.value);
             const checkedStatus = Array.from(document.querySelectorAll('.chk-status:checked')).map(cb => cb.value);
@@ -752,7 +760,6 @@
             Swal.fire({title: 'Menarik Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
             try {
-                // Tarik data mentah dari Apps Script
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -762,7 +769,6 @@
                 Swal.close();
 
                 if (res.status === 'success') {
-                    // Filter Data Menggunakan JavaScript (Sesuai centang)
                     const filteredData = res.data.filter(item => 
                         checkedKelas.includes(item.kelas) &&
                         checkedMapel.includes(item.mapel) &&
@@ -778,13 +784,12 @@
 
         function renderTabelLaporan(data, mulai, akhir) {
             document.getElementById('area-laporan').classList.remove('hidden');
-            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} 
- Total Data: ${data.length}`;
+            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} \n Total Data: ${data.length}`;
             
             const tbody = document.getElementById('laporan-body');
             
             if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-500 font-bold">Tidak ada data sesuai filter</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500 font-bold">Tidak ada data sesuai filter</td></tr>`; // span menjadi 5
                 return;
             }
 
@@ -796,6 +801,7 @@
                 if(item.status == 'Izin') statusColor = 'text-blue-600';
                 if(item.status == 'Alpa') statusColor = 'text-red-600';
 
+                // [BARU] Menambahkan Kolom Keterangan di Render HTML Tabel
                 html += `
                 <tr class="border-b active:bg-gray-50">
                     <td class="p-2 border">
@@ -805,17 +811,16 @@
                     <td class="p-2 border text-center font-bold text-gray-600">${item.kelas}</td>
                     <td class="p-2 border text-center whitespace-nowrap text-[10px]">${item.tanggal}</td>
                     <td class="p-2 border text-center font-bold ${statusColor}">${item.status}</td>
+                    <td class="p-2 border text-center text-[10px] text-gray-500 break-all">${item.keterangan || '-'}</td>
                 </tr>`;
             });
             tbody.innerHTML = html;
         }
 
-        // FUNGSI MEMBUAT GAMBAR (PNG)
         function exportPNG() {
             const tabel = document.getElementById('tabel-laporan');
             Swal.fire({title: 'Membuat Gambar...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
-            // scale: 2 berfungsi untuk membuat hasil PNG lebih tajam (High Definition)
             html2canvas(tabel, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
                 Swal.close();
                 const link = document.createElement('a');
@@ -826,15 +831,11 @@
                 Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
             });
         }
-        // ==========================================
-        // FITUR ABSEN MAPEL BATCH (MULTI-SISWA)
-        // ==========================================
 
         async function loadKelasMapelAbsen() {
             const siswas = await db.siswa.toArray();
             const mapels = await db.mapel.toArray();
             
-            // Render Checkbox Kelas
             const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
             let kelasHtml = '';
             kelasList.forEach(k => {
@@ -842,7 +843,6 @@
             });
             document.getElementById('checkbox-kelas-absen').innerHTML = kelasHtml;
 
-            // Render Select Mapel
             const options = mapels.map(m => `<option value="${m.nama}">${m.nama}</option>`).join('');
             document.getElementById('select-mapel-absen').innerHTML = options;
         }
@@ -852,7 +852,6 @@
             
             if(checkedKelas.length === 0) return Swal.fire('Peringatan', 'Mohon pilih minimal 1 kelas!', 'warning');
 
-            // Tarik data siswa yang kelasnya dicentang
             const semuaSiswa = await db.siswa.toArray();
             const siswaTerpilih = semuaSiswa.filter(s => checkedKelas.includes(s.kelas));
 
@@ -860,18 +859,17 @@
                 return Swal.fire('Kosong', 'Tidak ada data siswa pada kelas terpilih.', 'info');
             }
 
-            // Urutkan berdasarkan kelas, lalu nama (A-Z)
             siswaTerpilih.sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
 
             let html = '';
             siswaTerpilih.forEach(s => {
-                // UI menggunakan teknik Tailwind Peer untuk Radio Button custom yang interaktif
+                // [BARU] Menambahkan Dropdown Keterangan per Siswa di Fitur Mapel
                 html += `
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 student-absen-row" data-nis="${s.nis}" data-nama="${s.nama}" data-kelas="${s.kelas}">
                     <div class="font-bold text-gray-800">${s.nama}</div>
                     <div class="text-xs text-gray-500 mb-2">Kelas: ${s.kelas} | NIS: ${s.nis}</div>
                     
-                    <div class="flex gap-2 w-full">
+                    <div class="flex gap-2 w-full mb-3">
                         <div class="flex-1 relative">
                             <input type="radio" name="st-${s.nis}" value="Hadir" class="peer hidden" id="h-${s.nis}" checked>
                             <label for="h-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-green-100 peer-checked:text-green-700 peer-checked:border-green-400 transition">Hadir</label>
@@ -889,6 +887,18 @@
                             <label for="a-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-red-100 peer-checked:text-red-700 peer-checked:border-red-400 transition">Alpa</label>
                         </div>
                     </div>
+                    
+                    <div class="bg-gray-50 p-2 border border-gray-200 rounded-lg">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Ket. Tambahan (Opsional):</label>
+                        <select id="ket-${s.nis}" class="w-full border border-gray-300 p-2 text-xs font-bold text-gray-600 rounded mb-1" onchange="toggleLainnya('ket-${s.nis}', 'ket-lain-${s.nis}')">
+                            <option value="">- Kosong -</option>
+                            <option value="Terlambat">Terlambat</option>
+                            <option value="Bolos">Bolos</option>
+                            <option value="Pulang Cepat">Pulang Cepat</option>
+                            <option value="Lainnya">Lainnya...</option>
+                        </select>
+                        <input type="text" id="ket-lain-${s.nis}" class="w-full border border-gray-300 p-2 text-xs rounded hidden" placeholder="Ketik keterangan...">
+                    </div>
                 </div>`;
             });
 
@@ -896,12 +906,10 @@
             document.getElementById('area-absen-mapel').classList.remove('hidden');
         }
 
-        // Fungsi mempercepat absen (semua diset Hadir)
         function setSemuaHadir() {
             document.querySelectorAll('input[type="radio"][value="Hadir"]').forEach(radio => radio.checked = true);
         }
 
-        // Simpan semua data di layar sekaligus ke dalam memory HP (DexieDB)
         async function simpanAbsenMassal() {
             const tgl = document.getElementById('tgl-absen-mapel').value;
             const mapel = document.getElementById('select-mapel-absen').value;
@@ -917,11 +925,13 @@
                 const nis = row.getAttribute('data-nis');
                 const nama = row.getAttribute('data-nama');
                 const kelas = row.getAttribute('data-kelas');
-                
-                // Ambil radio button yang tercentang pada baris siswa ini
                 const status = row.querySelector(`input[name="st-${nis}"]:checked`).value;
 
-                // Cek ganda: Jangan simpan jika anak ini sudah diabsen hari ini di mapel yang sama
+                // [BARU] Menangkap Keterangan per Siswa
+                const ketSelect = row.querySelector(`#ket-${nis}`).value;
+                const ketLainnya = row.querySelector(`#ket-lain-${nis}`).value;
+                const keterangan = ketSelect === 'Lainnya' ? ketLainnya : ketSelect;
+
                 const cekGanda = await db.absen.where({nis: nis, tanggal: tgl, mapel: mapel}).first();
                 if (cekGanda) {
                     jumlahDilewati++;
@@ -935,7 +945,8 @@
                     tanggal: tgl,
                     jam: jam,
                     mapel: mapel,
-                    status: status
+                    status: status,
+                    keterangan: keterangan // [BARU] Simpan Keterangan
                 });
             }
 
@@ -947,7 +958,7 @@
                 if(jumlahDilewati > 0) pesan += `\n(${jumlahDilewati} siswa dilewati karena sudah ada datanya).`;
                 
                 Swal.fire('Berhasil', pesan, 'success');
-                document.getElementById('area-absen-mapel').classList.add('hidden'); // Tutup area setelah simpan
+                document.getElementById('area-absen-mapel').classList.add('hidden'); 
                 
             } else {
                 if (jumlahDilewati > 0) {
@@ -958,33 +969,24 @@
             }
         }
 
-        // ==========================================
-        // ==========================================
-        // FITUR KUNCI ABSEN (GENERATE ALPA OTOMATIS)
-        // ==========================================
         async function kunciAbsen() {
-            // Pengecekan krusial: Pastikan tidak ada data offline yang belum terkirim
             const count = await db.absen.count();
             if(count > 0) {
                 return Swal.fire('Peringatan!', 'Silakan SYNC data absen yang tertunda di HP ini terlebih dahulu sebelum mengunci absen.', 'warning');
             }
 
-            // Ambil opsi kelas dan mapel dari database offline
             const siswas = await db.siswa.toArray();
             const mapels = await db.mapel.toArray();
-            
             const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
             
-            // Buat HTML Dropdown Mapel (Default: DATANG)
             let mapelOptions = `<option value="DATANG" selected>DATANG</option>`;
             mapels.forEach(m => {
                 if(m.nama !== "Pulang" && m.nama !== "DATANG") {
                     mapelOptions += `<option value="${m.nama}">${m.nama}</option>`;
                 }
             });
-            mapelOptions += `<option value="Pulang">Pulang</option>`; // Tambahkan Pulang di akhir
+            mapelOptions += `<option value="Pulang">Pulang</option>`; 
 
-            // Buat HTML Dropdown Kelas (Default: SEMUA KELAS)
             let kelasOptions = `<option value="SEMUA KELAS" selected>SEMUA KELAS</option>`;
             kelasList.forEach(k => {
                 kelasOptions += `<option value="${k}">${k}</option>`;
@@ -992,7 +994,6 @@
 
             const todayDate = new Date().toISOString().split('T')[0];
 
-            // Tampilkan Custom Form SweetAlert2
             const { value: formValues } = await Swal.fire({
                 title: 'Kunci Absensi',
                 html:
@@ -1032,7 +1033,6 @@
                 }
             });
 
-            // Logika Setelah Tombol Diklik
             if (formValues) {
                 if (formValues.pass === '123') {
                     Swal.fire({title: 'Memproses Alpa Otomatis...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
@@ -1041,7 +1041,7 @@
                         const response = await fetch(SCRIPT_URL, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: newSearchParams({ 
+                            body: new URLSearchParams({ 
                                 action: 'generate_alpa', 
                                 tanggal: formValues.tgl,
                                 mapel: formValues.mapel,
@@ -1071,6 +1071,6 @@
             navigator.serviceWorker.register('./sw.js');
         });
     }
-</script>
+    </script>
 </body>
 </html>

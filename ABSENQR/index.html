@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Absensi Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        input, select { font-size: 16px !important; }
+        .hidden-page { display: none; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20"> 
+
+    <audio id="beep-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
+
+        <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <h1 class="text-lg font-bold">Absensi Offline</h1>
+                <button onclick="logout()" class="bg-white/20 text-white px-2 py-1 rounded text-xs font-bold hover:bg-white/30 active:bg-white/40">🔄 Update Data</button>
+                <button onclick="kunciAbsen()" class="bg-red-500/90 text-white px-2 py-1 rounded text-xs font-bold border border-red-400 hover:bg-red-600 shadow-sm active:bg-red-700">🔒 Kunci Absen</button>
+            </div>
+            <span id="badge-sync-header" class="bg-red-500 text-xs px-2 py-1 rounded-full font-bold">0 Belum Sync</span>
+        </header>
+
+        <div id="page-login" class="p-6 mt-10">
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-2">🏫</div>
+                <h2 class="text-xl font-bold text-gray-700">Login Guru</h2>
+                <p class="text-sm text-gray-500">Koneksi internet diperlukan saat login</p>
+            </div>
+            <input type="password" id="password" class="w-full border-2 border-gray-300 p-4 rounded-xl mb-4 text-center tracking-widest" placeholder="Password">
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg active:bg-blue-700 transition">Masuk & Unduh Data</button>
+        </div>
+
+        <div id="page-scan" class="hidden-page p-4">
+            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
+                <label class="block text-xs font-bold text-gray-500 mb-1">TANGGAL</label>
+                <input type="date" id="tgl-scan" class="w-full bg-white border border-gray-300 p-3 mb-3 rounded-lg font-semibold">
+                
+                <label class="block text-xs font-bold text-gray-500 mb-1">MATA PELAJARAN</label>
+                <select id="mapel-scan" class="w-full bg-white border border-gray-300 p-3 rounded-lg font-semibold"></select>
+            </div>
+            
+            <div id="reader" class="rounded-xl overflow-hidden shadow-inner mb-4 bg-black"></div>
+            
+            <button id="btn-start-scan" onclick="startScan()" class="w-full bg-green-500 text-white p-4 rounded-xl font-bold text-lg shadow-md active:bg-green-600">📸 Mulai Kamera</button>
+            <button id="btn-stop-scan" onclick="stopScan()" class="w-full bg-red-500 text-white p-4 rounded-xl font-bold text-lg shadow-md hidden active:bg-red-600">Tutup Kamera</button>
+        </div>
+
+        <div id="page-manual" class="hidden-page p-4">
+            <div class="bg-yellow-50 p-4 rounded-xl mb-4 border border-yellow-100">
+                <input type="date" id="tgl-manual" class="w-full border border-gray-300 p-3 mb-3 rounded-lg">
+                <select id="mapel-manual" class="w-full border border-gray-300 p-3 rounded-lg"></select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Cari Siswa (Ketik Nama/NIS)</label>
+                <input list="list-siswa" id="input-siswa" class="w-full border-2 border-gray-300 p-4 rounded-xl text-lg" placeholder="Contoh: 12345 atau Budi...">
+                <datalist id="list-siswa"></datalist>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <label class="flex items-center justify-center p-3 border-2 border-green-500 bg-green-50 rounded-xl font-bold text-green-700">
+                    <input type="radio" name="status-manual" value="Hadir" checked class="mr-2 w-5 h-5"> Hadir
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-yellow-500 bg-yellow-50 rounded-xl font-bold text-yellow-700">
+                    <input type="radio" name="status-manual" value="Sakit" class="mr-2 w-5 h-5"> Sakit
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-blue-500 bg-blue-50 rounded-xl font-bold text-blue-700">
+                    <input type="radio" name="status-manual" value="Izin" class="mr-2 w-5 h-5"> Izin
+                </label>
+                <label class="flex items-center justify-center p-3 border-2 border-red-500 bg-red-50 rounded-xl font-bold text-red-700">
+                    <input type="radio" name="status-manual" value="Alpa" class="mr-2 w-5 h-5"> Alpa
+                </label>
+            </div>
+
+            <!-- [BARU] Bagian Input Keterangan di Absen Manual -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Keterangan (Opsional)</label>
+                <select id="ket-manual" class="w-full border-2 border-gray-300 p-3 rounded-xl font-bold mb-2 text-gray-600" onchange="toggleLainnya('ket-manual', 'ket-manual-lainnya')">
+                    <option value="">-- Kosong --</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Bolos">Bolos</option>
+                    <option value="Pulang Cepat">Pulang Cepat</option>
+                    <option value="Lainnya">Lainnya (Ketik Manual)</option>
+                </select>
+                <input type="text" id="ket-manual-lainnya" class="w-full border-2 border-gray-300 p-3 rounded-xl hidden" placeholder="Ketik keterangan di sini...">
+            </div>
+
+            <button onclick="simpanManual()" class="w-full bg-yellow-500 text-white p-4 rounded-xl font-bold text-lg active:bg-yellow-600 shadow-md">Simpan Absen</button>
+        </div>
+        
+        <div id="page-laporan" class="hidden-page p-4">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Edit Absensi</h2>
+            
+            <div class="bg-purple-50 p-4 rounded-xl mb-4 border border-purple-100 shadow-sm">
+                <label class="block text-xs font-bold text-gray-500 mb-1">PILIH TANGGAL</label>
+                <input type="date" id="tgl-edit" class="w-full bg-white border border-gray-300 p-3 mb-3 rounded-lg font-semibold">
+                
+                <div class="flex gap-2">
+                    <button onclick="tampilkanEdit('offline')" class="flex-1 bg-gray-500 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-gray-600">Lokal (Offline)</button>
+                    <button onclick="tampilkanEdit('online')" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-purple-700">Server (Online)</button>
+                </div>
+            </div>
+
+            <div id="list-edit" class="space-y-3 pb-4"></div>
+        </div>
+
+        <div id="modal-edit" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+                <h3 class="text-lg font-bold mb-1 text-gray-800">Ubah Status</h3>
+                <p id="edit-nama" class="font-semibold text-purple-600 mb-1 text-xl"></p>
+                <p id="edit-detail" class="text-sm text-gray-500 mb-4"></p>
+                
+                <input type="hidden" id="edit-id"> 
+                <input type="hidden" id="edit-mode"> 
+                
+                <label class="block text-xs font-bold text-gray-500 mb-1">Status Kehadiran</label>
+                <select id="edit-status" class="w-full border-2 border-purple-200 p-4 rounded-xl mb-3 font-bold text-lg bg-purple-50">
+                    <option value="Hadir">Hadir</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Izin">Izin</option>
+                    <option value="Alpa">Alpa</option>
+                </select>
+
+                <!-- [BARU] Input Keterangan di Modal Edit -->
+                <label class="block text-xs font-bold text-gray-500 mb-1">Keterangan</label>
+                <select id="edit-keterangan" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-2 font-bold bg-purple-50" onchange="toggleLainnya('edit-keterangan', 'edit-keterangan-lainnya')">
+                    <option value="">-- Kosong --</option>
+                    <option value="Terlambat">Terlambat</option>
+                    <option value="Bolos">Bolos</option>
+                    <option value="Pulang Cepat">Pulang Cepat</option>
+                    <option value="Lainnya">Lainnya (Ketik Manual)</option>
+                </select>
+                <input type="text" id="edit-keterangan-lainnya" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-6 hidden" placeholder="Ketik Keterangan...">
+                
+                <div class="flex gap-3">
+                    <button onclick="tutupModal()" class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-xl font-bold">Batal</button>
+                    <button onclick="simpanEdit()" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-bold shadow-md">Simpan</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-rekap" class="hidden-page p-4">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Rekap Laporan</h2>
+
+            <!-- [BARU] Toggle Mode Rekap -->
+            <div class="flex gap-2 mb-4">
+                <button id="btn-mode-umum" onclick="setRekapMode('umum')" class="flex-1 p-3 rounded-xl font-bold text-sm shadow-md bg-blue-600 text-white transition">📊 Rekap Umum</button>
+                <button id="btn-mode-siswa" onclick="setRekapMode('siswa')" class="flex-1 p-3 rounded-xl font-bold text-sm shadow-md bg-gray-200 text-gray-700 transition">🧑‍🎓 Rekap Siswa</button>
+            </div>
+
+            <!-- [BARU] MODE: REKAP UMUM -->
+            <div id="mode-umum">
+                <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 shadow-sm text-sm">
+                    <label class="block font-bold text-gray-600 mb-1">RENTANG TANGGAL</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="date" id="rekap-start" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                        <span class="self-center font-bold">-</span>
+                        <input type="date" id="rekap-end" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                    </div>
+
+                    <label class="block font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                    <div id="filter-kelas" class="flex flex-wrap gap-2 mb-3"></div>
+
+                    <label class="block font-bold text-gray-600 mb-1">PILIH MAPEL</label>
+                    <div id="filter-mapel" class="flex flex-wrap gap-2 mb-3"></div>
+
+                    <label class="block font-bold text-gray-600 mb-1">PILIH STATUS</label>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-green-700"><input type="checkbox" value="Hadir" class="chk-status mr-1"> Hadir</label>
+                        <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-yellow-700"><input type="checkbox" value="Sakit" class="chk-status mr-1"> Sakit</label>
+                        <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-blue-700"><input type="checkbox" value="Izin" class="chk-status mr-1"> Izin</label>
+                        <label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-red-700"><input type="checkbox" value="Alpa" class="chk-status mr-1"> Alpa</label>
+                    </div>
+
+                    <button onclick="buatLaporan()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold active:bg-blue-700 shadow-md">Tampilkan Laporan</button>
+                </div>
+
+                <div id="area-laporan" class="hidden mb-6">
+                    <div id="tabel-laporan" class="bg-white p-4 border rounded-xl shadow-sm mb-4">
+                        <div class="text-center mb-4 border-b pb-2">
+                            <h3 class="font-bold text-lg text-gray-800">LAPORAN ABSENSI</h3>
+                            <p id="laporan-subtitle" class="text-xs text-gray-500"></p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 border font-bold">Nama</th>
+                                        <th class="p-2 border font-bold">Kls</th>
+                                        <th class="p-2 border font-bold">Tgl</th>
+                                        <th class="p-2 border font-bold">Status</th>
+                                        <th class="p-2 border font-bold text-center">Ket</th> <!-- [BARU] Header Kolom Ket -->
+                                    </tr>
+                                </thead>
+                                <tbody id="laporan-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <button onclick="exportPNG()" class="w-full bg-green-600 text-white p-4 rounded-xl font-bold active:bg-green-700 flex justify-center items-center gap-2 shadow-md">
+                        <span class="text-xl">🖼️</span> Export & Download PNG
+                    </button>
+                </div>
+            </div>
+
+            <!-- [BARU] MODE: REKAP PER SISWA -->
+            <div id="mode-siswa" class="hidden-page">
+                <div class="bg-green-50 p-4 rounded-xl mb-4 border border-green-100 shadow-sm text-sm">
+                    <label class="block font-bold text-gray-600 mb-1">CARI SISWA</label>
+                    <input list="list-siswa" id="input-siswa-rekap" class="w-full border-2 border-gray-300 p-3 rounded-xl mb-3 font-semibold" placeholder="Ketik NIS atau Nama...">
+
+                    <label class="block font-bold text-gray-600 mb-1">RENTANG TANGGAL</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="date" id="rekap-siswa-start" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                        <span class="self-center font-bold">-</span>
+                        <input type="date" id="rekap-siswa-end" class="w-full border border-gray-300 p-2 rounded-lg bg-white">
+                    </div>
+
+                    <label class="block font-bold text-gray-600 mb-1">PILIH MAPEL</label>
+                    <div id="filter-mapel-siswa" class="flex flex-wrap gap-2 mb-4"></div>
+
+                    <button onclick="tampilkanRekapSiswa()" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold active:bg-green-700 shadow-md">Tampilkan</button>
+                </div>
+
+                <div id="area-rekap-siswa" class="hidden mb-6">
+                    <div id="ringkasan-rekap-siswa" class="grid grid-cols-4 gap-2 mb-4 text-center text-xs font-bold"></div>
+                    <div id="tabel-rekap-siswa" class="bg-white p-4 border rounded-xl shadow-sm mb-4">
+                        <div class="text-center mb-4 border-b pb-2">
+                            <h3 id="rekap-siswa-nama" class="font-bold text-lg text-gray-800"></h3>
+                            <p id="rekap-siswa-subtitle" class="text-xs text-gray-500"></p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2 border font-bold">Tgl</th>
+                                        <th class="p-2 border font-bold">Mapel</th>
+                                        <th class="p-2 border font-bold">Status</th>
+                                        <th class="p-2 border font-bold text-center">Ket</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rekap-siswa-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <button onclick="exportPNGSiswa()" class="w-full bg-green-600 text-white p-4 rounded-xl font-bold active:bg-green-700 flex justify-center items-center gap-2 shadow-md">
+                        <span class="text-xl">🖼️</span> Export & Download PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-absen-mapel" class="hidden-page p-4 pb-24">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Absen Kelas (Mapel)</h2>
+            
+            <div class="bg-indigo-50 p-4 rounded-xl mb-4 border border-indigo-100 shadow-sm text-sm">
+                <label class="block font-bold text-gray-600 mb-1">TANGGAL</label>
+                <input type="date" id="tgl-absen-mapel" class="w-full border border-gray-300 p-2 rounded-lg bg-white mb-3">
+
+                <label class="block font-bold text-gray-600 mb-1">MATA PELAJARAN</label>
+                <select id="select-mapel-absen" class="w-full border border-gray-300 p-2 rounded-lg bg-white mb-3"></select>
+
+                <label class="block font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                <div id="checkbox-kelas-absen" class="flex flex-wrap gap-2 mb-4"></div>
+
+                <button onclick="tampilkanSiswaUntukAbsen()" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold active:bg-indigo-700 shadow-md">Tampilkan Siswa</button>
+            </div>
+            
+            <div id="area-absen-mapel" class="hidden mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-800">Daftar Siswa</h3>
+                    <button onclick="setSemuaHadir()" class="bg-white text-green-700 px-3 py-1 rounded-lg text-xs font-bold border border-green-300 shadow-sm active:bg-green-50">Set Semua Hadir</button>
+                </div>
+                <div id="list-siswa-absen" class="space-y-3 mb-4"></div>
+                
+                <button onclick="simpanAbsenMassal()" class="w-full bg-green-500 text-white p-4 rounded-xl font-bold text-lg active:bg-green-600 shadow-md">💾 Simpan Absen</button>
+            </div>
+        </div>
+
+        <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
+            <a href="../index.html" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">🏠</span>
+                <span class="text-[9px] font-bold">HOME</span>
+            </a>
+            <button onclick="showPage('page-scan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">📷</span>
+                <span class="text-[9px] font-bold">SCAN</span>
+            </button>
+            <button onclick="showPage('page-manual')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">✍️</span>
+                <span class="text-[9px] font-bold">MANUAL</span>
+            </button>
+            <button onclick="showPage('page-absen-mapel')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-indigo-600 focus:text-indigo-600 p-1">
+                <span class="text-xl mb-1">📝</span>
+                <span class="text-[9px] font-bold text-center leading-tight">ABSEN<br>MAPEL</span>
+            </button>
+            <button onclick="showPage('page-laporan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">✏️</span>
+                <span class="text-[9px] font-bold">EDIT</span>
+            </button>
+            <button onclick="showPage('page-rekap')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
+                <span class="text-xl mb-1">📊</span>
+                <span class="text-[9px] font-bold">LAPORAN</span>
+            </button>
+            <button onclick="syncData()" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1 relative">
+                <span class="text-xl mb-1">🔄</span>
+                <span class="text-[9px] font-bold">SYNC</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcOfiqrrLO9C8t4B3_masso1zFc5pbk9OPNf01DirSFhqffTwJoQwmUwgSPxuNCdRs/exec'; 
+
+        // [BARU] Versi Dexie dinaikkan ke versi 3 untuk menambahkan indeks Keterangan dengan aman
+        const db = new Dexie("AbsensiDB");
+        db.version(3).stores({
+            siswa: 'nis, nama, kelas',
+            mapel: 'id, nama',
+            absen: '++id, nis, nama, kelas, tanggal, jam, mapel, status, keterangan' 
+        });
+
+        let html5QrcodeScanner;
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('tgl-scan').value = today;
+        document.getElementById('tgl-manual').value = today;
+
+        // [BARU] Helper Function untuk membuka input Lainnya
+        function toggleLainnya(selectId, inputId) {
+            const val = document.getElementById(selectId).value;
+            const inputEl = document.getElementById(inputId);
+            if (val === 'Lainnya') {
+                inputEl.classList.remove('hidden');
+            } else {
+                inputEl.classList.add('hidden');
+            }
+        }
+        
+        // [BARU] Helper Function untuk mendapatkan nilai final keterangan
+        function getKeteranganValue(selectId, inputId) {
+            const val = document.getElementById(selectId).value;
+            return val === 'Lainnya' ? document.getElementById(inputId).value : val;
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel').forEach(div => {
+                div.classList.add('hidden-page');
+            });
+            document.getElementById(pageId).classList.remove('hidden-page');
+            
+            if(pageId !== 'page-login') {
+                document.getElementById('bottom-nav').classList.remove('hidden-page');
+                document.getElementById('bottom-nav').classList.add('flex');
+            }
+            
+            updateBadge();
+            loadMapel();
+            loadSiswaList();
+            
+            if(pageId === 'page-rekap') {
+                loadFilters();
+                setRekapMode('umum'); // [BARU] Selalu reset ke mode Rekap Umum & checkbox kosong saat tab dibuka
+                document.getElementById('area-laporan').classList.add('hidden');
+                document.getElementById('area-rekap-siswa').classList.add('hidden');
+                document.getElementById('input-siswa-rekap').value = '';
+            }
+            if(pageId === 'page-absen-mapel') {
+                document.getElementById('tgl-absen-mapel').value = new Date().toISOString().split('T')[0];
+                loadKelasMapelAbsen();
+            }
+        }
+
+        async function login() {
+            const pass = document.getElementById('password').value;
+            if(!pass) return Swal.fire('Error', 'Masukkan password!', 'error');
+
+            Swal.fire({title: 'Mengunduh Data...', text: 'Pastikan sinyal stabil', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'login', password: pass })
+                });
+                
+                const textResponse = await response.text(); 
+                
+                try {
+                    const res = JSON.parse(textResponse);
+                    
+                    if (res.status === 'success') {
+                        await db.siswa.clear();
+                        await db.mapel.clear();
+                        await db.siswa.bulkPut(res.siswa); 
+                        await db.mapel.bulkPut(res.mapel); 
+                        
+                        Swal.fire('Berhasil!', 'Data Siswa & Mapel tersimpan di HP.', 'success');
+                        showPage('page-scan');
+                    } else {
+                        Swal.fire('Gagal', res.message, 'error');
+                    }
+                } catch (jsonError) {
+                    Swal.fire('Error Script', 'Buka Inspect > Console (F12) untuk melihat pesan aslinya.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error Jaringan', 'Gagal terhubung ke server Google sama sekali.', 'error');
+            }
+        }
+        
+        function logout() {
+            Swal.fire({
+                title: 'Update Data Induk?',
+                text: "Anda akan diarahkan ke halaman login untuk mengunduh ulang data Siswa & Mapel terbaru dari Spreadsheet.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Update!',
+                cancelButtonText: 'Batal'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await db.siswa.clear();
+                    await db.mapel.clear();
+                    showPage('page-login');
+                    document.getElementById('bottom-nav').classList.remove('flex');
+                    document.getElementById('bottom-nav').classList.add('hidden-page');
+                }
+            })
+        }
+
+        async function loadMapel() {
+            const mapels = await db.mapel.toArray();
+            const options = mapels.map(m => `<option value="${m.nama}">${m.nama}</option>`).join('');
+            document.getElementById('mapel-scan').innerHTML = options;
+            document.getElementById('mapel-manual').innerHTML = options;
+        }
+
+        async function loadSiswaList() {
+            const siswas = await db.siswa.toArray();
+            const options = siswas.map(s => `<option value="${s.nis} - ${s.nama}">`).join('');
+            document.getElementById('list-siswa').innerHTML = options;
+        }
+
+        let lastScanTime = 0;
+        let lastScannedNis = '';
+
+        function startScan() {
+            const tgl = document.getElementById('tgl-scan').value;
+            const mapel = document.getElementById('mapel-scan').value;
+            
+            document.getElementById('btn-start-scan').classList.add('hidden');
+            document.getElementById('btn-stop-scan').classList.remove('hidden');
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                async (decodedText) => { 
+                    const nis = decodedText.trim();
+                    const currentTime = new Date().getTime();
+
+                    if (nis === lastScannedNis && (currentTime - lastScanTime) < 3000) {
+                        return;
+                    }
+
+                    lastScannedNis = nis;
+                    lastScanTime = currentTime;
+
+                    await prosesAbsen(nis, tgl, mapel, 'Hadir', ""); // Scan default keterangan = kosong
+                },
+                (errorMessage) => { }
+            ).catch(err => Swal.fire('Error', 'Izin kamera ditolak atau HTTPS belum aktif', 'error'));
+        }
+
+        function stopScan() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('btn-start-scan').classList.remove('hidden');
+                    document.getElementById('btn-stop-scan').classList.add('hidden');
+                });
+            }
+        }
+
+        async function simpanManual() {
+            const tgl = document.getElementById('tgl-manual').value;
+            const mapel = document.getElementById('mapel-manual').value;
+            const input = document.getElementById('input-siswa').value;
+            const status = document.querySelector('input[name="status-manual"]:checked').value;
+            
+            // [BARU] Menarik data Keterangan saat Simpan Manual
+            const keterangan = getKeteranganValue('ket-manual', 'ket-manual-lainnya');
+            
+            const nis = input.split(' - ')[0].trim(); 
+            if(!nis) return Swal.fire('Error', 'Pilih siswa terlebih dahulu', 'warning');
+            
+            await prosesAbsen(nis, tgl, mapel, status, keterangan); // Mengirim keterangan
+            document.getElementById('input-siswa').value = ''; 
+        }
+
+        // [BARU] Fungsi ditambahkan parameter `keterangan`
+        async function prosesAbsen(nis, tgl, mapel, status, keterangan = "") {
+            const siswa = await db.siswa.get(nis);
+            if (!siswa) {
+                Swal.fire({ icon: 'error', title: 'Tidak Ditemukan', text: `NIS ${nis} tidak terdaftar di database!`, timer: 2000 });
+                return;
+            }
+
+            const cekGanda = await db.absen.where({nis: nis, tanggal: tgl, mapel: mapel}).first();
+            if (cekGanda) {
+                Swal.fire({ icon: 'warning', title: 'Sudah Absen', text: `${siswa.nama} sudah absen mapel ini.`, timer: 1500 });
+                return;
+            }
+
+            document.getElementById('beep-sound').play();
+            const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            await db.absen.add({
+                nis: nis,
+                nama: siswa.nama,
+                kelas: siswa.kelas, 
+                tanggal: tgl,
+                jam: jam,
+                mapel: mapel,
+                status: status,
+                keterangan: keterangan // [BARU] Simpan keterangan ke Database Lokal
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: `${siswa.nama}`,
+                text: `Kelas ${siswa.kelas} - ${status}`,
+                showConfirmButton: false, 
+                timer: 1500
+            });
+            updateBadge();
+        }
+
+        async function updateBadge() {
+            const count = await db.absen.count();
+            const badge = document.getElementById('badge-sync-header');
+            badge.innerText = `${count} Belum Sync`;
+            if(count > 0) {
+                badge.classList.remove('bg-green-500');
+                badge.classList.add('bg-red-500');
+            } else {
+                badge.classList.remove('bg-red-500');
+                badge.classList.add('bg-green-500');
+                badge.innerText = 'Sync Selesai';
+            }
+        }
+
+        async function syncData() {
+            const dataBelumSync = await db.absen.toArray();
+            if (dataBelumSync.length === 0) return Swal.fire('Info', 'Semua data sudah tersinkronisasi.', 'info');
+
+            Swal.fire({title: 'Mengirim Data...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'sync', data: JSON.stringify(dataBelumSync) })
+                });
+                
+                const res = await response.json();
+                if (res.status === 'success') {
+                    await db.absen.clear(); 
+                    updateBadge();
+                    Swal.fire('Sukses!', `${dataBelumSync.length} data absen terkirim ke Spreadsheet.`, 'success');
+                }
+            } catch (err) {
+                Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+            }
+        }
+
+        document.getElementById('tgl-edit').value = today;
+        let currentEditData = []; 
+        let currentEditMode = '';
+        let currentEditMapel = '';
+
+        async function tampilkanEdit(mode) {
+            const tgl = document.getElementById('tgl-edit').value;
+            const container = document.getElementById('list-edit');
+            container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold animate-pulse">Memuat data...</p>`;
+            
+            currentEditMode = mode;
+            currentEditData = [];
+
+            if (mode === 'offline') {
+                currentEditData = await db.absen.where('tanggal').equals(tgl).toArray();
+                renderListMapel();
+            } else if (mode === 'online') {
+                Swal.fire({title: 'Menarik Data...', text: 'Butuh internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'get_absen', tanggal: tgl })
+                    });
+                    const res = await response.json();
+                    Swal.close();
+                    if (res.status === 'success') {
+                        currentEditData = res.data;
+                        renderListMapel();
+                    }
+                } catch (err) {
+                    Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+                    container.innerHTML = '';
+                }
+            }
+        }
+
+        function renderListMapel() {
+            const container = document.getElementById('list-edit');
+            if (currentEditData.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500 mt-5 font-bold">Data absen tidak ditemukan.</p>`;
+                return;
+            }
+
+            const uniqueMapel = [...new Set(currentEditData.map(item => item.mapel))];
+            let html = `<p class="text-sm font-bold text-gray-500 mb-3">Pilih Mata Pelajaran:</p>`;
+            
+            uniqueMapel.forEach(mapel => {
+                const jumlahSiswa = currentEditData.filter(item => item.mapel === mapel).length;
+                html += `
+                <div class="bg-white border-2 border-purple-200 p-4 rounded-xl shadow-sm mb-3 flex justify-between items-center active:bg-purple-50" 
+                     onclick="tampilkanSiswaMapel('${mapel}')">
+                    <span class="font-bold text-purple-700 text-lg">${mapel}</span>
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">${jumlahSiswa} Data</span>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function cariSiswaEdit(keyword) {
+            const barisSiswa = document.querySelectorAll('.baris-edit-siswa');
+            const keywordLower = keyword.toLowerCase();
+            
+            barisSiswa.forEach(baris => {
+                const nama = baris.getAttribute('data-nama').toLowerCase();
+                const nis = baris.getAttribute('data-nis').toLowerCase();
+                
+                if (nama.includes(keywordLower) || nis.includes(keywordLower)) {
+                    baris.style.display = 'flex';
+                } else {
+                    baris.style.display = 'none';
+                }
+            });
+        }
+
+        function tampilkanSiswaMapel(mapel) {
+            currentEditMapel = mapel;
+            const container = document.getElementById('list-edit');
+            const dataMapel = currentEditData.filter(item => item.mapel === mapel);
+
+            let html = `
+            <div class="sticky top-0 bg-white py-2 z-10 border-b border-gray-100 mb-4">
+                <div class="flex items-center mb-3">
+                    <button onclick="renderListMapel()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold mr-3 active:bg-gray-300">⬅ Kembali</button>
+                    <h3 class="text-lg font-bold text-gray-800 truncate">${mapel}</h3>
+                </div>
+                <input type="text" id="input-cari-edit" onkeyup="cariSiswaEdit(this.value)" class="w-full border-2 border-purple-200 p-3 rounded-xl mb-2 text-sm focus:outline-none focus:border-purple-400" placeholder="Cari nama atau NIS siswa...">
+            </div>
+            <div id="wadah-siswa-edit">
+            `;
+
+            dataMapel.forEach(item => {
+                let color = 'bg-gray-100 text-gray-800';
+                if(item.status == 'Hadir') color = 'bg-green-100 text-green-800';
+                if(item.status == 'Sakit') color = 'bg-yellow-100 text-yellow-800';
+                if(item.status == 'Izin') color = 'bg-blue-100 text-blue-800';
+                if(item.status == 'Alpa') color = 'bg-red-100 text-red-800';
+
+                const idData = currentEditMode === 'offline' ? item.id : item.rowNum;
+                
+                // [BARU] Menghindari String Petik pada keterangan
+                const ketSafe = (item.keterangan || '').replace(/'/g, "\\'"); 
+
+                html += `
+                <div class="baris-edit-siswa bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex justify-between items-center mb-3 active:bg-gray-50" 
+                     data-nama="${item.nama}" data-nis="${item.nis}"
+                     onclick="bukaModalEdit('${idData}', '${item.nama}', '${item.mapel}', '${item.status}', '${ketSafe}')">
+                    <div>
+                        <p class="font-bold text-gray-800">${item.nama}</p>
+                        <p class="text-xs text-gray-500">Kelas: ${item.kelas} | NIS: ${item.nis}</p>
+                    </div>
+                    <span class="${color} px-3 py-1 rounded-full text-xs font-bold">${item.status}</span>
+                </div>
+                `;
+            });
+            html += `</div>`; 
+            container.innerHTML = html;
+        }
+
+        // [BARU] Parameter ditambah keterangan
+        function bukaModalEdit(id, nama, mapel, status, keterangan) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-nama').innerText = nama;
+            document.getElementById('edit-detail').innerText = `Pelajaran: ${mapel}`;
+            document.getElementById('edit-status').value = status;
+            
+            // [BARU] Mengisi Nilai Keterangan ke Modal
+            const ketSelect = document.getElementById('edit-keterangan');
+            const ketInput = document.getElementById('edit-keterangan-lainnya');
+            if (!keterangan || ['Terlambat', 'Bolos', 'Pulang Cepat'].includes(keterangan)) {
+                ketSelect.value = keterangan || '';
+                ketInput.classList.add('hidden');
+                ketInput.value = '';
+            } else {
+                ketSelect.value = 'Lainnya';
+                ketInput.classList.remove('hidden');
+                ketInput.value = keterangan;
+            }
+
+            document.getElementById('modal-edit').classList.remove('hidden');
+        }
+
+        function tutupModal() {
+            document.getElementById('modal-edit').classList.add('hidden');
+        }
+
+        async function simpanEdit() {
+            const id = document.getElementById('edit-id').value;
+            const newStatus = document.getElementById('edit-status').value;
+            const newKeterangan = getKeteranganValue('edit-keterangan', 'edit-keterangan-lainnya'); // [BARU] Menangkap Keterangan baru
+            
+            tutupModal();
+            Swal.fire({title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            if (currentEditMode === 'offline') {
+                await db.absen.update(parseInt(id), { status: newStatus, keterangan: newKeterangan }); // [BARU] Simpan Keterangan
+                
+                const index = currentEditData.findIndex(item => item.id == id);
+                if (index !== -1) {
+                    currentEditData[index].status = newStatus;
+                    currentEditData[index].keterangan = newKeterangan; // [BARU] Update Memori Array
+                }
+                
+                Swal.fire({icon: 'success', title: 'Tersimpan (Offline)', timer: 1000, showConfirmButton: false});
+                tampilkanSiswaMapel(currentEditMapel); 
+            } 
+            else if (currentEditMode === 'online') {
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'update_absen', rowNum: id, status: newStatus, keterangan: newKeterangan }) // [BARU] Update ke GS
+                    });
+                    const res = await response.json();
+                    if (res.status === 'success') {
+                        const index = currentEditData.findIndex(item => item.rowNum == id);
+                        if (index !== -1) {
+                            currentEditData[index].status = newStatus;
+                            currentEditData[index].keterangan = newKeterangan; // [BARU] Update Memori Array
+                        }
+                        
+                        Swal.fire({icon: 'success', title: 'Tersimpan (Online)', timer: 1000, showConfirmButton: false});
+                        tampilkanSiswaMapel(currentEditMapel);
+                    }
+                } catch (err) {
+                    Swal.fire('Gagal', 'Pastikan sinyal internet aktif.', 'error');
+                }
+            }
+        }
+
+        window.onload = async () => {
+            const count = await db.siswa.count();
+            if (count > 0) {
+                showPage('page-scan');
+            } else {
+                showPage('page-login');
+            }
+        }
+
+        document.getElementById('rekap-start').value = today;
+        document.getElementById('rekap-end').value = today;
+        document.getElementById('rekap-siswa-start').value = today;
+        document.getElementById('rekap-siswa-end').value = today;
+
+        async function loadFilters() {
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            let kelasHtml = '';
+            kelasList.forEach(k => {
+                kelasHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${k}" class="chk-kelas mr-1"> ${k}</label>`;
+            });
+            document.getElementById('filter-kelas').innerHTML = kelasHtml;
+
+            let mapelHtml = '';
+            mapels.forEach(m => {
+                mapelHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${m.nama}" class="chk-mapel mr-1"> ${m.nama}</label>`;
+            });
+            document.getElementById('filter-mapel').innerHTML = mapelHtml;
+
+            // [BARU] Reset checkbox status (Hadir/Sakit/Izin/Alpa) agar tidak ada yang tercentang
+            document.querySelectorAll('.chk-status').forEach(cb => cb.checked = false);
+        }
+
+        // [BARU] Memuat checkbox Mapel untuk mode Rekap Per Siswa (default tidak tercentang)
+        async function loadFilterMapelSiswa() {
+            const mapels = await db.mapel.toArray();
+            let mapelHtml = '';
+            mapels.forEach(m => {
+                mapelHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${m.nama}" class="chk-mapel-siswa mr-1"> ${m.nama}</label>`;
+            });
+            document.getElementById('filter-mapel-siswa').innerHTML = mapelHtml;
+        }
+
+        // [BARU] Mengatur tampilan mode Rekap Umum vs Rekap Per Siswa
+        function setRekapMode(mode) {
+            const btnUmum = document.getElementById('btn-mode-umum');
+            const btnSiswa = document.getElementById('btn-mode-siswa');
+            const areaUmum = document.getElementById('mode-umum');
+            const areaSiswa = document.getElementById('mode-siswa');
+
+            if (mode === 'siswa') {
+                areaUmum.classList.add('hidden-page');
+                areaSiswa.classList.remove('hidden-page');
+                btnSiswa.classList.add('bg-green-600', 'text-white');
+                btnSiswa.classList.remove('bg-gray-200', 'text-gray-700');
+                btnUmum.classList.add('bg-gray-200', 'text-gray-700');
+                btnUmum.classList.remove('bg-blue-600', 'text-white');
+                loadFilterMapelSiswa();
+            } else {
+                areaSiswa.classList.add('hidden-page');
+                areaUmum.classList.remove('hidden-page');
+                btnUmum.classList.add('bg-blue-600', 'text-white');
+                btnUmum.classList.remove('bg-gray-200', 'text-gray-700');
+                btnSiswa.classList.add('bg-gray-200', 'text-gray-700');
+                btnSiswa.classList.remove('bg-green-600', 'text-white');
+            }
+        }
+
+        // [BARU] Menampilkan Rekap Absensi untuk 1 Siswa Terpilih
+        async function tampilkanRekapSiswa() {
+            const inputSiswa = document.getElementById('input-siswa-rekap').value;
+            const nis = inputSiswa.split(' - ')[0].trim();
+            if (!nis) return Swal.fire('Error', 'Pilih siswa terlebih dahulu (ketik nama/NIS lalu pilih dari daftar)!', 'warning');
+
+            const siswa = await db.siswa.get(nis);
+            if (!siswa) return Swal.fire('Error', 'Siswa tidak ditemukan di database!', 'error');
+
+            const tglMulai = document.getElementById('rekap-siswa-start').value;
+            const tglAkhir = document.getElementById('rekap-siswa-end').value;
+            if (!tglMulai || !tglAkhir) return Swal.fire('Error', 'Pilih rentang tanggal!', 'warning');
+
+            const checkedMapel = Array.from(document.querySelectorAll('.chk-mapel-siswa:checked')).map(cb => cb.value);
+            if (checkedMapel.length === 0) return Swal.fire('Peringatan', 'Pilih minimal 1 Mata Pelajaran!', 'warning');
+
+            Swal.fire({title: 'Menarik Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'get_laporan', tglMulai: tglMulai, tglAkhir: tglAkhir })
+                });
+                const res = await response.json();
+                Swal.close();
+
+                if (res.status === 'success') {
+                    const filteredData = res.data.filter(item =>
+                        String(item.nis) === String(nis) &&
+                        checkedMapel.includes(item.mapel)
+                    );
+                    filteredData.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+                    renderRekapSiswa(siswa, filteredData, tglMulai, tglAkhir);
+                } else {
+                    Swal.fire('Gagal', res.message || 'Terjadi kesalahan pada server.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Gagal', 'Pastikan koneksi internet aktif.', 'error');
+            }
+        }
+
+        function renderRekapSiswa(siswa, data, mulai, akhir) {
+            document.getElementById('area-rekap-siswa').classList.remove('hidden');
+            document.getElementById('rekap-siswa-nama').innerText = `${siswa.nama} (${siswa.kelas})`;
+            document.getElementById('rekap-siswa-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} | Total Data: ${data.length}`;
+
+            const hitung = { Hadir: 0, Sakit: 0, Izin: 0, Alpa: 0 };
+            data.forEach(item => { if (hitung.hasOwnProperty(item.status)) hitung[item.status]++; });
+
+            document.getElementById('ringkasan-rekap-siswa').innerHTML = `
+                <div class="bg-green-100 text-green-700 p-2 rounded-lg">Hadir<br><span class="text-lg">${hitung.Hadir}</span></div>
+                <div class="bg-yellow-100 text-yellow-700 p-2 rounded-lg">Sakit<br><span class="text-lg">${hitung.Sakit}</span></div>
+                <div class="bg-blue-100 text-blue-700 p-2 rounded-lg">Izin<br><span class="text-lg">${hitung.Izin}</span></div>
+                <div class="bg-red-100 text-red-700 p-2 rounded-lg">Alpa<br><span class="text-lg">${hitung.Alpa}</span></div>
+            `;
+
+            const tbody = document.getElementById('rekap-siswa-body');
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-500 font-bold">Tidak ada data sesuai filter</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                let statusColor = 'text-gray-800';
+                if(item.status == 'Hadir') statusColor = 'text-green-600';
+                if(item.status == 'Sakit') statusColor = 'text-yellow-600';
+                if(item.status == 'Izin') statusColor = 'text-blue-600';
+                if(item.status == 'Alpa') statusColor = 'text-red-600';
+
+                html += `
+                <tr class="border-b active:bg-gray-50">
+                    <td class="p-2 border text-center whitespace-nowrap text-[10px]">${item.tanggal}</td>
+                    <td class="p-2 border">${item.mapel}</td>
+                    <td class="p-2 border text-center font-bold ${statusColor}">${item.status}</td>
+                    <td class="p-2 border text-center text-[10px] text-gray-500 break-all">${item.keterangan || '-'}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function exportPNGSiswa() {
+            const tabel = document.getElementById('tabel-rekap-siswa');
+            Swal.fire({title: 'Membuat Gambar...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            html2canvas(tabel, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                Swal.close();
+                const link = document.createElement('a');
+                link.download = `Rekap_Siswa_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
+            });
+        }
+
+        async function buatLaporan() {
+            const tglMulai = document.getElementById('rekap-start').value;
+            const tglAkhir = document.getElementById('rekap-end').value;
+            
+            if(!tglMulai || !tglAkhir) return Swal.fire('Error', 'Pilih rentang tanggal!', 'warning');
+
+            const checkedKelas = Array.from(document.querySelectorAll('.chk-kelas:checked')).map(cb => cb.value);
+            const checkedMapel = Array.from(document.querySelectorAll('.chk-mapel:checked')).map(cb => cb.value);
+            const checkedStatus = Array.from(document.querySelectorAll('.chk-status:checked')).map(cb => cb.value);
+
+            if(checkedKelas.length === 0 || checkedMapel.length === 0 || checkedStatus.length === 0) {
+                return Swal.fire('Peringatan', 'Harus memilih minimal 1 Kelas, 1 Mapel, dan 1 Status!', 'warning');
+            }
+
+            Swal.fire({title: 'Menarik Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'get_laporan', tglMulai: tglMulai, tglAkhir: tglAkhir })
+                });
+                const res = await response.json();
+                Swal.close();
+
+                if (res.status === 'success') {
+                    const filteredData = res.data.filter(item => 
+                        checkedKelas.includes(item.kelas) &&
+                        checkedMapel.includes(item.mapel) &&
+                        checkedStatus.includes(item.status)
+                    );
+                    
+                    renderTabelLaporan(filteredData, tglMulai, tglAkhir);
+                }
+            } catch(err) {
+                Swal.fire('Gagal', 'Pastikan koneksi internet aktif.', 'error');
+            }
+        }
+
+        function renderTabelLaporan(data, mulai, akhir) {
+            document.getElementById('area-laporan').classList.remove('hidden');
+            document.getElementById('laporan-subtitle').innerText = `Periode: ${mulai} s/d ${akhir} \n Total Data: ${data.length}`;
+            
+            const tbody = document.getElementById('laporan-body');
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500 font-bold">Tidak ada data sesuai filter</td></tr>`; // span menjadi 5
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                let statusColor = 'text-gray-800';
+                if(item.status == 'Hadir') statusColor = 'text-green-600';
+                if(item.status == 'Sakit') statusColor = 'text-yellow-600';
+                if(item.status == 'Izin') statusColor = 'text-blue-600';
+                if(item.status == 'Alpa') statusColor = 'text-red-600';
+
+                // [BARU] Menambahkan Kolom Keterangan di Render HTML Tabel
+                html += `
+                <tr class="border-b active:bg-gray-50">
+                    <td class="p-2 border">
+                        <span class="font-bold block">${item.nama}</span>
+                        <span class="text-[10px] text-gray-500">${item.mapel}</span>
+                    </td>
+                    <td class="p-2 border text-center font-bold text-gray-600">${item.kelas}</td>
+                    <td class="p-2 border text-center whitespace-nowrap text-[10px]">${item.tanggal}</td>
+                    <td class="p-2 border text-center font-bold ${statusColor}">${item.status}</td>
+                    <td class="p-2 border text-center text-[10px] text-gray-500 break-all">${item.keterangan || '-'}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function exportPNG() {
+            const tabel = document.getElementById('tabel-laporan');
+            Swal.fire({title: 'Membuat Gambar...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            html2canvas(tabel, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                Swal.close();
+                const link = document.createElement('a');
+                link.download = `Laporan_Absensi_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
+            });
+        }
+
+        async function loadKelasMapelAbsen() {
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            let kelasHtml = '';
+            kelasList.forEach(k => {
+                kelasHtml += `<label class="bg-white px-3 py-1 border border-gray-300 rounded-lg shadow-sm font-bold text-gray-700"><input type="checkbox" value="${k}" class="chk-kelas-absen mr-1"> ${k}</label>`;
+            });
+            document.getElementById('checkbox-kelas-absen').innerHTML = kelasHtml;
+
+            const options = mapels.map(m => `<option value="${m.nama}">${m.nama}</option>`).join('');
+            document.getElementById('select-mapel-absen').innerHTML = options;
+        }
+
+        async function tampilkanSiswaUntukAbsen() {
+            const checkedKelas = Array.from(document.querySelectorAll('.chk-kelas-absen:checked')).map(cb => cb.value);
+            
+            if(checkedKelas.length === 0) return Swal.fire('Peringatan', 'Mohon pilih minimal 1 kelas!', 'warning');
+
+            const semuaSiswa = await db.siswa.toArray();
+            const siswaTerpilih = semuaSiswa.filter(s => checkedKelas.includes(s.kelas));
+
+            if(siswaTerpilih.length === 0) {
+                return Swal.fire('Kosong', 'Tidak ada data siswa pada kelas terpilih.', 'info');
+            }
+
+            siswaTerpilih.sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
+
+            let html = '';
+            siswaTerpilih.forEach(s => {
+                // [BARU] Menambahkan Dropdown Keterangan per Siswa di Fitur Mapel
+                html += `
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 student-absen-row" data-nis="${s.nis}" data-nama="${s.nama}" data-kelas="${s.kelas}">
+                    <div class="font-bold text-gray-800">${s.nama}</div>
+                    <div class="text-xs text-gray-500 mb-2">Kelas: ${s.kelas} | NIS: ${s.nis}</div>
+                    
+                    <div class="flex gap-2 w-full mb-3">
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Hadir" class="peer hidden" id="h-${s.nis}" checked>
+                            <label for="h-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-green-100 peer-checked:text-green-700 peer-checked:border-green-400 transition">Hadir</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Sakit" class="peer hidden" id="s-${s.nis}">
+                            <label for="s-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-yellow-100 peer-checked:text-yellow-700 peer-checked:border-yellow-400 transition">Sakit</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Izin" class="peer hidden" id="i-${s.nis}">
+                            <label for="i-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-blue-100 peer-checked:text-blue-700 peer-checked:border-blue-400 transition">Izin</label>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="radio" name="st-${s.nis}" value="Alpa" class="peer hidden" id="a-${s.nis}">
+                            <label for="a-${s.nis}" class="block w-full text-center bg-gray-50 border border-gray-200 py-2 rounded-lg font-bold text-gray-600 cursor-pointer peer-checked:bg-red-100 peer-checked:text-red-700 peer-checked:border-red-400 transition">Alpa</label>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-2 border border-gray-200 rounded-lg">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Ket. Tambahan (Opsional):</label>
+                        <select id="ket-${s.nis}" class="w-full border border-gray-300 p-2 text-xs font-bold text-gray-600 rounded mb-1" onchange="toggleLainnya('ket-${s.nis}', 'ket-lain-${s.nis}')">
+                            <option value="">- Kosong -</option>
+                            <option value="Terlambat">Terlambat</option>
+                            <option value="Bolos">Bolos</option>
+                            <option value="Pulang Cepat">Pulang Cepat</option>
+                            <option value="Lainnya">Lainnya...</option>
+                        </select>
+                        <input type="text" id="ket-lain-${s.nis}" class="w-full border border-gray-300 p-2 text-xs rounded hidden" placeholder="Ketik keterangan...">
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('list-siswa-absen').innerHTML = html;
+            document.getElementById('area-absen-mapel').classList.remove('hidden');
+        }
+
+        function setSemuaHadir() {
+            document.querySelectorAll('input[type="radio"][value="Hadir"]').forEach(radio => radio.checked = true);
+        }
+
+        async function simpanAbsenMassal() {
+            const tgl = document.getElementById('tgl-absen-mapel').value;
+            const mapel = document.getElementById('select-mapel-absen').value;
+            const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            const rows = document.querySelectorAll('.student-absen-row');
+            let dataUntukDisimpan = [];
+            let jumlahDilewati = 0;
+
+            Swal.fire({title: 'Menyimpan Absen...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            for (let row of rows) {
+                const nis = row.getAttribute('data-nis');
+                const nama = row.getAttribute('data-nama');
+                const kelas = row.getAttribute('data-kelas');
+                const status = row.querySelector(`input[name="st-${nis}"]:checked`).value;
+
+                // [BARU] Menangkap Keterangan per Siswa
+                const ketSelect = row.querySelector(`#ket-${nis}`).value;
+                const ketLainnya = row.querySelector(`#ket-lain-${nis}`).value;
+                const keterangan = ketSelect === 'Lainnya' ? ketLainnya : ketSelect;
+
+                const cekGanda = await db.absen.where({nis: nis, tanggal: tgl, mapel: mapel}).first();
+                if (cekGanda) {
+                    jumlahDilewati++;
+                    continue; 
+                }
+
+                dataUntukDisimpan.push({
+                    nis: nis,
+                    nama: nama,
+                    kelas: kelas,
+                    tanggal: tgl,
+                    jam: jam,
+                    mapel: mapel,
+                    status: status,
+                    keterangan: keterangan // [BARU] Simpan Keterangan
+                });
+            }
+
+            if (dataUntukDisimpan.length > 0) {
+                await db.absen.bulkAdd(dataUntukDisimpan);
+                updateBadge();
+                
+                let pesan = `${dataUntukDisimpan.length} Absensi berhasil disimpan ke memori HP.`;
+                if(jumlahDilewati > 0) pesan += `\n(${jumlahDilewati} siswa dilewati karena sudah ada datanya).`;
+                
+                Swal.fire('Berhasil', pesan, 'success');
+                document.getElementById('area-absen-mapel').classList.add('hidden'); 
+                
+            } else {
+                if (jumlahDilewati > 0) {
+                    Swal.fire('Selesai', 'Tidak ada data baru. Semua siswa di daftar ini sudah diabsen sebelumnya.', 'info');
+                } else {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem, data kosong.', 'error');
+                }
+            }
+        }
+
+        async function kunciAbsen() {
+            const count = await db.absen.count();
+            if(count > 0) {
+                return Swal.fire('Peringatan!', 'Silakan SYNC data absen yang tertunda di HP ini terlebih dahulu sebelum mengunci absen.', 'warning');
+            }
+
+            const siswas = await db.siswa.toArray();
+            const mapels = await db.mapel.toArray();
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+            
+            let mapelOptions = `<option value="DATANG" selected>DATANG</option>`;
+            mapels.forEach(m => {
+                if(m.nama !== "Pulang" && m.nama !== "DATANG") {
+                    mapelOptions += `<option value="${m.nama}">${m.nama}</option>`;
+                }
+            });
+            mapelOptions += `<option value="Pulang">Pulang</option>`; 
+
+            let kelasOptions = `<option value="SEMUA KELAS" selected>SEMUA KELAS</option>`;
+            kelasList.forEach(k => {
+                kelasOptions += `<option value="${k}">${k}</option>`;
+            });
+
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Kunci Absensi',
+                html:
+                    `<div class="text-left mb-2">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PILIH TANGGAL</label>
+                        <input id="swal-tgl" type="date" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3" value="${todayDate}">
+                        
+                        <label class="block text-xs font-bold text-gray-600 mb-1">MATA PELAJARAN</label>
+                        <select id="swal-mapel" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3 font-semibold">
+                            ${mapelOptions}
+                        </select>
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PILIH KELAS</label>
+                        <select id="swal-kelas" class="w-full border border-gray-300 p-3 rounded-xl bg-gray-50 mb-3 font-semibold">
+                            ${kelasOptions}
+                        </select>
+                        
+                        <label class="block text-xs font-bold text-gray-600 mb-1">PASSWORD (Wajib)</label>
+                        <input id="swal-pass" type="password" class="w-full border border-gray-300 p-3 rounded-xl text-center tracking-widest text-lg" placeholder="***">
+                    </div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Kunci & Proses Alpa',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const tgl = document.getElementById('swal-tgl').value;
+                    const mapel = document.getElementById('swal-mapel').value;
+                    const kelas = document.getElementById('swal-kelas').value;
+                    const pass = document.getElementById('swal-pass').value;
+                    
+                    if (!pass) {
+                        Swal.showValidationMessage('Password tidak boleh kosong!');
+                        return false;
+                    }
+                    return { tgl, mapel, kelas, pass };
+                }
+            });
+
+            if (formValues) {
+                if (formValues.pass === '123') {
+                    Swal.fire({title: 'Memproses Alpa Otomatis...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                    
+                    try {
+                        const response = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({ 
+                                action: 'generate_alpa', 
+                                tanggal: formValues.tgl,
+                                mapel: formValues.mapel,
+                                kelas: formValues.kelas
+                            })
+                        });
+                        const res = await response.json();
+                        
+                        if (res.status === 'success') {
+                            Swal.fire('Berhasil!', res.message, 'success');
+                        } else {
+                            Swal.fire('Gagal', res.message || 'Terjadi kesalahan pada server.', 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+                    }
+                } else {
+                    Swal.fire('Gagal', 'Password salah!', 'error');
+                }
+            }
+        }
+    
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js');
+        });
+    }
+    </script>
+</body>
+</html>

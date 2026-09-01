@@ -317,6 +317,33 @@
             <div id="list-siswa-data" class="space-y-2"></div>
         </div>
 
+        <div id="page-monitor" class="hidden-page p-4 pb-24">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Cek &amp; Riwayat Absen</h2>
+
+            <div class="bg-indigo-50 p-4 rounded-xl mb-4 border border-indigo-100 shadow-sm text-sm">
+                <label class="block font-bold text-gray-600 mb-1">PILIH TANGGAL</label>
+                <input type="date" id="tgl-monitor" class="w-full border border-gray-300 p-3 rounded-lg bg-white mb-3 font-semibold">
+
+                <label class="block font-bold text-gray-600 mb-1">MATA PELAJARAN</label>
+                <div id="filter-mapel-monitor" class="flex flex-wrap gap-2 mb-4"></div>
+
+                <button onclick="tampilkanMonitor()" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold active:bg-indigo-700 shadow-md">🔍 Cek Status</button>
+            </div>
+
+            <div id="capture-monitor" class="bg-white p-3 rounded-xl">
+                <div class="text-center mb-3 border-b pb-2">
+                    <h3 class="font-bold text-lg text-gray-800">STATUS ABSENSI</h3>
+                    <p id="monitor-subtitle" class="text-xs text-gray-500"></p>
+                </div>
+                <div id="ringkasan-monitor" class="grid grid-cols-3 gap-2 mb-4 text-center text-xs font-bold"></div>
+                <div id="list-monitor-kelas" class="space-y-3"></div>
+            </div>
+
+            <button id="btn-export-monitor" onclick="exportPNGMonitor()" class="hidden w-full mt-4 bg-green-600 text-white p-4 rounded-xl font-bold active:bg-green-700 flex justify-center items-center gap-2 shadow-md">
+                <span class="text-xl">🖼️</span> Export & Download PNG
+            </button>
+        </div>
+
         <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
             <a href="../index.html" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">🏠</span>
@@ -337,6 +364,10 @@
             <button onclick="showPage('page-siswa')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-teal-600 focus:text-teal-600 p-1">
                 <span class="text-xl mb-1">👥</span>
                 <span class="text-[9px] font-bold">SISWA</span>
+            </button>
+            <button onclick="showPage('page-monitor')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-indigo-600 focus:text-indigo-600 p-1">
+                <span class="text-xl mb-1">🔍</span>
+                <span class="text-[9px] font-bold text-center leading-tight">CEK<br>ABSEN</span>
             </button>
             <button onclick="showPage('page-laporan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">✏️</span>
@@ -387,7 +418,7 @@
         }
 
         function showPage(pageId) {
-            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel, #page-siswa').forEach(div => {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel, #page-siswa, #page-monitor').forEach(div => {
                 div.classList.add('hidden-page');
             });
             document.getElementById(pageId).classList.remove('hidden-page');
@@ -414,6 +445,9 @@
             }
             if(pageId === 'page-siswa') {
                 loadSiswaPage();
+            }
+            if(pageId === 'page-monitor') {
+                loadMonitorPage();
             }
         }
 
@@ -811,6 +845,230 @@
             }
         }
         // ==================== [AKHIR] FITUR TAB DATA SISWA ====================
+
+        // ==================== [BARU] FITUR CEK & RIWAYAT ABSEN (MONITOR) ====================
+        let mapelMonitorAktif = 'SEMUA';
+
+        async function loadMonitorPage() {
+            document.getElementById('tgl-monitor').value = new Date().toISOString().split('T')[0];
+            mapelMonitorAktif = 'SEMUA';
+
+            const mapels = await db.mapel.toArray();
+            let html = `<button onclick="setMapelMonitor('SEMUA')" data-mapel="SEMUA" class="mapel-monitor-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-indigo-600 text-white">SEMUA MAPEL</button>`;
+            mapels.forEach(m => {
+                html += `<button onclick="setMapelMonitor('${m.nama}')" data-mapel="${m.nama}" class="mapel-monitor-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-white text-gray-600">${m.nama}</button>`;
+            });
+            document.getElementById('filter-mapel-monitor').innerHTML = html;
+
+            document.getElementById('monitor-subtitle').innerText = '';
+            document.getElementById('ringkasan-monitor').innerHTML = '';
+            document.getElementById('list-monitor-kelas').innerHTML = `<p class="text-center text-gray-400 py-6 text-sm">Pilih tanggal &amp; mata pelajaran, lalu tekan "Cek Status".</p>`;
+            document.getElementById('btn-export-monitor').classList.add('hidden');
+        }
+
+        function setMapelMonitor(m) {
+            mapelMonitorAktif = m;
+            document.querySelectorAll('.mapel-monitor-btn').forEach(btn => {
+                if (btn.dataset.mapel === m) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('bg-white', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-600');
+                }
+            });
+        }
+
+        async function tampilkanMonitor() {
+            const tgl = document.getElementById('tgl-monitor').value;
+            if (!tgl) return Swal.fire('Error', 'Pilih tanggal terlebih dahulu!', 'warning');
+
+            Swal.fire({ title: 'Mengecek Data...', text: 'Mengambil data server & lokal', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            // Data lokal (belum sync) pada tanggal ini
+            let dataLokal = await db.absen.where('tanggal').equals(tgl).toArray();
+            dataLokal = dataLokal.map(d => ({ nis: d.nis, nama: d.nama, kelas: d.kelas, mapel: d.mapel, status: d.status }));
+
+            // Data server (sudah sync) pada tanggal ini
+            let dataServer = [];
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'get_laporan', tglMulai: tgl, tglAkhir: tgl })
+                });
+                const res = await response.json();
+                if (res.status === 'success') {
+                    dataServer = res.data.map(d => ({ nis: d.nis, nama: d.nama, kelas: d.kelas, mapel: d.mapel, status: d.status }));
+                }
+            } catch (err) {
+                // Tetap lanjut dengan data lokal saja jika sedang offline
+            }
+            Swal.close();
+
+            // Gabungkan: data server jadi prioritas, data lokal dipakai bila NIS+Mapel belum tercatat di server
+            const gabunganMap = new Map();
+            dataServer.forEach(d => gabunganMap.set(d.nis + '_' + d.mapel, d));
+            dataLokal.forEach(d => {
+                const key = d.nis + '_' + d.mapel;
+                if (!gabunganMap.has(key)) gabunganMap.set(key, d);
+            });
+            let gabungan = Array.from(gabunganMap.values());
+
+            if (mapelMonitorAktif !== 'SEMUA') {
+                gabungan = gabungan.filter(d => d.mapel === mapelMonitorAktif);
+            }
+
+            renderMonitor(gabungan, tgl);
+        }
+
+        async function renderMonitor(dataAbsen, tgl) {
+            const siswas = await db.siswa.toArray();
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+
+            document.getElementById('monitor-subtitle').innerText = `Tanggal: ${tgl} | Mapel: ${mapelMonitorAktif}`;
+
+            const totalSiswa = siswas.length;
+            const totalSudahAbsen = new Set(dataAbsen.map(d => d.nis)).size;
+            const totalHadir = dataAbsen.filter(d => d.status === 'Hadir').length;
+            const totalBelum = totalSiswa - totalSudahAbsen;
+
+            document.getElementById('ringkasan-monitor').innerHTML = `
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-2">
+                    <p class="text-lg text-indigo-700">${totalSudahAbsen}</p>
+                    <p class="text-[10px] text-gray-500">Sudah Absen</p>
+                </div>
+                <div class="bg-green-50 border border-green-100 rounded-xl p-2">
+                    <p class="text-lg text-green-700">${totalHadir}</p>
+                    <p class="text-[10px] text-gray-500">Hadir</p>
+                </div>
+                <div class="bg-red-50 border border-red-100 rounded-xl p-2">
+                    <p class="text-lg text-red-700">${totalBelum}</p>
+                    <p class="text-[10px] text-gray-500">Belum Absen</p>
+                </div>
+            `;
+
+            let html = '';
+            kelasList.forEach(kelas => {
+                const siswaKelas = siswas.filter(s => s.kelas === kelas);
+                const nisSet = new Set(siswaKelas.map(s => s.nis));
+                const absenKelas = dataAbsen.filter(d => nisSet.has(d.nis));
+                const nisSudahAbsen = new Set(absenKelas.map(d => d.nis));
+
+                const jmlHadir = absenKelas.filter(d => d.status === 'Hadir').length;
+                const jmlSakit = absenKelas.filter(d => d.status === 'Sakit').length;
+                const jmlIzin = absenKelas.filter(d => d.status === 'Izin').length;
+                const jmlAlpa = absenKelas.filter(d => d.status === 'Alpa').length;
+
+                const jmlSudah = nisSudahAbsen.size;
+                const jmlBelum = siswaKelas.length - jmlSudah;
+
+                let badge = '';
+                if (jmlSudah === 0) {
+                    badge = `<span class="bg-gray-200 text-gray-600 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">❌ Belum Ada</span>`;
+                } else if (jmlBelum === 0) {
+                    badge = `<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">✅ Lengkap</span>`;
+                } else {
+                    badge = `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">⚠️ ${jmlBelum} Belum</span>`;
+                }
+
+                const persen = siswaKelas.length > 0 ? Math.round((jmlSudah / siswaKelas.length) * 100) : 0;
+
+                html += `
+                <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+                    <div class="flex justify-between items-center mb-2 gap-2">
+                        <div>
+                            <p class="font-bold text-gray-800">Kelas ${kelas}</p>
+                            <p class="text-[11px] text-gray-500">${siswaKelas.length} siswa &bull; ${jmlSudah} sudah absen</p>
+                        </div>
+                        ${badge}
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                        <div class="bg-indigo-500 h-1.5 rounded-full" style="width:${persen}%"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-2 text-[10px] font-bold">
+                        <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Hadir ${jmlHadir}</span>
+                        <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Sakit ${jmlSakit}</span>
+                        <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Izin ${jmlIzin}</span>
+                        <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Alpa ${jmlAlpa}</span>
+                    </div>
+                    ${jmlBelum > 0 ? `<button onclick='lihatBelumAbsen(${JSON.stringify(kelas)}, ${JSON.stringify(Array.from(nisSudahAbsen))})' class="text-xs text-indigo-600 font-bold underline block">Lihat ${jmlBelum} siswa belum absen →</button>` : ''}
+                    ${(jmlBelum > 0 && mapelMonitorAktif !== 'SEMUA') ? `<button onclick='prosesAlpaKelasMonitor(${JSON.stringify(kelas)}, ${JSON.stringify(mapelMonitorAktif)}, ${JSON.stringify(tgl)})' class="text-xs text-red-600 font-bold underline block mt-1">⚡ Proses Alpa Otomatis</button>` : ''}
+                </div>`;
+            });
+
+            if (kelasList.length === 0) {
+                html = `<p class="text-center text-gray-400 py-6 text-sm">Belum ada data siswa. Silakan Update Data terlebih dahulu.</p>`;
+            }
+
+            document.getElementById('list-monitor-kelas').innerHTML = html;
+            document.getElementById('btn-export-monitor').classList.toggle('hidden', kelasList.length === 0);
+        }
+
+        async function lihatBelumAbsen(kelas, nisSudahAbsen) {
+            const siswas = await db.siswa.toArray();
+            const belum = siswas.filter(s => s.kelas === kelas && !nisSudahAbsen.includes(s.nis)).sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+            let listHtml = belum.map(s => `<div class="text-left border-b py-1.5 text-sm"><span class="font-bold">${s.nama}</span> <span class="text-gray-400 text-xs">(${s.nis})</span></div>`).join('');
+            if (!listHtml) listHtml = '<p class="text-gray-400 text-sm">Semua siswa sudah absen 🎉</p>';
+
+            Swal.fire({
+                title: `Belum Absen - Kelas ${kelas}`,
+                html: `<div class="text-left max-h-72 overflow-y-auto">${listHtml}</div>`,
+                confirmButtonText: 'Tutup',
+                confirmButtonColor: '#4f46e5'
+            });
+        }
+
+        async function prosesAlpaKelasMonitor(kelas, mapel, tgl) {
+            const { value: pass } = await Swal.fire({
+                title: `Proses Alpa - Kelas ${kelas}`,
+                text: `Siswa yang belum absen mapel "${mapel}" pada ${tgl} akan ditandai Alpa.`,
+                input: 'password',
+                inputPlaceholder: 'Masukkan Password',
+                showCancelButton: true,
+                confirmButtonText: 'Proses',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Batal'
+            });
+
+            if (!pass) return;
+            if (pass !== '123') return Swal.fire('Gagal', 'Password salah!', 'error');
+
+            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'generate_alpa', tanggal: tgl, mapel: mapel, kelas: kelas })
+                });
+                const res = await response.json();
+                if (res.status === 'success') {
+                    Swal.fire('Berhasil', res.message, 'success');
+                    tampilkanMonitor();
+                } else {
+                    Swal.fire('Gagal', res.message || 'Terjadi kesalahan.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+            }
+        }
+
+        function exportPNGMonitor() {
+            const area = document.getElementById('capture-monitor');
+            Swal.fire({ title: 'Membuat Gambar...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            html2canvas(area, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                Swal.close();
+                const link = document.createElement('a');
+                link.download = `Status_Absen_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                Swal.fire('Error', 'Gagal membuat gambar PNG.', 'error');
+            });
+        }
+        // ==================== [AKHIR] FITUR CEK & RIWAYAT ABSEN (MONITOR) ====================
 
         let lastScanTime = 0;
         let lastScannedNis = '';

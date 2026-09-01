@@ -287,6 +287,36 @@
             </div>
         </div>
 
+        <div id="page-siswa" class="hidden-page p-4 pb-24">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-700">Data Siswa</h2>
+                <span id="total-siswa-info" class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg text-right"></span>
+            </div>
+
+            <div class="bg-teal-50 p-4 rounded-xl mb-4 border border-teal-100 shadow-sm text-sm">
+                <label class="block font-bold text-gray-600 mb-1">CARI SISWA</label>
+                <input type="text" id="search-siswa" oninput="renderSiswaList()" class="w-full border border-gray-300 p-3 rounded-xl mb-3" placeholder="Ketik NIS atau Nama...">
+
+                <label class="block font-bold text-gray-600 mb-1">FILTER KELAS</label>
+                <div id="filter-kelas-siswa" class="flex flex-wrap gap-2 mb-3"></div>
+
+                <label class="block font-bold text-gray-600 mb-1">FILTER JENIS KELAMIN</label>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="setFilterJkSiswa('SEMUA')" data-jk="SEMUA" class="filter-jk-siswa-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-teal-600 text-white">SEMUA</button>
+                    <button onclick="setFilterJkSiswa('L')" data-jk="L" class="filter-jk-siswa-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-white text-gray-600">👦 Laki-laki</button>
+                    <button onclick="setFilterJkSiswa('P')" data-jk="P" class="filter-jk-siswa-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-white text-gray-600">👧 Perempuan</button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <button onclick="tambahSiswaBaru()" class="flex-1 bg-teal-600 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-teal-700">➕ Tambah Siswa</button>
+                <button onclick="importMassalSiswa()" class="flex-1 bg-gray-500 text-white p-3 rounded-xl font-bold text-sm shadow-md active:bg-gray-600">📋 Import Massal</button>
+            </div>
+
+            <datalist id="list-kelas-siswa"></datalist>
+            <div id="list-siswa-data" class="space-y-2"></div>
+        </div>
+
         <nav id="bottom-nav" class="hidden-page fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-between px-1 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-20">
             <a href="../index.html" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">🏠</span>
@@ -303,6 +333,10 @@
             <button onclick="showPage('page-absen-mapel')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-indigo-600 focus:text-indigo-600 p-1">
                 <span class="text-xl mb-1">📝</span>
                 <span class="text-[9px] font-bold text-center leading-tight">ABSEN<br>MAPEL</span>
+            </button>
+            <button onclick="showPage('page-siswa')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-teal-600 focus:text-teal-600 p-1">
+                <span class="text-xl mb-1">👥</span>
+                <span class="text-[9px] font-bold">SISWA</span>
             </button>
             <button onclick="showPage('page-laporan')" class="flex-1 flex flex-col items-center text-gray-500 hover:text-blue-600 focus:text-blue-600 p-1">
                 <span class="text-xl mb-1">✏️</span>
@@ -353,7 +387,7 @@
         }
 
         function showPage(pageId) {
-            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel').forEach(div => {
+            document.querySelectorAll('#page-login, #page-scan, #page-manual, #page-laporan, #page-rekap, #page-absen-mapel, #page-siswa').forEach(div => {
                 div.classList.add('hidden-page');
             });
             document.getElementById(pageId).classList.remove('hidden-page');
@@ -377,6 +411,9 @@
             if(pageId === 'page-absen-mapel') {
                 document.getElementById('tgl-absen-mapel').value = new Date().toISOString().split('T')[0];
                 loadKelasMapelAbsen();
+            }
+            if(pageId === 'page-siswa') {
+                loadSiswaPage();
             }
         }
 
@@ -450,6 +487,330 @@
             const options = siswas.map(s => `<option value="${s.nis} - ${s.nama}">`).join('');
             document.getElementById('list-siswa').innerHTML = options;
         }
+
+        // ==================== [BARU] FITUR TAB DATA SISWA ====================
+        let filterKelasSiswaAktif = 'SEMUA';
+        let filterJkSiswaAktif = 'SEMUA';
+
+        async function loadSiswaPage() {
+            const siswas = await db.siswa.toArray();
+            const kelasList = [...new Set(siswas.map(s => s.kelas))].sort();
+
+            let kelasChips = `<button onclick="setFilterKelasSiswa('SEMUA')" data-kelas="SEMUA" class="filter-kelas-siswa-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-teal-600 text-white">SEMUA</button>`;
+            kelasList.forEach(k => {
+                kelasChips += `<button onclick="setFilterKelasSiswa('${k}')" data-kelas="${k}" class="filter-kelas-siswa-btn px-3 py-1 rounded-lg text-xs font-bold border shadow-sm bg-white text-gray-600">${k}</button>`;
+            });
+            document.getElementById('filter-kelas-siswa').innerHTML = kelasChips;
+            document.getElementById('list-kelas-siswa').innerHTML = kelasList.map(k => `<option value="${k}">`).join('');
+
+            filterKelasSiswaAktif = 'SEMUA';
+            filterJkSiswaAktif = 'SEMUA';
+            document.querySelectorAll('.filter-jk-siswa-btn').forEach(btn => {
+                if (btn.dataset.jk === 'SEMUA') {
+                    btn.classList.add('bg-teal-600', 'text-white');
+                    btn.classList.remove('bg-white', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-teal-600', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-600');
+                }
+            });
+            document.getElementById('search-siswa').value = '';
+            renderSiswaList();
+        }
+
+        function setFilterKelasSiswa(kelas) {
+            filterKelasSiswaAktif = kelas;
+            document.querySelectorAll('.filter-kelas-siswa-btn').forEach(btn => {
+                if (btn.dataset.kelas === kelas) {
+                    btn.classList.add('bg-teal-600', 'text-white');
+                    btn.classList.remove('bg-white', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-teal-600', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-600');
+                }
+            });
+            renderSiswaList();
+        }
+
+        function setFilterJkSiswa(jk) {
+            filterJkSiswaAktif = jk;
+            document.querySelectorAll('.filter-jk-siswa-btn').forEach(btn => {
+                if (btn.dataset.jk === jk) {
+                    btn.classList.add('bg-teal-600', 'text-white');
+                    btn.classList.remove('bg-white', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-teal-600', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-600');
+                }
+            });
+            renderSiswaList();
+        }
+
+        async function renderSiswaList() {
+            let siswas = await db.siswa.toArray();
+
+            if (filterKelasSiswaAktif !== 'SEMUA') {
+                siswas = siswas.filter(s => s.kelas === filterKelasSiswaAktif);
+            }
+            if (filterJkSiswaAktif !== 'SEMUA') {
+                siswas = siswas.filter(s => (s.jk || '').toString().toUpperCase() === filterJkSiswaAktif);
+            }
+            const keyword = document.getElementById('search-siswa').value.trim().toLowerCase();
+            if (keyword) {
+                siswas = siswas.filter(s => s.nis.toString().toLowerCase().includes(keyword) || (s.nama || '').toLowerCase().includes(keyword));
+            }
+
+            siswas.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+            const jmlL = siswas.filter(s => (s.jk || '').toString().toUpperCase() === 'L').length;
+            const jmlP = siswas.filter(s => (s.jk || '').toString().toUpperCase() === 'P').length;
+            document.getElementById('total-siswa-info').innerText = `${siswas.length} Siswa (👦${jmlL} / 👧${jmlP})`;
+
+            const listEl = document.getElementById('list-siswa-data');
+            if (siswas.length === 0) {
+                listEl.innerHTML = `<p class="text-center text-gray-400 py-6 text-sm">Tidak ada data siswa.</p>`;
+                return;
+            }
+
+            let html = '';
+            siswas.forEach(s => {
+                const jk = (s.jk || '').toString().toUpperCase();
+                const jkBadge = jk === 'L'
+                    ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">L</span>'
+                    : jk === 'P'
+                        ? '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[10px] font-bold">P</span>'
+                        : '<span class="bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full text-[10px] font-bold">-</span>';
+                html += `
+                <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex justify-between items-center">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="font-bold text-gray-800">${s.nama}</p>
+                            ${jkBadge}
+                        </div>
+                        <p class="text-xs text-gray-500">NIS: ${s.nis} &bull; Kelas ${s.kelas}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editSiswa('${s.nis}')" class="bg-yellow-100 text-yellow-700 p-2 rounded-lg text-sm active:bg-yellow-200">✏️</button>
+                        <button onclick="hapusSiswa('${s.nis}')" class="bg-red-100 text-red-700 p-2 rounded-lg text-sm active:bg-red-200">🗑️</button>
+                    </div>
+                </div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+        async function tambahSiswaBaru() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Tambah Siswa',
+                html:
+                    `<div class="text-left mb-2">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">NIS</label>
+                        <input id="swal-nis" class="w-full border border-gray-300 p-3 rounded-xl mb-3" placeholder="Contoh: 12345">
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">NAMA LENGKAP</label>
+                        <input id="swal-nama" class="w-full border border-gray-300 p-3 rounded-xl mb-3" placeholder="Contoh: Budi Santoso">
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">KELAS</label>
+                        <input id="swal-kelas" list="list-kelas-siswa" class="w-full border border-gray-300 p-3 rounded-xl mb-3" placeholder="Contoh: 7A">
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">JENIS KELAMIN</label>
+                        <select id="swal-jk" class="w-full border border-gray-300 p-3 rounded-xl">
+                            <option value="L">👦 Laki-laki</option>
+                            <option value="P">👧 Perempuan</option>
+                        </select>
+                    </div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan',
+                confirmButtonColor: '#0d9488',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const nis = document.getElementById('swal-nis').value.trim();
+                    const nama = document.getElementById('swal-nama').value.trim();
+                    const kelas = document.getElementById('swal-kelas').value.trim();
+                    const jk = document.getElementById('swal-jk').value;
+                    if (!nis || !nama || !kelas) {
+                        Swal.showValidationMessage('NIS, Nama, dan Kelas wajib diisi!');
+                        return false;
+                    }
+                    return { nis, nama, kelas, jk };
+                }
+            });
+
+            if (formValues) {
+                const sudahAda = await db.siswa.get(formValues.nis);
+                if (sudahAda) {
+                    return Swal.fire('Gagal', `NIS ${formValues.nis} sudah terdaftar (${sudahAda.nama}).`, 'error');
+                }
+                await prosesSimpanSiswaBaru([formValues]);
+            }
+        }
+
+        async function importMassalSiswa() {
+            const { value: teks } = await Swal.fire({
+                title: 'Import Massal Siswa',
+                html: `<p class="text-xs text-gray-500 mb-2 text-left">Format per baris: <b>NIS;NAMA;KELAS;JK</b><br>Contoh: 12345;Budi Santoso;7A;L<br><span class="text-gray-400">(JK boleh dikosongkan, isi L atau P)</span></p>`,
+                input: 'textarea',
+                inputPlaceholder: '12345;Budi Santoso;7A;L\n12346;Siti Aminah;7A;P',
+                showCancelButton: true,
+                confirmButtonText: 'Proses Import',
+                confirmButtonColor: '#0d9488',
+                cancelButtonText: 'Batal'
+            });
+
+            if (!teks) return;
+
+            const baris = teks.split('\n').map(b => b.trim()).filter(b => b);
+            if (baris.length === 0) return Swal.fire('Kosong', 'Tidak ada data untuk diimport.', 'warning');
+
+            const dataBaru = [];
+            const nisDicek = new Set();
+            let formatSalah = 0, dobelDiInput = 0;
+
+            for (const b of baris) {
+                const parts = b.split(';').map(p => p.trim());
+                if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) { formatSalah++; continue; }
+                if (nisDicek.has(parts[0])) { dobelDiInput++; continue; }
+                nisDicek.add(parts[0]);
+                dataBaru.push({ nis: parts[0], nama: parts[1], kelas: parts[2], jk: (parts[3] || '').toUpperCase() });
+            }
+
+            if (dataBaru.length === 0) return Swal.fire('Format Salah', 'Pastikan format setiap baris NIS;NAMA;KELAS', 'error');
+
+            await prosesSimpanSiswaBaru(dataBaru, formatSalah + dobelDiInput);
+        }
+
+        async function prosesSimpanSiswaBaru(dataBaru, dilewatiLokal = 0) {
+            Swal.fire({ title: 'Menyimpan ke Spreadsheet...', text: 'Membutuhkan internet', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'add_siswa_bulk', data: JSON.stringify(dataBaru) })
+                });
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    for (const s of dataBaru) {
+                        const sudahAda = await db.siswa.get(s.nis);
+                        if (!sudahAda) {
+                            await db.siswa.put({ nis: s.nis, nama: s.nama, kelas: s.kelas, jk: s.jk || '' });
+                        }
+                    }
+                    let pesan = `${res.ditambahkan} siswa berhasil ditambahkan.`;
+                    if (res.dilewati > 0) pesan += `\n${res.dilewati} dilewati (NIS sudah ada di server).`;
+                    if (dilewatiLokal > 0) pesan += `\n${dilewatiLokal} baris diabaikan (format salah/duplikat).`;
+                    Swal.fire('Berhasil', pesan, 'success');
+                    loadSiswaPage();
+                } else {
+                    Swal.fire('Gagal', res.message || 'Terjadi kesalahan di server. Pastikan Kode GS sudah diperbarui.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+            }
+        }
+
+        async function editSiswa(nis) {
+            const s = await db.siswa.get(nis);
+            if (!s) return;
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Edit Data Siswa',
+                html:
+                    `<div class="text-left mb-2">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">NIS (Tidak dapat diubah)</label>
+                        <input id="swal-nis" class="w-full border border-gray-200 bg-gray-100 p-3 rounded-xl mb-3 text-gray-500" value="${s.nis}" disabled>
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">NAMA LENGKAP</label>
+                        <input id="swal-nama" class="w-full border border-gray-300 p-3 rounded-xl mb-3" value="${s.nama || ''}">
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">KELAS</label>
+                        <input id="swal-kelas" list="list-kelas-siswa" class="w-full border border-gray-300 p-3 rounded-xl mb-3" value="${s.kelas || ''}">
+
+                        <label class="block text-xs font-bold text-gray-600 mb-1">JENIS KELAMIN</label>
+                        <select id="swal-jk" class="w-full border border-gray-300 p-3 rounded-xl">
+                            <option value="L" ${(s.jk || '').toUpperCase() === 'L' ? 'selected' : ''}>👦 Laki-laki</option>
+                            <option value="P" ${(s.jk || '').toUpperCase() === 'P' ? 'selected' : ''}>👧 Perempuan</option>
+                        </select>
+                    </div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan Perubahan',
+                confirmButtonColor: '#0d9488',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const nama = document.getElementById('swal-nama').value.trim();
+                    const kelas = document.getElementById('swal-kelas').value.trim();
+                    const jk = document.getElementById('swal-jk').value;
+                    if (!nama || !kelas) {
+                        Swal.showValidationMessage('Nama dan Kelas wajib diisi!');
+                        return false;
+                    }
+                    return { nama, kelas, jk };
+                }
+            });
+
+            if (formValues) {
+                Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'update_siswa', nis: nis, nama: formValues.nama, kelas: formValues.kelas, jk: formValues.jk })
+                    });
+                    const res = await response.json();
+
+                    if (res.status === 'success') {
+                        await db.siswa.put({ nis: nis, nama: formValues.nama, kelas: formValues.kelas, jk: formValues.jk });
+                        Swal.fire('Berhasil', 'Data siswa berhasil diperbarui.', 'success');
+                        loadSiswaPage();
+                    } else {
+                        Swal.fire('Gagal', res.message || 'Terjadi kesalahan di server. Pastikan Kode GS sudah diperbarui.', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+                }
+            }
+        }
+
+        async function hapusSiswa(nis) {
+            const s = await db.siswa.get(nis);
+            if (!s) return;
+
+            const result = await Swal.fire({
+                title: 'Hapus Siswa?',
+                text: `${s.nama} (NIS: ${nis}) akan dihapus permanen dari Spreadsheet.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ action: 'delete_siswa', nis: nis })
+                    });
+                    const res = await response.json();
+
+                    if (res.status === 'success') {
+                        await db.siswa.delete(nis);
+                        Swal.fire('Terhapus', 'Data siswa berhasil dihapus.', 'success');
+                        loadSiswaPage();
+                    } else {
+                        Swal.fire('Gagal', res.message || 'Terjadi kesalahan di server. Pastikan Kode GS sudah diperbarui.', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error Jaringan', 'Pastikan sinyal internet aktif.', 'error');
+                }
+            }
+        }
+        // ==================== [AKHIR] FITUR TAB DATA SISWA ====================
 
         let lastScanTime = 0;
         let lastScannedNis = '';

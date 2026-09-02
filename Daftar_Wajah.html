@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#1F6F54">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Daftar Wajah Siswa</title>
+<style>
+  :root{
+    --ink:#10241E;
+    --ink-soft:#4B5D56;
+    --paper:#F5F8F5;
+    --surface:#FFFFFF;
+    --brand:#1F6F54;
+    --brand-deep:#14503B;
+    --brand-soft:#E4F0EA;
+    --accent:#E8A33D;
+    --accent-soft:#FBEDD4;
+    --danger:#C1443A;
+    --danger-soft:#FBE7E4;
+    --line:#DCE3DC;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --shadow:0 1px 2px rgba(16,36,30,.06);
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.45;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  button{font-family:inherit;}
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 18px) 18px 28px;
+  }
+
+  /* ---------- Header & progress ---------- */
+  header.top{margin-bottom:22px;}
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .brand-mark{
+    width:38px;height:38px;border-radius:11px;
+    background:var(--brand);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .brand-mark svg{width:20px;height:20px;}
+  .brand-text h1{font-size:16.5px;font-weight:700;margin:0;letter-spacing:-.01em;}
+  .brand-text p{font-size:12.5px;color:var(--ink-soft);margin:1px 0 0;}
+
+  .progress{display:flex;gap:6px;margin-bottom:8px;}
+  .progress i{
+    flex:1;height:4px;border-radius:3px;background:var(--line);
+    overflow:hidden;position:relative;
+  }
+  .progress i::after{
+    content:"";position:absolute;inset:0;background:var(--brand);
+    transform:scaleX(0);transform-origin:left;transition:transform .35s ease;
+  }
+  .progress i.done::after,.progress i.active::after{transform:scaleX(1);}
+  .progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft);}
+  .progress-labels span{flex:1;}
+  .progress-labels span:nth-child(2){text-align:center;}
+  .progress-labels span:last-child{text-align:right;}
+  .progress-labels span.on{color:var(--brand-deep);font-weight:600;}
+
+  main{flex:1;display:flex;flex-direction:column;}
+  .panel{display:none;flex-direction:column;flex:1;animation:rise .25s ease both;}
+  .panel.show{display:flex;}
+  @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  h2.step-title{font-size:20px;margin:2px 0 4px;letter-spacing:-.01em;}
+  p.step-sub{font-size:14px;color:var(--ink-soft);margin:0 0 18px;}
+
+  /* ---------- Search / autocomplete ---------- */
+  .search-wrap{position:relative;margin-bottom:10px;}
+  .search-field{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    border-radius:var(--radius-md);
+    padding:14px 42px 14px 16px;
+    font-size:16px;
+    color:var(--ink);
+    outline:none;
+  }
+  .search-field:focus{border-color:var(--brand);}
+  .search-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
+
+  .results{
+    border-radius:var(--radius-md);
+    overflow:hidden;
+    background:var(--surface);
+    border:1px solid var(--line);
+    margin-top:10px;
+  }
+  .result-item{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .result-item:last-child{border-bottom:none;}
+  .result-item:active{background:var(--brand-soft);}
+  .avatar{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--brand-soft);color:var(--brand-deep);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;flex:none;
+  }
+  .result-info{flex:1;min-width:0;}
+  .result-name{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .result-meta{font-size:12.5px;color:var(--ink-soft);}
+  .badge{
+    font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px;
+    background:var(--brand-soft);color:var(--brand-deep);flex:none;
+  }
+  .badge.warn{background:var(--accent-soft);color:#8A5A0F;}
+  .empty-note{padding:16px 14px;font-size:13.5px;color:var(--ink-soft);text-align:center;}
+
+  /* ---------- Confirmation card ---------- */
+  .confirm-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    padding:20px;
+    display:flex;flex-direction:column;align-items:center;
+    text-align:center;
+    gap:6px;
+    margin-bottom:16px;
+  }
+  .confirm-avatar{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--brand-soft);color:var(--brand-deep);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:22px;margin-bottom:8px;
+  }
+  .confirm-card h3{margin:0;font-size:18px;}
+  .confirm-card .meta{font-size:13.5px;color:var(--ink-soft);}
+  .confirm-status{margin-top:10px;}
+
+  .link-btn{
+    background:none;border:none;color:var(--brand-deep);
+    font-size:13.5px;font-weight:600;text-decoration:underline;
+    padding:6px;cursor:pointer;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;padding:15px 18px;border-radius:var(--radius-md);
+    font-size:15.5px;font-weight:700;border:none;cursor:pointer;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .btn:active{transform:scale(.985);}
+  .btn-primary{background:var(--brand);color:#fff;}
+  .btn-primary:disabled{opacity:.45;pointer-events:none;}
+  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
+  .btn-danger-outline{background:var(--danger-soft);color:var(--danger);}
+  .btn-row{display:flex;gap:10px;margin-top:10px;}
+  .btn-row .btn{width:auto;flex:1;}
+  .spacer{flex:1;}
+
+  /* ---------- Camera step ---------- */
+  .cam-shell{
+    position:relative;
+    width:100%;
+    aspect-ratio:3/4;
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    background:#0B1512;
+    margin-bottom:14px;
+  }
+  .cam-mirror{position:absolute;inset:0;transform:scaleX(-1);z-index:1;}
+  video{width:100%;height:100%;object-fit:cover;display:block;background:#0B1512;}
+  canvas.overlay{position:absolute;inset:0;width:100%;height:100%;}
+  .guide{
+    position:absolute;inset:0;pointer-events:none;z-index:2;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .guide svg{width:62%;opacity:.55;}
+  .cam-idle{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;color:#fff;
+    background:linear-gradient(180deg,#0F241D,#0B1512);
+    padding:24px;text-align:center;z-index:3;
+  }
+  .cam-idle svg{width:44px;height:44px;opacity:.85;}
+  .cam-idle p{font-size:13.5px;color:#CBE3D8;margin:0;max-width:26ch;}
+
+  .status-pill{
+    position:absolute;left:12px;right:12px;bottom:12px;z-index:4;
+    background:rgba(11,21,18,.72);
+    backdrop-filter:blur(4px);
+    color:#fff;font-size:13px;font-weight:600;
+    padding:10px 14px;border-radius:99px;text-align:center;
+    transition:background .2s ease;
+  }
+  .status-pill.good{background:rgba(31,111,84,.85);}
+  .status-pill.warn{background:rgba(232,163,61,.88);color:#3A2604;}
+
+  .pose-track{display:flex;gap:8px;margin-bottom:14px;}
+  .pose-step{
+    flex:1;border:1px solid var(--line);background:var(--surface);
+    border-radius:var(--radius-md);padding:10px 8px;text-align:center;
+  }
+  .pose-step .dot{
+    width:22px;height:22px;border-radius:50%;margin:0 auto 6px;
+    background:var(--paper);border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pose-step.done .dot{background:var(--brand);border-color:var(--brand);}
+  .pose-step.done .dot::after{content:"✓";color:#fff;font-size:12px;font-weight:800;}
+  .pose-step.active .dot{border-color:var(--brand);}
+  .pose-step span{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+  .pose-step.active span{color:var(--brand-deep);}
+
+  .thumb-grid{display:flex;gap:10px;margin-bottom:16px;}
+  .thumb-grid .thumb{
+    flex:1;aspect-ratio:1/1;border-radius:var(--radius-md);
+    overflow:hidden;border:1px solid var(--line);background:var(--surface);
+    position:relative;
+  }
+  .thumb-grid .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb-grid .thumb .cap{
+    position:absolute;bottom:4px;left:4px;right:4px;text-align:center;
+    font-size:10px;font-weight:700;color:#fff;
+    background:rgba(11,21,18,.55);border-radius:6px;padding:2px 0;
+  }
+
+  /* ---------- Done panel ---------- */
+  .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:20px 0;}
+  .check-circle{
+    width:84px;height:84px;border-radius:50%;
+    background:var(--brand-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .check-circle svg{width:40px;height:40px;}
+  .check-circle path{
+    stroke:var(--brand-deep);stroke-width:3;fill:none;
+    stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:48;stroke-dashoffset:48;
+    animation:draw .5s .1s ease forwards;
+  }
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .done-wrap h2{margin:0;font-size:21px;}
+  .done-wrap p{margin:0;color:var(--ink-soft);font-size:14px;max-width:28ch;}
+
+  /* ---------- Toast / inline error ---------- */
+  .inline-alert{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--danger-soft);color:var(--danger);
+    border-radius:var(--radius-md);padding:12px 14px;
+    font-size:13.5px;margin-bottom:14px;
+  }
+  .inline-alert.info{background:var(--brand-soft);color:var(--brand-deep);}
+  .inline-alert svg{flex:none;margin-top:1px;}
+
+  footer.foot{
+    text-align:center;font-size:11.5px;color:var(--ink-soft);
+    margin-top:22px;
+  }
+
+  .loading-line{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:20px 0;color:var(--ink-soft);font-size:13.5px;
+  }
+  .spin{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid var(--line);border-top-color:var(--brand);
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media (prefers-reduced-motion: reduce){
+    .panel, .check-circle path, .spin{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12.5c2.3 0 4-1.9 4-4.25S14.3 4 12 4 8 5.9 8 8.25 9.7 12.5 12 12.5Z" stroke="#fff" stroke-width="1.6"/>
+          <path d="M4.5 20c1-3.4 4-5.5 7.5-5.5s6.5 2.1 7.5 5.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Daftar Wajah Siswa</h1>
+        <p id="schoolLabel">Sistem absen wajah</p>
+      </div>
+    </div>
+    <div class="progress">
+      <i id="prog1" class="active"></i>
+      <i id="prog2"></i>
+      <i id="prog3"></i>
+    </div>
+    <div class="progress-labels">
+      <span id="lbl1" class="on">Pilih nama</span>
+      <span id="lbl2">Ambil wajah</span>
+      <span id="lbl3">Selesai</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ PANEL 1: PILIH SISWA ============ -->
+    <section id="panelPilih" class="panel show">
+      <h2 class="step-title">Cari namamu</h2>
+      <p class="step-sub">Ketik minimal 2 huruf. Kalau ada nama yang mirip, cek juga kelas dan NIS-nya sebelum memilih.</p>
+
+      <div id="loadListNote" class="inline-alert info" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="loadListText">Memuat daftar siswa…</span>
+      </div>
+
+      <div class="search-wrap">
+        <input id="searchInput" class="search-field" type="text" inputmode="search" autocomplete="off" placeholder="Nama, NIS, atau kelas" />
+        <span class="search-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M21 21l-3.6-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+
+      <div id="results" class="results" style="display:none;"></div>
+
+      <div class="spacer"></div>
+    </section>
+
+    <!-- ============ Konfirmasi siswa terpilih (bagian dari panel 1) ============ -->
+    <section id="panelKonfirmasi" class="panel">
+      <h2 class="step-title">Konfirmasi identitas</h2>
+      <p class="step-sub">Pastikan ini benar-benar kamu sebelum melanjutkan ke pengambilan foto wajah.</p>
+
+      <div class="confirm-card">
+        <div id="confirmAvatar" class="confirm-avatar">--</div>
+        <h3 id="confirmNama">-</h3>
+        <div class="meta">Kelas <span id="confirmKelas">-</span> · NIS <span id="confirmNis">-</span></div>
+        <div id="confirmStatus" class="confirm-status"></div>
+      </div>
+
+      <button class="btn btn-primary" id="btnLanjutKamera">Lanjut, ini aku</button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnGantiNama">Bukan aku, ganti nama</button>
+      </div>
+
+      <div class="spacer"></div>
+    </section>
+
+    <!-- ============ PANEL 2: KAMERA ============ -->
+    <section id="panelKamera" class="panel">
+      <h2 class="step-title">Ambil foto wajah</h2>
+      <p class="step-sub">Posisikan wajah di dalam bingkai, cari tempat yang terang, dan ikuti instruksi arah wajah.</p>
+
+      <div class="pose-track">
+        <div class="pose-step active" id="poseStep0"><div class="dot"></div><span>Depan</span></div>
+        <div class="pose-step" id="poseStep1"><div class="dot"></div><span>Kiri</span></div>
+        <div class="pose-step" id="poseStep2"><div class="dot"></div><span>Kanan</span></div>
+      </div>
+
+      <div class="cam-shell" id="camShell">
+        <div class="cam-idle" id="camIdle">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.4a1 1 0 0 0 .87-.5l.66-1A2 2 0 0 1 11.14 3.5h1.72a2 2 0 0 1 1.71 1l.66 1a1 1 0 0 0 .87.5h1.4A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="#CBE3D8" stroke-width="1.5"/><circle cx="12" cy="12.5" r="3.4" stroke="#CBE3D8" stroke-width="1.5"/></svg>
+          <p>Kamera perlu izin dulu. Pastikan cahaya cukup dan tidak membelakangi jendela.</p>
+          <button class="btn btn-primary" id="btnAktifkanKamera" style="width:auto;padding:13px 22px;">Aktifkan kamera</button>
+        </div>
+        <div class="cam-mirror">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay" class="overlay"></canvas>
+        </div>
+        <div class="guide">
+          <svg viewBox="0 0 100 130" fill="none"><ellipse cx="50" cy="60" rx="34" ry="46" stroke="#fff" stroke-width="2" stroke-dasharray="6 6"/></svg>
+        </div>
+        <div id="statusPill" class="status-pill">Menyiapkan…</div>
+      </div>
+
+      <div id="camError" class="inline-alert" style="display:none;"></div>
+
+      <div class="spacer"></div>
+      <button class="btn btn-ghost" id="btnBatalKamera">Batal, kembali</button>
+    </section>
+
+    <!-- ============ PANEL 2b: REVIEW HASIL ============ -->
+    <section id="panelReview" class="panel">
+      <h2 class="step-title">Periksa hasil</h2>
+      <p class="step-sub">Tiga sudut wajah berhasil direkam. Kalau kurang yakin, kamu bisa mengulang.</p>
+
+      <div class="thumb-grid" id="thumbGrid"></div>
+
+      <button class="btn btn-primary" id="btnSimpan">Simpan pendaftaran</button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnUlangi">Ambil ulang foto</button>
+      </div>
+
+      <div id="submitStatus"></div>
+      <div class="spacer"></div>
+    </section>
+
+    <!-- ============ PANEL 3: SELESAI ============ -->
+    <section id="panelSelesai" class="panel">
+      <div class="done-wrap">
+        <div class="check-circle">
+          <svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg>
+        </div>
+        <h2 id="doneTitle">Wajah berhasil didaftarkan</h2>
+        <p id="doneSub">Data wajah tersimpan dan siap dipakai untuk absen.</p>
+        <button class="btn btn-primary" id="btnDaftarLagi" style="margin-top:8px;">Daftarkan siswa lain</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">Data wajah disimpan sebagai kode angka, bukan foto — hanya dipakai untuk absensi sekolah.</footer>
+</div>
+
+<!-- face-api.js: deteksi & pengenalan wajah di browser (tanpa server) -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ====================== KONFIGURASI ======================
+  const CONFIG = {
+    // Tempel URL Web App Google Apps Script kamu di sini (lihat README.md).
+    SCRIPT_URL: "PASTE_URL_WEB_APP_GOOGLE_APPS_SCRIPT_DI_SINI",
+    MODEL_URL: "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/weights",
+    NAMA_SEKOLAH: "" // opsional, contoh: "SMPN 1 Ratatotok"
+  };
+
+  if (CONFIG.NAMA_SEKOLAH) {
+    document.getElementById('schoolLabel').textContent = CONFIG.NAMA_SEKOLAH + ' · Absen wajah';
+  }
+
+  // Data siswa bawaan (dari MasterAbsenSiswa.csv) supaya pencarian nama
+  // langsung terasa instan tanpa menunggu jaringan. Status "sudah terdaftar"
+  // tetap disinkronkan dari server saat halaman dibuka.
+  const STUDENTS_EMBEDDED = [{"nis": "2026001", "nama": "AKILA PUTRI RAMADANI HUNTOYUNGO", "kelas": "7A", "jk": "P"}, {"nis": "2026002", "nama": "Anggoro Sandewa Adam", "kelas": "7A", "jk": "L"}, {"nis": "2026003", "nama": "BRAIN KENZO KALOH", "kelas": "7A", "jk": "L"}, {"nis": "2026004", "nama": "CIKA ESTER VALERIE SAMBOW", "kelas": "7A", "jk": "P"}, {"nis": "2026005", "nama": "DRILEN PAJAMA", "kelas": "7A", "jk": "L"}, {"nis": "2026006", "nama": "Farel Bril Kasenda", "kelas": "7A", "jk": "L"}, {"nis": "2026007", "nama": "GANSA ANGKATO", "kelas": "7A", "jk": "P"}, {"nis": "2026008", "nama": "IREYNE OVELIANA PANGAYOAN", "kelas": "7A", "jk": "P"}, {"nis": "2026009", "nama": "JIBRAEL JELLOME GANDARIA", "kelas": "7A", "jk": "L"}, {"nis": "2026010", "nama": "JUARES NEMAN", "kelas": "7A", "jk": "L"}, {"nis": "2026011", "nama": "KEYZHA LAURENTH SAMBUAGA", "kelas": "7A", "jk": "P"}, {"nis": "2026012", "nama": "MICHAEL CHRISTIAL LEWI", "kelas": "7A", "jk": "L"}, {"nis": "2026013", "nama": "QUEENCY CATALEYA PIRI", "kelas": "7A", "jk": "P"}, {"nis": "2026014", "nama": "Raffilio Nehemia Palar", "kelas": "7A", "jk": "L"}, {"nis": "2026016", "nama": "WINRAIN EZRA ELLYA TUMANKEN", "kelas": "7A", "jk": "L"}, {"nis": "2026017", "nama": "ALGUERO FRANZISKO RAKIAN", "kelas": "7B", "jk": "L"}, {"nis": "2026018", "nama": "Aliando Sevilio Lineleyan", "kelas": "7B", "jk": "L"}, {"nis": "2026019", "nama": "Andre Mikail Gumogar", "kelas": "7B", "jk": "L"}, {"nis": "2026020", "nama": "CLEIVO ALVARO PASUHUK", "kelas": "7B", "jk": "L"}, {"nis": "2026021", "nama": "ELLSHA DIVASHEF SUOTH", "kelas": "7B", "jk": "P"}, {"nis": "2026023", "nama": "GIOVANNI CHANDRA PIRI", "kelas": "7B", "jk": "L"}, {"nis": "2026022", "nama": "Genji Imanuel Takaliuang", "kelas": "7B", "jk": "L"}, {"nis": "2026024", "nama": "HAZAEL ISRAEL PIRI", "kelas": "7B", "jk": "L"}, {"nis": "2026025", "nama": "Hillary Injili onsu", "kelas": "7B", "jk": "P"}, {"nis": "2026026", "nama": "JUFANDI AHMAD WAHYU", "kelas": "7B", "jk": "L"}, {"nis": "2026027", "nama": "LAKISYYA DUAULU", "kelas": "7B", "jk": "P"}, {"nis": "2026028", "nama": "MICHAEL KEVIN WOWOR", "kelas": "7B", "jk": "L"}, {"nis": "2026029", "nama": "MORGAN NATANAEL PALASI", "kelas": "7B", "jk": "L"}, {"nis": "2026030", "nama": "NIZAM SOMBA", "kelas": "7B", "jk": "L"}, {"nis": "2026031", "nama": "YOTANIA ONSU", "kelas": "7B", "jk": "P"}, {"nis": "2025001", "nama": "ANGEL YESHA IMMANUELA MONINGKA", "kelas": "8A", "jk": "P"}, {"nis": "2025003", "nama": "ANGGUN KALIPE", "kelas": "8A", "jk": "P"}, {"nis": "2025002", "nama": "Anggraini Firginia Naomi Logor", "kelas": "8A", "jk": "P"}, {"nis": "202508", "nama": "CANTIKA MAHURI", "kelas": "8A", "jk": "P"}, {"nis": "2025004", "nama": "CHRISTY NATALIA PUTRI DAMOPOLII", "kelas": "8A", "jk": "P"}, {"nis": "2025005", "nama": "ENJELI PALASI", "kelas": "8A", "jk": "P"}, {"nis": "2025006", "nama": "FARLI EZRA SAMBEKA", "kelas": "8A", "jk": "L"}, {"nis": "2025007", "nama": "IIFTITHA SUOTH", "kelas": "8A", "jk": "P"}, {"nis": "2025008", "nama": "JENNIFER MIKHA SEKEON", "kelas": "8A", "jk": "P"}, {"nis": "2025009", "nama": "MICHAEL LIONEL KAWATU", "kelas": "8A", "jk": "L"}, {"nis": "2025010", "nama": "MOZES ADAM", "kelas": "8A", "jk": "L"}, {"nis": "2025011", "nama": "Muhammad Fadil Sehe", "kelas": "8A", "jk": "L"}, {"nis": "2025012", "nama": "NURAQILA ADAM", "kelas": "8A", "jk": "P"}, {"nis": "2025013", "nama": "RAYNELLE DANIEL VARIYEL WANTALANGI", "kelas": "8A", "jk": "L"}, {"nis": "2025014", "nama": "REQUELME CANIGIA PONAMON", "kelas": "8A", "jk": "L"}, {"nis": "2025015", "nama": "VIRJINIA AURA KAREPOWAN", "kelas": "8A", "jk": "P"}, {"nis": "2025016", "nama": "YEREMIA HOTMA", "kelas": "8A", "jk": "L"}, {"nis": "2025017", "nama": "ZYLQWYN JISRAEL WOLAYAN", "kelas": "8A", "jk": "L"}, {"nis": "2025018", "nama": "ABIGAIL BLESSY INJILIA GERUNGAN", "kelas": "8B", "jk": "P"}, {"nis": "2025019", "nama": "AZARYA CHARITY PIRI", "kelas": "8B", "jk": "P"}, {"nis": "2025020", "nama": "CHELSIE PATRISIA WURANGIAN", "kelas": "8B", "jk": "P"}, {"nis": "2025021", "nama": "CHRISNA GANZA SUOTH", "kelas": "8B", "jk": "L"}, {"nis": "2025022", "nama": "CHRISTLY MEIRALDO RAU", "kelas": "8B", "jk": "L"}, {"nis": "2025023", "nama": "EXELO SAMUEL AHULENDING", "kelas": "8B", "jk": "L"}, {"nis": "2025024", "nama": "FIKEN GERUNGAN", "kelas": "8B", "jk": "L"}, {"nis": "2025037", "nama": "GALATIA PAYOW", "kelas": "8B", "jk": "P"}, {"nis": "2025025", "nama": "JANET SOFLY PIRI", "kelas": "8B", "jk": "P"}, {"nis": "2025026", "nama": "JHERALDO VIRJHIEL SOPUTAN", "kelas": "8B", "jk": "L"}, {"nis": "2025027", "nama": "JHINSHIE JHACLINE ADAM", "kelas": "8B", "jk": "P"}, {"nis": "2025028", "nama": "LEONARDO JILIO MOSES SUMAKUL", "kelas": "8B", "jk": "L"}, {"nis": "2025036", "nama": "LIONEL EVAN MAPALIEY", "kelas": "8B", "jk": "L"}, {"nis": "2025029", "nama": "Quilla Hilary Lengkey", "kelas": "8B", "jk": "P"}, {"nis": "2025030", "nama": "REFALINA TILAAR", "kelas": "8B", "jk": "P"}, {"nis": "2025031", "nama": "RIZKY LONDA", "kelas": "8B", "jk": "L"}, {"nis": "2025032", "nama": "RIZKY RICARDO KASETI", "kelas": "8B", "jk": "L"}, {"nis": "2025033", "nama": "SHALOMITA RONDONUWU", "kelas": "8B", "jk": "P"}, {"nis": "2025034", "nama": "ZEFANYA JULIO GERET", "kelas": "8B", "jk": "L"}, {"nis": "2024001", "nama": "ABIGEIL ROMBOT", "kelas": "9A", "jk": "P"}, {"nis": "2024003", "nama": "ALKALIFI PUTRA KAMBEY", "kelas": "9A", "jk": "L"}, {"nis": "2024005", "nama": "ANATASYA BOSEKE", "kelas": "9A", "jk": "P"}, {"nis": "2024006", "nama": "ANITA BALANSA", "kelas": "9A", "jk": "P"}, {"nis": "2024007", "nama": "ARBIANSYAH TAHUPAHANGENG", "kelas": "9A", "jk": "L"}, {"nis": "2024008", "nama": "AULIA MOLONGIO", "kelas": "9A", "jk": "P"}, {"nis": "2024010", "nama": "FELICIA GRACIA", "kelas": "9A", "jk": "P"}, {"nis": "2025035", "nama": "FEREN FEBIOLA TOAR", "kelas": "9A", "jk": "P"}, {"nis": "2024035", "nama": "JIO MIYUKI KOYONGIAN", "kelas": "9A", "jk": "L"}, {"nis": "2024015", "nama": "KINGSLY YEHESKIEL LONTOH", "kelas": "9A", "jk": "L"}, {"nis": "2024016", "nama": "KIREY TIRSA ADAM", "kelas": "9A", "jk": "P"}, {"nis": "2024021", "nama": "MEYSIA FELI INDRI PUSUNG", "kelas": "9A", "jk": "P"}, {"nis": "2024023", "nama": "MIKHAILA LUMINTANG", "kelas": "9A", "jk": "P"}, {"nis": "2024018", "nama": "Marcelano Sondakh", "kelas": "9A", "jk": "L"}, {"nis": "2024026", "nama": "NINDY ALDA TULAR", "kelas": "9A", "jk": "P"}, {"nis": "2024027", "nama": "PRINCE IMANUEL KEINTJEM", "kelas": "9A", "jk": "L"}, {"nis": "2024030", "nama": "RASIMA FITRI NUSI", "kelas": "9A", "jk": "P"}, {"nis": "2026015", "nama": "SARAH AKILA ADISTYA SAMBEKA", "kelas": "9A", "jk": "P"}, {"nis": "2024033", "nama": "TOAR TOLOLIU", "kelas": "9A", "jk": "L"}, {"nis": "2024034", "nama": "YEHESKIEL FRENLI KALIGIS", "kelas": "9A", "jk": "L"}, {"nis": "2024002", "nama": "AISYA PUTRI PAENDONG", "kelas": "9B", "jk": "P"}, {"nis": "2024004", "nama": "ALVESIO RUMENGAN", "kelas": "9B", "jk": "L"}, {"nis": "2024036", "nama": "ANUGRAH BILATULA", "kelas": "9B", "jk": "P"}, {"nis": "2024009", "nama": "AYU TOSIK", "kelas": "9B", "jk": "P"}, {"nis": "2024011", "nama": "FLYRHEN BLESSING SUOTH", "kelas": "9B", "jk": "P"}, {"nis": "2024037", "nama": "GABRIEL GUMOGAR", "kelas": "9B", "jk": "L"}, {"nis": "2024012", "nama": "GRACIA CALLISTA BINONGKO", "kelas": "9B", "jk": "P"}, {"nis": "2024039", "nama": "JISRAEL PIRI", "kelas": "9B", "jk": "L"}, {"nis": "2022018", "nama": "Jelovia Takaliuang", "kelas": "9B", "jk": "P"}, {"nis": "2024013", "nama": "KALLEN PUNU", "kelas": "9B", "jk": "L"}, {"nis": "2024014", "nama": "KASIH KARUNYA EKLEYSIA NELWAN", "kelas": "9B", "jk": "P"}, {"nis": "2024017", "nama": "KIREYLIA SAMBALAO", "kelas": "9B", "jk": "P"}, {"nis": "2024019", "nama": "MESIAS ELSADAY SAMBEKA", "kelas": "9B", "jk": "L"}, {"nis": "2024020", "nama": "MESSIAS YOEL YOSUA WOWOR", "kelas": "9B", "jk": "L"}, {"nis": "2024022", "nama": "MIKHAEL LIONEL TUMEY", "kelas": "9B", "jk": "L"}, {"nis": "2024024", "nama": "MIKHAYLA RIANI RUINDUNGAN", "kelas": "9B", "jk": "P"}, {"nis": "2024025", "nama": "NAZRIL FAKHY RISKY ADAM", "kelas": "9B", "jk": "L"}, {"nis": "2024028", "nama": "PUTRI CLAYRE BOKI", "kelas": "9B", "jk": "P"}, {"nis": "2024029", "nama": "PUTRI NOVELIN LASUT", "kelas": "9B", "jk": "P"}, {"nis": "2024031", "nama": "ROGER ADAM", "kelas": "9B", "jk": "L"}, {"nis": "2024032", "nama": "Silvia Rembet", "kelas": "9B", "jk": "P"}, {"nis": "2024038", "nama": "VICENSO SAJOW", "kelas": "9B", "jk": "L"}];
+
+  const POSES = [
+    { key: 'depan', label: 'Depan', instruksi: 'Lihat lurus ke arah kamera' },
+    { key: 'kiri',  label: 'Kiri',  instruksi: 'Putar wajah sedikit ke kiri' },
+    { key: 'kanan', label: 'Kanan', instruksi: 'Putar wajah sedikit ke kanan' }
+  ];
+
+  const STABLE_TICKS_NEEDED = 5;   // ~ 5 x 160ms ≈ 0.8 detik posisi bagus berturut-turut
+  const TICK_INTERVAL_MS = 160;
+  const MAX_PAIR_DISTANCE = 0.55;  // ambang kewajaran antar 3 sampel wajah yang sama
+
+  // ====================== STATE ======================
+  let allStudents = [];               // hasil gabungan data bawaan + status server
+  let selected = null;                // { nis, nama, kelas }
+  let modelsReady = false;
+  let stream = null;
+  let loopHandle = null;
+  let lastTick = 0;
+  let stableCount = 0;
+  let currentPoseIndex = 0;
+  let captures = [];                  // { pose, descriptor(Array), thumb(dataURL) }
+  let displaySize = null;
+
+  // ====================== ELEMENTS ======================
+  const el = (id) => document.getElementById(id);
+  const panels = {
+    pilih: el('panelPilih'),
+    konfirmasi: el('panelKonfirmasi'),
+    kamera: el('panelKamera'),
+    review: el('panelReview'),
+    selesai: el('panelSelesai')
+  };
+  const searchInput = el('searchInput');
+  const resultsBox = el('results');
+  const loadListNote = el('loadListNote');
+  const loadListText = el('loadListText');
+
+  function showPanel(name){
+    Object.values(panels).forEach(p => p.classList.remove('show'));
+    panels[name].classList.add('show');
+    window.scrollTo({top:0});
+  }
+
+  function setProgress(step){
+    // step: 1 pilih, 2 kamera/review, 3 selesai
+    const bars = [el('prog1'), el('prog2'), el('prog3')];
+    const labels = [el('lbl1'), el('lbl2'), el('lbl3')];
+    bars.forEach((b,i) => {
+      b.classList.remove('active','done');
+      if (i < step-1) b.classList.add('done');
+      else if (i === step-1) b.classList.add('active');
+    });
+    labels.forEach((l,i) => l.classList.toggle('on', i === step-1));
+  }
+
+  function initials(nama){
+    return (nama||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  }
+
+  // ====================== LANGKAH 1: CARI & PILIH SISWA ======================
+
+  function normalize(s){ return (s||'').toLowerCase(); }
+
+  function renderResults(query){
+    const q = normalize(query).trim();
+    if (q.length < 2){
+      resultsBox.style.display = 'none';
+      resultsBox.innerHTML = '';
+      return;
+    }
+    const matches = allStudents.filter(s =>
+      normalize(s.nama).includes(q) ||
+      normalize(s.nis).includes(q) ||
+      normalize(s.kelas).includes(q)
+    ).slice(0, 8);
+
+    resultsBox.innerHTML = '';
+    if (!matches.length){
+      resultsBox.innerHTML = '<div class="empty-note">Nama tidak ditemukan. Coba periksa ejaan, atau hubungi wali kelas.</div>';
+      resultsBox.style.display = 'block';
+      return;
+    }
+    matches.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'result-item';
+      row.innerHTML = `
+        <div class="avatar">${initials(s.nama)}</div>
+        <div class="result-info">
+          <div class="result-name">${escapeHtml(s.nama)}</div>
+          <div class="result-meta">Kelas ${escapeHtml(s.kelas)} · NIS ${escapeHtml(s.nis)}</div>
+        </div>
+        ${s.terdaftar ? '<span class="badge">Terdaftar</span>' : ''}
+      `;
+      row.addEventListener('click', () => selectStudent(s));
+      resultsBox.appendChild(row);
+    });
+    resultsBox.style.display = 'block';
+  }
+
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  searchInput.addEventListener('input', (e) => renderResults(e.target.value));
+
+  function selectStudent(s){
+    selected = s;
+    el('confirmAvatar').textContent = initials(s.nama);
+    el('confirmNama').textContent = s.nama;
+    el('confirmKelas').textContent = s.kelas || '-';
+    el('confirmNis').textContent = s.nis;
+
+    const statusBox = el('confirmStatus');
+    if (s.terdaftar){
+      statusBox.innerHTML = '<span class="badge warn">Wajah sudah pernah terdaftar — lanjut akan menggantinya</span>';
+    } else {
+      statusBox.innerHTML = '<span class="badge">Belum terdaftar</span>';
+    }
+
+    showPanel('konfirmasi');
+  }
+
+  el('btnGantiNama').addEventListener('click', () => {
+    selected = null;
+    showPanel('pilih');
+  });
+
+  el('btnLanjutKamera').addEventListener('click', () => {
+    setProgress(2);
+    resetCaptureState();
+    showPanel('kamera');
+    prepareModelsThenIdle();
+  });
+
+  // ====================== MUAT DATA SISWA ======================
+
+  function mergeStatus(list){
+    // list: [{nis, nama, kelas, terdaftar}] dari server
+    const byNis = {};
+    list.forEach(s => { byNis[s.nis] = s; });
+    allStudents = STUDENTS_EMBEDDED.map(s => {
+      const server = byNis[s.nis];
+      return {
+        nis: s.nis,
+        nama: s.nama,
+        kelas: s.kelas,
+        terdaftar: server ? !!server.terdaftar : false
+      };
+    });
+  }
+
+  function loadStudentStatus(){
+    allStudents = STUDENTS_EMBEDDED.map(s => ({ ...s, terdaftar: false }));
+
+    if (!CONFIG.SCRIPT_URL || CONFIG.SCRIPT_URL.indexOf('PASTE_URL') === 0){
+      loadListText.textContent = 'Server belum dikonfigurasi (CONFIG.SCRIPT_URL kosong) — pencarian nama tetap bisa dipakai, tapi status "sudah terdaftar" belum akurat.';
+      loadListNote.style.display = 'flex';
+      return;
+    }
+
+    fetch(CONFIG.SCRIPT_URL + '?action=list')
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok){
+          mergeStatus(res.data || []);
+          loadListNote.style.display = 'none';
+        } else {
+          throw new Error((res && res.message) || 'Gagal memuat data');
+        }
+      })
+      .catch(err => {
+        loadListText.textContent = 'Tidak bisa memuat status dari server (' + err.message + '). Pencarian nama tetap berjalan dari data bawaan.';
+        loadListNote.style.display = 'flex';
+      });
+  }
+
+  // ====================== LANGKAH 2: KAMERA & DETEKSI WAJAH ======================
+
+  const video = el('video');
+  const overlay = el('overlay');
+  const octx = overlay.getContext('2d');
+  const statusPill = el('statusPill');
+  const camError = el('camError');
+  const camIdle = el('camIdle');
+
+  function resetCaptureState(){
+    captures = [];
+    currentPoseIndex = 0;
+    stableCount = 0;
+    updatePoseTrack();
+    camIdle.style.display = 'flex';
+    camError.style.display = 'none';
+    statusPill.textContent = 'Menyiapkan…';
+    statusPill.className = 'status-pill';
+  }
+
+  function updatePoseTrack(){
+    POSES.forEach((p, i) => {
+      const stepEl = el('poseStep' + i);
+      stepEl.classList.remove('active','done');
+      if (i < currentPoseIndex) stepEl.classList.add('done');
+      else if (i === currentPoseIndex) stepEl.classList.add('active');
+    });
+  }
+
+  async function prepareModelsThenIdle(){
+    if (modelsReady) return;
+    try {
+      statusPill.textContent = 'Menyiapkan mesin pengenalan wajah…';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(CONFIG.MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.MODEL_URL)
+      ]);
+      modelsReady = true;
+      statusPill.textContent = 'Siap. Tekan "Aktifkan kamera".';
+    } catch (err) {
+      showCamError('Gagal memuat mesin pengenalan wajah. Periksa koneksi internet lalu coba lagi. (' + err.message + ')');
+    }
+  }
+
+  function showCamError(msg){
+    camError.style.display = 'flex';
+    camError.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>${escapeHtml(msg)}</span>
+    `;
+  }
+
+  el('btnAktifkanKamera').addEventListener('click', startCamera);
+
+  async function startCamera(){
+    camError.style.display = 'none';
+    try {
+      if (!modelsReady) await prepareModelsThenIdle();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      camIdle.style.display = 'none';
+
+      // Samakan rasio bingkai kamera dengan rasio asli video (bisa beda-beda
+      // antar HP/laptop) supaya kotak deteksi wajah selalu presisi menempel,
+      // tidak melenceng akibat pemotongan gambar (object-fit: cover).
+      if (video.videoWidth && video.videoHeight){
+        el('camShell').style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
+      }
+      await new Promise(r => requestAnimationFrame(r)); // biarkan layout menyesuaikan dulu
+
+      displaySize = { width: video.clientWidth, height: video.clientHeight };
+      faceapi.matchDimensions(overlay, displaySize);
+
+      currentPoseIndex = 0;
+      stableCount = 0;
+      updatePoseTrack();
+      setPoseInstruction();
+      startDetectionLoop();
+    } catch (err) {
+      camIdle.style.display = 'flex';
+      showCamError('Tidak bisa mengakses kamera. Pastikan izin kamera diaktifkan di browser. (' + err.message + ')');
+    }
+  }
+
+  function setPoseInstruction(){
+    const pose = POSES[currentPoseIndex];
+    statusPill.className = 'status-pill';
+    statusPill.textContent = pose.instruksi;
+  }
+
+  function stopCamera(){
+    if (loopHandle) cancelAnimationFrame(loopHandle);
+    loopHandle = null;
+    if (stream){
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    octx.clearRect(0,0,overlay.width,overlay.height);
+  }
+
+  el('btnBatalKamera').addEventListener('click', () => {
+    stopCamera();
+    setProgress(1);
+    showPanel('konfirmasi');
+  });
+
+  function startDetectionLoop(){
+    lastTick = 0;
+    const tick = async (ts) => {
+      loopHandle = requestAnimationFrame(tick);
+      if (ts - lastTick < TICK_INTERVAL_MS) return;
+      lastTick = ts;
+      await evaluateFrame();
+    };
+    loopHandle = requestAnimationFrame(tick);
+  }
+
+  async function evaluateFrame(){
+    if (!video.videoWidth) return;
+
+    const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+    let faces;
+    try {
+      faces = await faceapi.detectAllFaces(video, tinyOptions);
+    } catch (err) {
+      return; // frame sesekali gagal terbaca, abaikan dan coba lagi di tick berikutnya
+    }
+
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+
+    if (!faces.length){
+      stableCount = 0;
+      setStatus('Wajah tidak terdeteksi — hadapkan wajah ke kamera', 'warn');
+      return;
+    }
+    if (faces.length > 1){
+      stableCount = 0;
+      setStatus('Terdeteksi lebih dari satu wajah — pastikan hanya kamu di depan kamera', 'warn');
+      return;
+    }
+
+    const resized = faceapi.resizeResults(faces, displaySize);
+    const box = resized[0].box;
+    const score = faces[0].score;
+    drawBox(box, false);
+
+    const videoW = displaySize.width, videoH = displaySize.height;
+    const cx = box.x + box.width/2, cy = box.y + box.height/2;
+    const relW = box.width / videoW;
+
+    let msg = null;
+    if (relW < 0.24) msg = 'Dekatkan wajah ke kamera';
+    else if (relW > 0.8) msg = 'Jauhkan sedikit wajah dari kamera';
+    else if (cx < videoW*0.28 || cx > videoW*0.72) msg = 'Posisikan wajah di tengah bingkai';
+    else if (cy < videoH*0.12 || cy > videoH*0.85) msg = 'Posisikan wajah di tengah bingkai';
+    else if (score < 0.6) msg = 'Cari pencahayaan yang lebih terang';
+
+    if (msg){
+      stableCount = 0;
+      setStatus(msg, 'warn');
+      return;
+    }
+
+    // Posisi bagus.
+    stableCount++;
+    drawBox(box, true);
+    const pose = POSES[currentPoseIndex];
+    if (stableCount < STABLE_TICKS_NEEDED){
+      setStatus('Bagus, tahan posisi… (' + pose.label + ')', 'good');
+    } else {
+      setStatus('Mengambil gambar…', 'good');
+      stableCount = 0;
+      await captureCurrentPose();
+    }
+  }
+
+  function drawBox(box, good){
+    octx.lineWidth = 3;
+    octx.strokeStyle = good ? '#2FB27E' : 'rgba(255,255,255,.85)';
+    roundRectPath(octx, box.x, box.y, box.width, box.height, 14);
+    octx.stroke();
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function setStatus(text, kind){
+    statusPill.textContent = text;
+    statusPill.className = 'status-pill' + (kind ? ' ' + kind : '');
+  }
+
+  async function captureCurrentPose(){
+    try {
+      const result = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      if (!result){
+        setPoseInstruction();
+        return; // gagal ambil deskriptor tepat waktu, lanjut coba lagi di tick berikutnya
+      }
+
+      const thumb = grabThumbnail();
+      captures.push({
+        pose: POSES[currentPoseIndex].key,
+        descriptor: Array.from(result.descriptor),
+        thumb: thumb
+      });
+
+      currentPoseIndex++;
+      updatePoseTrack();
+
+      if (currentPoseIndex >= POSES.length){
+        finishCapturing();
+      } else {
+        setPoseInstruction();
+      }
+    } catch (err) {
+      setStatus('Gagal memproses wajah, coba lagi', 'warn');
+    }
+  }
+
+  function grabThumbnail(){
+    const c = document.createElement('canvas');
+    const size = 240;
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const side = Math.min(vw, vh);
+    const sx = (vw - side)/2, sy = (vh - side)/2;
+    // mirror horizontally to match what the student sees on screen
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, size, size);
+    return c.toDataURL('image/jpeg', 0.82);
+  }
+
+  function finishCapturing(){
+    stopCamera();
+
+    const dists = [];
+    for (let i=0;i<captures.length;i++){
+      for (let j=i+1;j<captures.length;j++){
+        dists.push(faceapi.euclideanDistance(captures[i].descriptor, captures[j].descriptor));
+      }
+    }
+    const maxDist = Math.max(...dists);
+
+    renderThumbGrid();
+    setProgress(2);
+    showPanel('review');
+
+    const submitStatus = el('submitStatus');
+    submitStatus.innerHTML = '';
+    if (maxDist > MAX_PAIR_DISTANCE){
+      submitStatus.innerHTML = `
+        <div class="inline-alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Hasil dari tiga sudut kurang konsisten. Sebaiknya ambil ulang di tempat yang lebih terang dan wajah tetap sama sepanjang proses.</span>
+        </div>`;
+    }
+  }
+
+  function renderThumbGrid(){
+    const grid = el('thumbGrid');
+    grid.innerHTML = '';
+    captures.forEach(c => {
+      const label = POSES.find(p => p.key === c.pose).label;
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      div.innerHTML = `<img src="${c.thumb}" alt="Foto ${label}"><div class="cap">${label}</div>`;
+      grid.appendChild(div);
+    });
+  }
+
+  el('btnUlangi').addEventListener('click', () => {
+    resetCaptureState();
+    setProgress(2);
+    showPanel('kamera');
+    startCamera();
+  });
+
+  // ====================== LANGKAH 3: SIMPAN KE SPREADSHEET ======================
+
+  el('btnSimpan').addEventListener('click', submitRegistration);
+
+  async function submitRegistration(){
+    const btn = el('btnSimpan');
+    const submitStatus = el('submitStatus');
+    btn.disabled = true;
+    submitStatus.innerHTML = '<div class="loading-line"><span class="spin"></span> Menyimpan pendaftaran…</div>';
+
+    if (!CONFIG.SCRIPT_URL || CONFIG.SCRIPT_URL.indexOf('PASTE_URL') === 0){
+      submitStatus.innerHTML = '<div class="inline-alert"><span>CONFIG.SCRIPT_URL belum diisi oleh admin. Data belum bisa dikirim ke spreadsheet.</span></div>';
+      btn.disabled = false;
+      return;
+    }
+
+    const payload = {
+      action: 'daftar',
+      nis: selected.nis,
+      nama: selected.nama,
+      dataWajah: captures.map(c => c.descriptor)
+    };
+
+    try {
+      // Content-Type text/plain menghindari preflight CORS pada Apps Script Web App.
+      const res = await fetch(CONFIG.SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data && data.ok){
+        el('doneTitle').textContent = 'Wajah ' + (data.nama || selected.nama) + ' berhasil didaftarkan';
+        el('doneSub').textContent = 'Data wajah tersimpan dan siap dipakai untuk absen.';
+        setProgress(3);
+        showPanel('selesai');
+      } else {
+        submitStatus.innerHTML = `<div class="inline-alert"><span>${escapeHtml((data && data.message) || 'Gagal menyimpan, coba lagi.')}</span></div>`;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      submitStatus.innerHTML = `<div class="inline-alert"><span>Tidak bisa menghubungi server. Periksa koneksi internet lalu coba lagi. (${escapeHtml(err.message)})</span></div>`;
+      btn.disabled = false;
+    }
+  }
+
+  el('btnDaftarLagi').addEventListener('click', () => {
+    selected = null;
+    captures = [];
+    searchInput.value = '';
+    resultsBox.innerHTML = '';
+    resultsBox.style.display = 'none';
+    el('btnSimpan').disabled = false;
+    setProgress(1);
+    showPanel('pilih');
+    loadStudentStatus();
+  });
+
+  // ====================== INIT ======================
+  loadStudentStatus();
+
+})();
+</script>
+</body>
+</html>

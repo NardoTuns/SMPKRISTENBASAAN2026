@@ -6,6 +6,9 @@
     <title>Aplikasi Kartu Siswa SMP Basaan</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -62,47 +65,103 @@
         video.mirror { transform: scaleX(-1); }
         canvas { display: none; }
 
-        /* Desain Kartu */
+        /* Desain Kartu — Portrait, ukuran fisik FIX 6cm x 10cm di perangkat apapun */
         .card-wrapper { margin: 30px 0; display: flex; justify-content: center; overflow-x: auto; padding: 20px; background: #fafafa; border: 1px dashed #ccc; }
-        
+
         #kartu-siswa {
-            width: 540px; 
-            height: 340px;
-            background: linear-gradient(135deg, #ffffff 0%, #d4f1f4 100%);
-            border: 2px solid #444;
-            border-radius: 12px;
-            padding: 12px 15px;
+            /* Ukuran fix pakai satuan cm agar TIDAK berubah oleh lebar layar HP —
+               tidak butuh "desktop mode" untuk mendapatkan ukuran kartu yang benar. */
+            width: 6cm;
+            height: 10cm;
+            flex-shrink: 0;
+            background: linear-gradient(170deg, #ffffff 0%, #eef7fb 55%, #e3f2f8 100%);
+            border-radius: 14px;
             box-sizing: border-box;
             position: relative;
-            color: #000;
-            font-family: 'Arial', sans-serif;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            color: #1a1a1a;
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            box-shadow: 0 10px 24px rgba(15, 76, 129, 0.25), 0 2px 6px rgba(0,0,0,0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #kartu-siswa * { box-sizing: border-box; }
+
+        .card-header {
+            text-align: center;
+            padding: 0.22cm 0.25cm 0.18cm;
+            background: linear-gradient(135deg, #0b4f8a 0%, #1c7fb8 100%);
+            color: #fff;
+            position: relative;
+            border-bottom: 3px solid #ffcb3d;
+        }
+        .card-header h3 { margin: 0; font-size: 6.5px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.92; font-family: 'Montserrat', sans-serif; }
+        .card-header h2 { margin: 2px 0 1px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.4px; font-family: 'Montserrat', sans-serif; line-height: 1.15; }
+        .card-header p { margin: 0; font-size: 6px; opacity: 0.9; line-height: 1.2; }
+
+        .card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.22cm 0.3cm 0.18cm;
+            gap: 0.12cm;
         }
 
-        .card-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 3px; margin-bottom: 12px; }
-        .card-header h3 { margin: 0; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
-        .card-header h2 { margin: 2px 0; font-size: 19px; font-weight: bold; color: #000; }
-        .card-header p { margin: 0; font-size: 10px; }
-        
-        .card-body { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
-        
-        .data-area { flex-grow: 1; font-size: 12px; font-weight: bold; margin-top: 5px; }
-        .data-row { display: flex; margin-bottom: 6px; }
-        .data-label { width: 105px; }
-        .data-colon { width: 15px; text-align: center; }
-        .data-value { flex-grow: 1; text-transform: uppercase; color: #222; }
+        /* Foto + QR berdampingan agar hemat ruang vertikal pada layout portrait */
+        .top-row { display: flex; align-items: flex-start; justify-content: center; gap: 0.22cm; width: 100%; }
 
-        .side-area { display: flex; flex-direction: column; align-items: center; width: 120px; gap: 10px; }
-        
-        .foto-container { display: flex; align-items: center; width: 100%; justify-content: center; }
-        .foto-container img { width: 85px; height: 115px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); background: #eee; }
-        
-        /* Area QR Code Tunggal (NIS) */
-        .qr-wrapper { background: #fff; padding: 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); text-align: center; width: 100%; box-sizing: border-box; }
-        .qr-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #000; letter-spacing: 1px; }
-        #qrImage { width: 75px; height: 75px; margin: 0 auto; display: block; }
+        .foto-container { display: flex; align-items: center; justify-content: center; width: 2.3cm; }
+        .foto-container img {
+            width: 2.3cm; height: 2.9cm; object-fit: cover;
+            border-radius: 8px;
+            border: 3px solid #fff;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+            background: #eee;
+        }
 
-        #kartu-siswa * { box-sizing: border-box; }
+        .qr-wrapper {
+            background: #fff;
+            padding: 0.1cm;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+            text-align: center;
+            width: 2.3cm;
+            box-sizing: border-box;
+        }
+        .qr-label { font-size: 6px; font-weight: 700; margin-bottom: 2px; color: #0b4f8a; letter-spacing: 0.5px; }
+        #qrImage { width: 1.85cm; height: 1.85cm; margin: 0 auto; display: block; }
+
+        .data-area { width: 100%; margin-top: 0.05cm; }
+        .data-row { margin-bottom: 5px; }
+        .data-row:last-child { margin-bottom: 0; }
+        .data-label {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: #0b4f8a;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 1px;
+        }
+        .data-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #16233a;
+            text-transform: uppercase;
+            line-height: 1.12;
+            word-break: break-word;
+        }
+
+        .card-footer {
+            text-align: center;
+            padding: 0.08cm 0.2cm 0.14cm;
+            font-size: 5.5px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #0b4f8a;
+            opacity: 0.85;
+        }
     </style>
 </head>
 <body>
@@ -160,20 +219,10 @@
             <div class="card-header">
                 <h3>YAYASAN DS. A .Z WENAS</h3>
                 <h2>SMP KRISTEN BASAAN</h2>
-                <p>KEC. RATATOTOK KAB. MINAHASA TENGGARA.</p>
+                <p>KEC. RATATOTOK KAB. MINAHASA TENGGARA</p>
             </div>
             <div class="card-body">
-                <div class="data-area">
-                    <div class="data-row"><div class="data-label">NAMA</div><div class="data-colon">:</div><div class="data-value" id="valNama">-</div></div>
-                    <div class="data-row"><div class="data-label">NIS / NISN</div><div class="data-colon">:</div><div class="data-value" id="valNis">-</div></div>
-                    <div class="data-row"><div class="data-label">KELAS</div><div class="data-colon">:</div><div class="data-value" id="valKelas">-</div></div>
-                    <div class="data-row"><div class="data-label">JK</div><div class="data-colon">:</div><div class="data-value" id="valJk">-</div></div>
-                    <div class="data-row"><div class="data-label">TTL</div><div class="data-colon">:</div><div class="data-value" id="valTtl">-</div></div>
-                    <div class="data-row"><div class="data-label">NIK</div><div class="data-colon">:</div><div class="data-value" id="valNik">-</div></div>
-                    <div class="data-row"><div class="data-label">TAHUN MASUK</div><div class="data-colon">:</div><div class="data-value" id="valTahun">-</div></div>
-                </div>
-                
-                <div class="side-area">
+                <div class="top-row">
                     <div class="foto-container">
                         <img id="fotoSiswa" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Foto Siswa">
                     </div>
@@ -182,7 +231,18 @@
                         <img id="qrImage" alt="QR NIS">
                     </div>
                 </div>
+
+                <div class="data-area">
+                    <div class="data-row"><div class="data-label">Nama</div><div class="data-value" id="valNama">-</div></div>
+                    <div class="data-row"><div class="data-label">NIS / NISN</div><div class="data-value" id="valNis">-</div></div>
+                    <div class="data-row"><div class="data-label">Kelas</div><div class="data-value" id="valKelas">-</div></div>
+                    <div class="data-row"><div class="data-label">Jenis Kelamin</div><div class="data-value" id="valJk">-</div></div>
+                    <div class="data-row"><div class="data-label">Tempat, Tgl Lahir</div><div class="data-value" id="valTtl">-</div></div>
+                    <div class="data-row"><div class="data-label">NIK</div><div class="data-value" id="valNik">-</div></div>
+                    <div class="data-row"><div class="data-label">Tahun Masuk</div><div class="data-value" id="valTahun">-</div></div>
+                </div>
             </div>
+            <div class="card-footer">KARTU TANDA PELAJAR</div>
         </div>
     </div>
 
@@ -455,7 +515,7 @@
         const finalFileName = nisnValid + "_" + namaValid + ".jpg";
         
         // Peningkatan rendering agar gambar QR Code terbaca sempurna
-        html2canvas(targetCard, { scale: 3, useCORS: true, allowTaint: true }).then(canvas => {
+        html2canvas(targetCard, { scale: 4, useCORS: true, allowTaint: true }).then(canvas => {
             const imgData = canvas.toDataURL('image/jpeg', 1.0);
             const downloadLink = document.createElement('a');
             downloadLink.download = finalFileName;

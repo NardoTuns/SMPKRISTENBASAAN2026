@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Custom Scrollbar for Sci-Fi / Professional look */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #111827; }
         ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
@@ -29,6 +29,7 @@
         
         <!-- UI Overlay Atas -->
         <div class="absolute top-4 left-4 right-4 flex justify-between items-start z-20 pointer-events-none">
+            
             <div class="bg-black/60 backdrop-blur-md px-5 py-3 rounded-xl border border-gray-700/50 shadow-lg pointer-events-auto">
                 <h1 class="font-bold text-green-400 text-lg tracking-wide"><i class="fas fa-expand cursor-pointer" onclick="toggleFullScreen()"></i> ScannerPro</h1>
                 <p class="text-xs text-gray-300 mt-1 flex items-center gap-2">
@@ -37,16 +38,29 @@
                 </p>
             </div>
             
-            <div class="flex flex-col md:flex-row gap-3 pointer-events-auto">
-                <button onclick="switchCamera()" class="bg-gray-800/80 hover:bg-gray-700 px-4 py-3 rounded-xl shadow border border-gray-600 transition flex items-center justify-center" title="Tukar Kamera">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-                <button onclick="manualAbsen()" class="bg-blue-600/90 hover:bg-blue-500 px-5 py-3 rounded-xl shadow shadow-blue-500/20 border border-blue-400/50 transition font-semibold flex items-center gap-2 text-sm">
-                    <i class="fas fa-keyboard"></i> <span class="hidden md:inline">Absen Manual</span>
-                </button>
-                <button onclick="bukaPengaturan()" class="bg-gray-800/80 hover:bg-gray-700 px-4 py-3 rounded-xl shadow border border-gray-600 transition flex items-center justify-center" title="Pengaturan">
-                    <i class="fas fa-cog"></i>
-                </button>
+            <div class="flex flex-col md:flex-row gap-3 pointer-events-auto items-end md:items-center">
+                <!-- Dropdown Pilih Mapel -->
+                <select id="pilihMapel" onchange="simpanMapel()" class="bg-gray-800/90 text-white text-sm px-4 py-3 rounded-xl shadow border border-gray-600 outline-none cursor-pointer focus:border-green-500 transition">
+                    <option value="Informatika">Informatika</option>
+                    <option value="Matematika">Matematika</option>
+                    <option value="IPA">IPA</option>
+                    <option value="IPS">IPS</option>
+                    <option value="Bahasa Inggris">Bahasa Inggris</option>
+                    <option value="Prakarya">Prakarya</option>
+                    <option value="Lainnya...">+ Tambah Lainnya...</option>
+                </select>
+
+                <div class="flex gap-2">
+                    <button onclick="switchCamera()" class="bg-gray-800/80 hover:bg-gray-700 px-4 py-3 rounded-xl shadow border border-gray-600 transition flex items-center justify-center" title="Tukar Kamera">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button onclick="manualAbsen()" class="bg-blue-600/90 hover:bg-blue-500 px-5 py-3 rounded-xl shadow shadow-blue-500/20 border border-blue-400/50 transition font-semibold flex items-center gap-2 text-sm">
+                        <i class="fas fa-keyboard"></i> <span class="hidden md:inline">Manual</span>
+                    </button>
+                    <button onclick="bukaPengaturan()" class="bg-gray-800/80 hover:bg-gray-700 px-4 py-3 rounded-xl shadow border border-gray-600 transition flex items-center justify-center" title="Pengaturan">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -79,14 +93,10 @@
         // 1. KONFIGURASI (HARDCODE)
         // ==========================================
         const CONFIG = {
-            // URL Google Apps Script yang Anda berikan
+            // URL Web App Google Apps Script
             SCRIPT_URL: "https://script.google.com/macros/s/AKfycbymVkLLH35ycayVr0MR9shinOWJqb1OPNxfhIQ24gBaRlpl78dbmL2RSzkDjw6wfzQK/exec",
-            
-            // Password telah disesuaikan dengan file KodeGS.txt Anda
+            // Password sinkronisasi
             PASSWORD: "40102046", 
-            
-            // Nama Mata Pelajaran Default
-            MAPEL: "Informatika" 
         };
 
         // ==========================================
@@ -117,6 +127,7 @@
         // 4. INISIALISASI APLIKASI
         // ==========================================
         window.onload = async () => {
+            initMapel(); // Muat mata pelajaran dari penyimpanan
             await checkSetup();
             await loadAiModels();
             await buildFaceMatcher();
@@ -124,18 +135,67 @@
             updateSidebar();
         };
 
-        // Mengecek apakah data siswa sudah diunduh ke database lokal
-        async function checkSetup() {
-            const count = await db.students.count();
-            // Jika database kosong, otomatis unduh data dari server
-            if (count === 0) {
-                await pullDataWajah();
+        // ==========================================
+        // FITUR BARU: MANAJEMEN MATA PELAJARAN
+        // ==========================================
+        function initMapel() {
+            const savedMapel = localStorage.getItem('SCAN_MAPEL');
+            const selectEl = document.getElementById('pilihMapel');
+            
+            if (savedMapel) {
+                // Cek apakah mapel yang tersimpan ada di dropdown, jika tidak, tambahkan
+                let exists = Array.from(selectEl.options).some(opt => opt.value === savedMapel);
+                if (!exists && savedMapel !== "Lainnya...") {
+                    const newOpt = new Option(savedMapel, savedMapel);
+                    selectEl.add(newOpt, selectEl.options[selectEl.options.length - 1]);
+                }
+                selectEl.value = savedMapel;
+            } else {
+                localStorage.setItem('SCAN_MAPEL', 'Informatika');
             }
         }
+
+        async function simpanMapel() {
+            const selectEl = document.getElementById('pilihMapel');
+            if (selectEl.value === 'Lainnya...') {
+                const { value: customMapel } = await Swal.fire({
+                    title: 'Tambah Mata Pelajaran',
+                    input: 'text',
+                    inputPlaceholder: 'Ketik nama Mata Pelajaran...',
+                    background: '#1f2937', color: '#fff',
+                    showCancelButton: true,
+                    confirmButtonText: 'Simpan',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (customMapel && customMapel.trim() !== '') {
+                    // Tambahkan opsi baru sebelum "Lainnya..."
+                    const newOpt = new Option(customMapel, customMapel);
+                    selectEl.add(newOpt, selectEl.options[selectEl.options.length - 1]);
+                    selectEl.value = customMapel;
+                    localStorage.setItem('SCAN_MAPEL', customMapel);
+                } else {
+                    // Kembalikan ke pilihan sebelumnya jika batal
+                    selectEl.value = localStorage.getItem('SCAN_MAPEL') || 'Informatika';
+                }
+            } else {
+                localStorage.setItem('SCAN_MAPEL', selectEl.value);
+            }
+            
+            // Beri notifikasi kecil saat diganti
+            const Toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1500, background: '#1f2937', color: '#fff'});
+            Toast.fire({ icon: 'success', title: `Mapel disetel ke: ${localStorage.getItem('SCAN_MAPEL')}` });
+        }
+
 
         // ==========================================
         // 5. DOWNLOAD DATA WAJAH (Dari Code.gs)
         // ==========================================
+        async function checkSetup() {
+            const count = await db.students.count();
+            if (count === 0) await pullDataWajah();
+        }
+
         async function pullDataWajah() {
             Swal.fire({ 
                 title: 'Menyinkronkan Data...', 
@@ -147,7 +207,7 @@
             try {
                 const res = await fetch(CONFIG.SCRIPT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Mencegah error CORS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                     body: JSON.stringify({ action: 'pull-wajah', password: CONFIG.PASSWORD })
                 });
                 const data = await res.json();
@@ -205,7 +265,7 @@
             });
 
             if(labeledDescriptors.length > 0) {
-                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.50); // Tingkat akurasi tinggi
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.50); 
                 statusText.innerText = `Sistem Siap (${labeledDescriptors.length} Wajah)`;
                 statusIndicator.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]";
             } else {
@@ -297,13 +357,15 @@
             const student = studentMap[nis];
             const nama = student ? student.nama : "Siswa Unknown";
             const kelas = student ? student.kelas : "-";
+            const activeMapel = localStorage.getItem('SCAN_MAPEL') || 'Informatika';
             
-            const existing = await db.attendance.where({nis: nis, tanggal: dateStr}).first();
+            // Cek apakah murid dengan Mapel tersebut sudah absen hari ini
+            const existing = await db.attendance.where({nis: nis, tanggal: dateStr}).and(item => item.mapel === activeMapel).first();
             if (existing && !isManual) return;
 
             const record = {
                 nis: nis, nama: nama, kelas: kelas,
-                mapel: CONFIG.MAPEL,
+                mapel: activeMapel,
                 status: statusOverride, tanggal: dateStr, jam: timeStr,
                 keterangan: isManual ? 'Input Manual' : 'Scan Wajah', sync: 0
             };
@@ -345,7 +407,7 @@
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center shadow">
                     <div>
                         <p class="font-bold text-white text-[15px] truncate max-w-[160px]">${log.nama}</p>
-                        <p class="text-xs text-gray-400 mt-0.5">NIS: ${log.nis} | KELAS: ${log.kelas}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">NIS: ${log.nis} | ${log.mapel}</p>
                     </div>
                     <div class="text-right flex flex-col items-end">
                         <span class="text-xs px-2.5 py-1 rounded-md bg-green-500/20 text-green-400 font-semibold border border-green-500/30">${log.jam}</span>
@@ -358,9 +420,11 @@
         }
 
         async function manualAbsen() {
+            const currentMapel = localStorage.getItem('SCAN_MAPEL') || 'Informatika';
             const { value: formValues } = await Swal.fire({
                 title: 'Absen Manual',
                 html: `
+                    <div class="mb-3 text-sm text-gray-300">Mapel: <b class="text-white">${currentMapel}</b></div>
                     <input id="swal-nis" class="swal2-input !text-sm" placeholder="Masukkan NIS Siswa">
                     <select id="swal-status" class="swal2-input !text-sm">
                         <option value="Hadir">Hadir</option>
@@ -407,7 +471,7 @@
                 
                 const res = await fetch(CONFIG.SCRIPT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Mencegah error CORS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'sync-absen', password: CONFIG.PASSWORD, records: records })
                 });
                 const data = await res.json();
@@ -442,7 +506,10 @@
             }).then((result) => {
                 if (result.isConfirmed) pullDataWajah();
                 else if (result.isDenied) {
-                    db.delete().then(() => { window.location.reload(); });
+                    db.delete().then(() => { 
+                        localStorage.removeItem('SCAN_MAPEL');
+                        window.location.reload(); 
+                    });
                 }
             });
         }

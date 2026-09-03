@@ -82,8 +82,8 @@
             // URL Google Apps Script yang Anda berikan
             SCRIPT_URL: "https://script.google.com/macros/s/AKfycbymVkLLH35ycayVr0MR9shinOWJqb1OPNxfhIQ24gBaRlpl78dbmL2RSzkDjw6wfzQK/exec",
             
-            // Masukkan password sinkronisasi persis seperti yang diset di fungsi setSyncPassword() pada Code.gs
-            PASSWORD: "GANTI_DENGAN_PASSWORD_RAHASIA", 
+            // Password telah disesuaikan dengan file KodeGS.txt Anda
+            PASSWORD: "40102046", 
             
             // Nama Mata Pelajaran Default
             MAPEL: "Informatika" 
@@ -147,6 +147,7 @@
             try {
                 const res = await fetch(CONFIG.SCRIPT_URL, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Mencegah error CORS
                     body: JSON.stringify({ action: 'pull-wajah', password: CONFIG.PASSWORD })
                 });
                 const data = await res.json();
@@ -157,10 +158,10 @@
                     Swal.fire({title: 'Sukses!', text: `Berhasil mengunduh ${data.jumlah} data wajah.`, icon: 'success', background: '#1f2937', color: '#fff'});
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    Swal.fire({title: 'Akses Ditolak', text: data.message || 'Password salah!', icon: 'error', background: '#1f2937', color: '#fff'});
+                    Swal.fire({title: 'Akses Ditolak', text: data.message || 'Gagal menarik data. Periksa Password di Script.', icon: 'error', background: '#1f2937', color: '#fff'});
                 }
             } catch(e) {
-                Swal.fire({title: 'Error Jaringan', text: 'Pastikan internet aktif saat pertama kali menarik data wajah.', icon: 'error', background: '#1f2937', color: '#fff'});
+                Swal.fire({title: 'Error Jaringan', text: 'Gagal terhubung ke Google Script. Pastikan internet Anda aktif.', icon: 'error', background: '#1f2937', color: '#fff'});
             }
         }
 
@@ -176,7 +177,7 @@
                     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
                 ]);
             } catch(e) {
-                Swal.fire('Error Model AI', 'Gagal memuat model. Cek koneksi Anda.', 'error');
+                Swal.fire('Error Model AI', 'Gagal memuat model pendeteksi wajah. Cek koneksi internet Anda.', 'error');
             }
         }
 
@@ -189,12 +190,12 @@
             studentMap = {};
 
             students.forEach(s => {
-                studentMap[s.nis] = s; // Untuk referensi UI Cepat
+                studentMap[s.nis] = s; 
                 const descData = s.DATA_WAJAH || s.descriptor;
                 if(descData) {
                     try {
                         let parsed = typeof descData === 'string' ? JSON.parse(descData) : descData;
-                        if(typeof parsed === 'string') parsed = JSON.parse(parsed); // Handle double stringify
+                        if(typeof parsed === 'string') parsed = JSON.parse(parsed); 
                         const descArray = parsed.map(d => new Float32Array(Object.values(d)));
                         if(descArray.length > 0) {
                             labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(String(s.nis), descArray));
@@ -204,11 +205,11 @@
             });
 
             if(labeledDescriptors.length > 0) {
-                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.50); // Akurasi tinggi
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.50); // Tingkat akurasi tinggi
                 statusText.innerText = `Sistem Siap (${labeledDescriptors.length} Wajah)`;
                 statusIndicator.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]";
             } else {
-                statusText.innerText = "Belum ada wajah terdaftar";
+                statusText.innerText = "Belum ada wajah terdaftar di Database LOKAL";
                 statusIndicator.className = "w-2 h-2 rounded-full bg-red-500";
             }
         }
@@ -224,7 +225,7 @@
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = currentStream;
             } catch(err) {
-                Swal.fire('Error Kamera', 'Berikan izin akses kamera pada browser Anda.', 'error');
+                Swal.fire('Error Kamera', 'Berikan izin akses kamera pada browser Anda agar bisa memindai wajah.', 'error');
             }
         }
 
@@ -237,7 +238,6 @@
             const displaySize = { width: video.videoWidth, height: video.videoHeight };
             faceapi.matchDimensions(canvas, displaySize);
             
-            // Loop Deteksi dengan jeda 250ms (~4 FPS) untuk performa
             setInterval(async () => {
                 if(!faceMatcher || video.paused) return;
                 
@@ -253,19 +253,16 @@
                 results.forEach((result, i) => {
                     const box = resizedDetections[i].detection.box;
                     const isUnknown = result.label === 'unknown';
-                    const color = isUnknown ? '#ef4444' : '#10b981'; // Merah / Hijau
+                    const color = isUnknown ? '#ef4444' : '#10b981'; 
                     
-                    // Style Box Profesional
                     ctx.strokeStyle = color;
                     ctx.lineWidth = 3;
                     ctx.strokeRect(box.x, box.y, box.width, box.height);
                     
-                    // Sudut Sci-Fi dekoratif
                     ctx.fillStyle = color;
                     ctx.fillRect(box.x - 2, box.y - 2, 10, 10);
                     ctx.fillRect(box.x + box.width - 8, box.y - 2, 10, 10);
                     
-                    // Label Nama di atas kepala
                     let displayName = 'TIDAK DIKENAL';
                     if (!isUnknown) {
                         const s = studentMap[result.label];
@@ -289,10 +286,9 @@
         // ==========================================
         async function processAttendance(nis, statusOverride = 'Hadir', isManual = false) {
             const now = new Date();
-            const dateStr = now.toLocaleDateString('id-ID'); // Format lokal
+            const dateStr = now.toLocaleDateString('id-ID');
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-            // Cooldown 1 Menit agar wajah tidak di-scan berulang secara instan
             if (!isManual) {
                 if (lastScanned[nis] && (now.getTime() - lastScanned[nis] < 60000)) return; 
                 lastScanned[nis] = now.getTime();
@@ -302,9 +298,8 @@
             const nama = student ? student.nama : "Siswa Unknown";
             const kelas = student ? student.kelas : "-";
             
-            // Cek apakah sudah absen hari ini
             const existing = await db.attendance.where({nis: nis, tanggal: dateStr}).first();
-            if (existing && !isManual) return; // Abaikan jika sudah ada
+            if (existing && !isManual) return;
 
             const record = {
                 nis: nis, nama: nama, kelas: kelas,
@@ -320,10 +315,10 @@
 
         function bacakanNama(nama) {
             const now = Date.now();
-            if (now - lastSpokenTime < 2500) return; // Hindari penumpukan suara
+            if (now - lastSpokenTime < 2500) return; 
             lastSpokenTime = now;
             
-            const shortName = nama.split(' ').slice(0, 2).join(' '); // Ambil maksimal 2 kata pertama
+            const shortName = nama.split(' ').slice(0, 2).join(' '); 
             const speech = new SpeechSynthesisUtterance(`Absen, ${shortName}`);
             speech.lang = 'id-ID';
             speech.rate = 1.0;
@@ -399,7 +394,7 @@
         async function syncOfflineData() {
             const unsynced = await db.attendance.where({sync: 0}).toArray();
             if (unsynced.length === 0) {
-                Swal.fire({title: 'Info', text: 'Semua data sudah tersinkron ke Spreadsheet.', icon: 'info', background: '#1f2937', color: '#fff'});
+                Swal.fire({title: 'Info', text: 'Semua data absen sudah tersinkron ke Spreadsheet.', icon: 'info', background: '#1f2937', color: '#fff'});
                 return;
             }
             
@@ -412,12 +407,12 @@
                 
                 const res = await fetch(CONFIG.SCRIPT_URL, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Mencegah error CORS
                     body: JSON.stringify({ action: 'sync-absen', password: CONFIG.PASSWORD, records: records })
                 });
                 const data = await res.json();
                 
                 if (data.ok) {
-                    // Update status sync di database lokal
                     for(let u of unsynced) await db.attendance.update(u.id, {sync: 1});
                     Swal.fire({title: 'Berhasil!', text: 'Sinkronisasi ke Spreadsheet selesai.', icon: 'success', background: '#1f2937', color: '#fff'});
                     updateSidebar();

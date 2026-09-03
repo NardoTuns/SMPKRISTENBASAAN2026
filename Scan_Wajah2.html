@@ -93,18 +93,17 @@
         // 1. KONFIGURASI (HARDCODE)
         // ==========================================
         const CONFIG = {
-            // URL Web App Google Apps Script
             SCRIPT_URL: "https://script.google.com/macros/s/AKfycbymVkLLH35ycayVr0MR9shinOWJqb1OPNxfhIQ24gBaRlpl78dbmL2RSzkDjw6wfzQK/exec",
-            // Password sinkronisasi
             PASSWORD: "40102046", 
         };
 
         // ==========================================
         // 2. SETUP DATABASE LOKAL (Dexie.js)
         // ==========================================
+        // DB dinaikkan ke version(2) agar tabel otomatis diperbarui dan fix masalah pembacaan descriptor
         const db = new Dexie("AbsenWajahDB");
-        db.version(1).stores({
-            students: "nis, nama, kelas, mapel, descriptor",
+        db.version(2).stores({
+            students: "nis, nama, kelas, mapel, descriptors",
             attendance: "++id, nis, nama, mapel, kelas, status, tanggal, jam, keterangan, sync"
         });
 
@@ -127,7 +126,7 @@
         // 4. INISIALISASI APLIKASI
         // ==========================================
         window.onload = async () => {
-            initMapel(); // Muat mata pelajaran dari penyimpanan
+            initMapel(); 
             await checkSetup();
             await loadAiModels();
             await buildFaceMatcher();
@@ -143,7 +142,6 @@
             const selectEl = document.getElementById('pilihMapel');
             
             if (savedMapel) {
-                // Cek apakah mapel yang tersimpan ada di dropdown, jika tidak, tambahkan
                 let exists = Array.from(selectEl.options).some(opt => opt.value === savedMapel);
                 if (!exists && savedMapel !== "Lainnya...") {
                     const newOpt = new Option(savedMapel, savedMapel);
@@ -169,20 +167,17 @@
                 });
 
                 if (customMapel && customMapel.trim() !== '') {
-                    // Tambahkan opsi baru sebelum "Lainnya..."
                     const newOpt = new Option(customMapel, customMapel);
                     selectEl.add(newOpt, selectEl.options[selectEl.options.length - 1]);
                     selectEl.value = customMapel;
                     localStorage.setItem('SCAN_MAPEL', customMapel);
                 } else {
-                    // Kembalikan ke pilihan sebelumnya jika batal
                     selectEl.value = localStorage.getItem('SCAN_MAPEL') || 'Informatika';
                 }
             } else {
                 localStorage.setItem('SCAN_MAPEL', selectEl.value);
             }
             
-            // Beri notifikasi kecil saat diganti
             const Toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1500, background: '#1f2937', color: '#fff'});
             Toast.fire({ icon: 'success', title: `Mapel disetel ke: ${localStorage.getItem('SCAN_MAPEL')}` });
         }
@@ -251,16 +246,25 @@
 
             students.forEach(s => {
                 studentMap[s.nis] = s; 
-                const descData = s.DATA_WAJAH || s.descriptor;
-                if(descData) {
+                
+                // MENGATASI BUG STRUKTUR DATA: Menangkap semua kemungkinan penamaan variabel (descriptors/descriptor)
+                let rawDesc = s.descriptors || s.descriptor || s.DATA_WAJAH; 
+                
+                if(rawDesc) {
                     try {
-                        let parsed = typeof descData === 'string' ? JSON.parse(descData) : descData;
+                        let parsed = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc;
                         if(typeof parsed === 'string') parsed = JSON.parse(parsed); 
-                        const descArray = parsed.map(d => new Float32Array(Object.values(d)));
-                        if(descArray.length > 0) {
+                        
+                        // Menangani jika array terbungkus di dalam object {"v":1, "descriptors": [...]}
+                        let descArrayRaw = parsed.descriptors ? parsed.descriptors : parsed;
+
+                        if (Array.isArray(descArrayRaw) && descArrayRaw.length > 0) {
+                            const descArray = descArrayRaw.map(d => new Float32Array(Object.values(d)));
                             labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(String(s.nis), descArray));
                         }
-                    } catch(e) {}
+                    } catch(e) {
+                        console.error("Gagal membaca data wajah untuk NIS: " + s.nis, e);
+                    }
                 }
             });
 
@@ -359,7 +363,6 @@
             const kelas = student ? student.kelas : "-";
             const activeMapel = localStorage.getItem('SCAN_MAPEL') || 'Informatika';
             
-            // Cek apakah murid dengan Mapel tersebut sudah absen hari ini
             const existing = await db.attendance.where({nis: nis, tanggal: dateStr}).and(item => item.mapel === activeMapel).first();
             if (existing && !isManual) return;
 

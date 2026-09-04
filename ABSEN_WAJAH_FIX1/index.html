@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#123B2E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Scan Wajah — Absen Siswa</title>
+<style>
+  :root{
+    --ink:#0F211B;
+    --ink-soft:#54655D;
+    --paper:#F3F6F3;
+    --surface:#FFFFFF;
+    --brand:#1F6F54;
+    --brand-deep:#123B2E;
+    --brand-soft:#E4F0EA;
+    --accent:#E8A33D;
+    --accent-soft:#FBEDD4;
+    --danger:#C1443A;
+    --danger-soft:#FBE7E4;
+    --info:#2E6E9E;
+    --info-soft:#E2EEF7;
+    --line:#DCE3DC;
+    --radius-lg:22px;
+    --radius-md:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.45;
+    -webkit-tap-highlight-color:transparent;
+    overflow-x:hidden;
+  }
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+  .hidden{display:none !important;}
+
+  /* ====================== LOCK SCREEN ====================== */
+  .lock-screen{
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:28px 20px calc(env(safe-area-inset-bottom) + 28px);
+    background:radial-gradient(circle at 50% 0%, #1B5B45 0%, var(--brand-deep) 60%, #0B241C 100%);
+    color:#fff;
+  }
+  .lock-mark{
+    width:64px;height:64px;border-radius:18px;
+    background:rgba(255,255,255,.12);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:18px;
+  }
+  .lock-mark svg{width:30px;height:30px;}
+  .lock-screen h1{font-size:20px;margin:0 0 4px;text-align:center;letter-spacing:-.01em;}
+  .lock-screen p.sub{font-size:13.5px;color:#BFE0D2;text-align:center;margin:0 0 26px;max-width:30ch;}
+  .lock-card{
+    width:100%;max-width:360px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:var(--radius-lg);padding:22px;
+    backdrop-filter:blur(6px);
+  }
+  .lock-card label{display:block;font-size:12.5px;color:#BFE0D2;margin-bottom:6px;font-weight:600;}
+  .pw-wrap{position:relative;margin-bottom:14px;}
+  .pw-wrap input{
+    width:100%;padding:14px 44px 14px 14px;border-radius:var(--radius-md);
+    border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);
+    color:#fff;font-size:16px;outline:none;
+  }
+  .pw-wrap input::placeholder{color:rgba(255,255,255,.45);}
+  .pw-wrap input:focus{border-color:#fff;}
+  .pw-toggle{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:#BFE0D2;padding:8px;cursor:pointer;
+  }
+  .lock-mode-note{
+    font-size:12px;color:#BFE0D2;background:rgba(255,255,255,.08);
+    border-radius:10px;padding:9px 11px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;
+  }
+  .lock-error{
+    font-size:12.5px;color:#FFD9D2;background:rgba(193,68,58,.35);
+    border-radius:10px;padding:9px 11px;margin-bottom:14px;display:none;
+  }
+  .lock-btn{
+    width:100%;padding:14px;border-radius:var(--radius-md);border:none;
+    background:#fff;color:var(--brand-deep);font-weight:700;font-size:15px;cursor:pointer;
+  }
+  .lock-btn:disabled{opacity:.6;}
+  .lock-foot{margin-top:18px;font-size:11.5px;color:#8FC2AC;text-align:center;max-width:32ch;}
+
+  /* ====================== TOP BAR ====================== */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:var(--surface);border-bottom:1px solid var(--line);
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  }
+  .topbar-row{display:flex;align-items:center;gap:10px;}
+  .topbar-mark{
+    width:34px;height:34px;border-radius:10px;background:var(--brand);
+    display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .topbar-mark svg{width:17px;height:17px;}
+  .topbar-title{flex:1;min-width:0;}
+  .topbar-title h1{font-size:15px;margin:0;font-weight:700;}
+  .topbar-title p{font-size:11.5px;color:var(--ink-soft);margin:0;}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:700;padding:5px 9px;border-radius:99px;
+    white-space:nowrap;
+  }
+  .pill.online{background:var(--brand-soft);color:var(--brand-deep);}
+  .pill.offline{background:var(--accent-soft);color:#8A5A0F;}
+  .pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .icon-btn{
+    width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex:none;color:var(--ink);
+  }
+  .icon-btn:active{background:var(--brand-soft);}
+
+  .session-row{display:flex;gap:8px;margin-top:10px;}
+  .session-row input{
+    flex:1;min-width:0;padding:10px 12px;border-radius:var(--radius-md);
+    border:1px solid var(--line);font-size:13.5px;outline:none;background:var(--surface);
+  }
+  .session-row input:focus{border-color:var(--brand);}
+  .sync-chip{
+    display:flex;align-items:center;gap:6px;
+    padding:9px 12px;border-radius:var(--radius-md);
+    background:var(--accent-soft);color:#8A5A0F;font-size:12.5px;font-weight:700;
+    border:none;cursor:pointer;white-space:nowrap;
+  }
+  .sync-chip.done{background:var(--brand-soft);color:var(--brand-deep);}
+  .sync-chip .spin{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ====================== LAYOUT ====================== */
+  .layout{
+    display:flex;flex-direction:column;gap:16px;
+    padding:16px;max-width:1180px;margin:0 auto;
+  }
+  @media (min-width:900px){
+    .layout{flex-direction:row;align-items:flex-start;}
+    .cam-col{flex:1.5;}
+    .side-col{flex:1;position:sticky;top:150px;max-height:calc(100vh - 170px);}
+  }
+
+  /* ====================== CAMERA ====================== */
+  .cam-col{display:flex;flex-direction:column;gap:12px;}
+  .cam-card{
+    position:relative;background:#0B1512;border-radius:var(--radius-lg);
+    overflow:hidden;aspect-ratio:4/3;
+  }
+  .cam-mirror{position:absolute;inset:0;transform-origin:center;}
+  .cam-mirror.mirrored{transform:scaleX(-1);}
+  video{width:100%;height:100%;object-fit:cover;display:block;background:#0B1512;}
+  canvas.overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;}
+  .cam-idle{
+    position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;color:#fff;text-align:center;padding:24px;
+    background:linear-gradient(180deg,#123B2E,#0B1512);
+  }
+  .cam-idle svg{width:42px;height:42px;opacity:.85;}
+  .cam-idle p{font-size:13px;color:#CBE3D8;margin:0;max-width:30ch;}
+  .cam-top-controls{
+    position:absolute;top:10px;right:10px;z-index:4;display:flex;gap:8px;
+  }
+  .cam-round-btn{
+    width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+    background:rgba(11,21,18,.6);color:#fff;display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(3px);
+  }
+  .cam-round-btn.active{background:var(--brand);}
+  .cam-status-pill{
+    position:absolute;left:10px;bottom:10px;z-index:4;
+    background:rgba(11,21,18,.68);color:#fff;font-size:12px;font-weight:600;
+    padding:8px 12px;border-radius:99px;
+  }
+  .cam-count-pill{
+    position:absolute;right:10px;bottom:10px;z-index:4;
+    background:rgba(31,111,84,.85);color:#fff;font-size:12px;font-weight:700;
+    padding:8px 12px;border-radius:99px;
+  }
+
+  .stat-strip{display:flex;gap:10px;}
+  .stat-box{
+    flex:1;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius-md);padding:12px 14px;
+  }
+  .stat-box .num{font-size:19px;font-weight:800;letter-spacing:-.02em;}
+  .stat-box .lbl{font-size:11.5px;color:var(--ink-soft);}
+
+  .action-row{display:flex;gap:10px;}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px 16px;border-radius:var(--radius-md);
+    font-size:14.5px;font-weight:700;border:none;cursor:pointer;flex:1;
+  }
+  .btn-primary{background:var(--brand);color:#fff;}
+  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
+  .btn:disabled{opacity:.5;pointer-events:none;}
+
+  /* ====================== SIDEBAR ====================== */
+  .side-col{display:flex;flex-direction:column;gap:12px;}
+  .side-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius-lg);padding:16px;
+  }
+  .side-card h2{font-size:14.5px;margin:0 0 2px;}
+  .side-card p.sub{font-size:12px;color:var(--ink-soft);margin:0 0 12px;}
+  .attend-list{list-style:none;margin:0;padding:0;max-height:420px;overflow-y:auto;}
+  .attend-item{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 0;border-bottom:1px solid var(--line);
+  }
+  .attend-item:last-child{border-bottom:none;}
+  .attend-avatar{
+    width:34px;height:34px;border-radius:50%;flex:none;
+    background:var(--brand-soft);color:var(--brand-deep);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;
+  }
+  .attend-info{flex:1;min-width:0;}
+  .attend-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .attend-meta{font-size:11px;color:var(--ink-soft);}
+  .attend-time{font-size:11px;color:var(--ink-soft);font-weight:600;flex:none;}
+  .attend-status{
+    font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:6px;flex:none;
+  }
+  .attend-status.hadir{background:var(--brand-soft);color:var(--brand-deep);}
+  .attend-status.manual{background:var(--info-soft);color:var(--info);}
+  .attend-status.izin, .attend-status.sakit{background:var(--accent-soft);color:#8A5A0F;}
+  .attend-status.alpa{background:var(--danger-soft);color:var(--danger);}
+  .attend-empty{padding:20px 0;text-align:center;color:var(--ink-soft);font-size:13px;}
+
+  /* ====================== MODAL (manual + sync) ====================== */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(11,21,18,.55);
+    display:flex;align-items:flex-end;justify-content:center;z-index:50;
+    padding:0;
+  }
+  @media (min-width:640px){
+    .modal-backdrop{align-items:center;padding:20px;}
+  }
+  .modal-card{
+    width:100%;max-width:440px;background:var(--surface);
+    border-radius:22px 22px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom) + 20px);
+    max-height:88vh;overflow-y:auto;
+  }
+  @media (min-width:640px){
+    .modal-card{border-radius:var(--radius-lg);}
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .modal-head h2{font-size:17px;margin:0;}
+  .modal-close{background:none;border:none;color:var(--ink-soft);padding:6px;cursor:pointer;}
+
+  .field-label{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:12px 0 6px;}
+  .field-label:first-child{margin-top:0;}
+  .search-field{
+    width:100%;border:1px solid var(--line);background:var(--paper);
+    border-radius:var(--radius-md);padding:12px 14px;font-size:15px;outline:none;
+  }
+  .search-field:focus{border-color:var(--brand);}
+  .manual-results{margin-top:8px;border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;max-height:220px;overflow-y:auto;}
+  .manual-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .manual-item > div:first-child{flex:1;min-width:0;}
+  .manual-item:last-child{border-bottom:none;}
+  .manual-item:active{background:var(--brand-soft);}
+  .manual-item .name{font-size:13.5px;font-weight:600;}
+  .manual-item .meta{font-size:11.5px;color:var(--ink-soft);}
+  .mini-badge{
+    font-size:9.5px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);
+    padding:3px 7px;border-radius:99px;flex:none;white-space:nowrap;
+  }
+
+  .selected-student{
+    display:flex;align-items:center;gap:10px;background:var(--brand-soft);
+    border-radius:var(--radius-md);padding:10px 12px;margin-top:8px;
+  }
+  .selected-student .name{font-weight:700;font-size:13.5px;color:var(--brand-deep);}
+  .selected-student .meta{font-size:11.5px;color:var(--brand-deep);opacity:.75;}
+  .selected-student button{margin-left:auto;background:none;border:none;color:var(--brand-deep);font-size:12px;font-weight:700;cursor:pointer;}
+
+  .status-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .status-opt{
+    padding:9px 14px;border-radius:99px;border:1px solid var(--line);
+    background:var(--surface);font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink-soft);
+  }
+  .status-opt.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+
+  textarea.note-field{
+    width:100%;border:1px solid var(--line);border-radius:var(--radius-md);
+    padding:12px;font-size:13.5px;outline:none;resize:vertical;min-height:60px;background:var(--paper);
+  }
+  textarea.note-field:focus{border-color:var(--brand);}
+
+  .modal-foot{margin-top:18px;}
+
+  .settings-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 0;border-bottom:1px solid var(--line);
+  }
+  .settings-row:last-child{border-bottom:none;}
+  .settings-row .lbl{font-size:13.5px;font-weight:600;}
+  .settings-row .desc{font-size:11.5px;color:var(--ink-soft);}
+  .switch{position:relative;width:44px;height:26px;flex:none;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .track{
+    position:absolute;inset:0;background:var(--line);border-radius:99px;cursor:pointer;transition:.15s;
+  }
+  .switch .track::after{
+    content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .switch input:checked + .track{background:var(--brand);}
+  .switch input:checked + .track::after{transform:translateX(18px);}
+
+  .toast-stack{
+    position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);
+    z-index:80;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;
+  }
+  .toast{
+    background:var(--brand-deep);color:#fff;font-size:13px;font-weight:600;
+    padding:10px 16px;border-radius:99px;box-shadow:0 6px 18px rgba(18,59,46,.35);
+    animation:toastIn .25s ease both;max-width:88vw;text-align:center;
+  }
+  .toast.err{background:var(--danger);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+  @media (prefers-reduced-motion: reduce){
+    .toast, .sync-chip .spin{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ====================== LOCK SCREEN ====================== -->
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-mark">
+    <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="10" width="18" height="10" rx="2" stroke="#fff" stroke-width="1.6"/><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#fff" stroke-width="1.6"/></svg>
+  </div>
+  <h1>Scan Wajah — Absen Siswa</h1>
+  <p class="sub" id="lockSubtitle">Masukkan password untuk mengambil data siswa dari server.</p>
+
+  <div class="lock-card">
+    <label for="pwInput">Password sinkronisasi</label>
+    <div class="pw-wrap">
+      <input id="pwInput" type="password" placeholder="Masukkan password" autocomplete="off" />
+      <button class="pw-toggle" id="pwToggle" type="button" aria-label="Tampilkan password">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+
+    <div id="lockModeNote" class="lock-mode-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:none;margin-top:1px;"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="lockModeText">Perangkat ini belum punya data tersimpan — sambungkan ke internet untuk sinkronisasi pertama kali.</span>
+    </div>
+
+    <div id="lockError" class="lock-error"></div>
+
+    <button class="lock-btn" id="btnUnlock">Buka Aplikasi</button>
+  </div>
+
+  <p class="lock-foot">Data wajah &amp; identitas siswa disimpan di perangkat ini dalam bentuk terenkripsi menggunakan password di atas — tanpa password yang benar, data tidak bisa dibaca.</p>
+</div>
+
+<!-- ====================== APLIKASI UTAMA ====================== -->
+<div id="app" class="hidden">
+
+  <div class="toast-stack" id="toastStack"></div>
+
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-mark">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="10" width="18" height="10" rx="2" stroke="#fff" stroke-width="1.6"/><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#fff" stroke-width="1.6"/></svg>
+      </div>
+      <div class="topbar-title">
+        <h1 id="schoolTitle">Scan Wajah — Absen</h1>
+        <p id="syncedInfo">Data belum disinkronkan</p>
+      </div>
+      <span id="onlinePill" class="pill online"><span class="pill-dot"></span>Online</span>
+      <button class="icon-btn" id="btnSettings" aria-label="Pengaturan">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.4.66.75.85.14.08.3.13.46.15H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="1.3"/></svg>
+      </button>
+      <button class="icon-btn" id="btnLock" aria-label="Kunci aplikasi">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="10" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+
+    <div class="session-row">
+      <input id="mapelInput" type="text" placeholder="Mata pelajaran / kegiatan (mis. Matematika)" />
+      <button class="sync-chip" id="btnSyncQueue">
+        <span id="syncChipText">0 belum sinkron</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- ============ KAMERA ============ -->
+    <section class="cam-col">
+      <div class="cam-card" id="camCard">
+        <div class="cam-idle" id="camIdle">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.4a1 1 0 0 0 .87-.5l.66-1A2 2 0 0 1 11.14 3.5h1.72a2 2 0 0 1 1.71 1l.66 1a1 1 0 0 0 .87.5h1.4A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="#CBE3D8" stroke-width="1.5"/><circle cx="12" cy="12.5" r="3.4" stroke="#CBE3D8" stroke-width="1.5"/></svg>
+          <p>Arahkan kamera ke siswa yang lewat. Aplikasi bisa mengenali beberapa wajah sekaligus.</p>
+          <button class="btn btn-primary" id="btnStartCam" style="flex:none;padding:12px 22px;">Mulai kamera</button>
+        </div>
+        <div class="cam-mirror mirrored" id="camMirror">
+          <video id="video" autoplay muted playsinline></video>
+        </div>
+        <canvas id="overlay" class="overlay"></canvas>
+        <div class="cam-top-controls">
+          <button class="cam-round-btn" id="btnSwitchCam" aria-label="Ganti kamera" title="Ganti kamera depan/belakang">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" stroke="#fff" stroke-width="1.5"/><path d="M9 20a3 3 0 1 0 6 0" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="cam-round-btn" id="btnToggleSound" aria-label="Suara" title="Aktif/nonaktifkan suara">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h4l5 4V5L8 9H4Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path id="soundWave" d="M16 9a4 4 0 0 1 0 6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="cam-status-pill" id="camStatusPill">Kamera belum aktif</div>
+        <div class="cam-count-pill hidden" id="camCountPill">0 wajah</div>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat-box"><div class="num" id="statHadir">0</div><div class="lbl">Sudah absen hari ini</div></div>
+        <div class="stat-box"><div class="num" id="statRoster">0</div><div class="lbl">Total siswa tersinkron</div></div>
+        <div class="stat-box"><div class="num" id="statPending">0</div><div class="lbl">Menunggu sinkron</div></div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-primary" id="btnManual">Absen manual</button>
+        <button class="btn btn-ghost" id="btnStopCam">Hentikan kamera</button>
+      </div>
+    </section>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="side-col">
+      <div class="side-card">
+        <h2>Sudah absen</h2>
+        <p class="sub" id="sideDate">-</p>
+        <ul class="attend-list" id="attendList">
+          <li class="attend-empty">Belum ada siswa yang absen.</li>
+        </ul>
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<!-- ====================== MODAL: ABSEN MANUAL ====================== -->
+<div id="manualModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Absen manual</h2>
+      <button class="modal-close" id="closeManual">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="field-label">Cari siswa</div>
+    <input id="manualSearch" class="search-field" type="text" placeholder="Nama, NIS, atau kelas" autocomplete="off" />
+    <div id="manualResults" class="manual-results hidden"></div>
+    <div id="manualSelected"></div>
+
+    <div class="field-label">Status kehadiran</div>
+    <div class="status-grid" id="statusGrid">
+      <button type="button" class="status-opt on" data-status="Hadir">Hadir</button>
+      <button type="button" class="status-opt" data-status="Izin">Izin</button>
+      <button type="button" class="status-opt" data-status="Sakit">Sakit</button>
+      <button type="button" class="status-opt" data-status="Alpa">Alpa</button>
+    </div>
+
+    <div class="field-label">Keterangan (opsional)</div>
+    <textarea id="manualNote" class="note-field" placeholder="Catatan tambahan…"></textarea>
+
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="btnSubmitManual" style="width:100%;">Simpan absen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MODAL: PENGATURAN ====================== -->
+<div id="settingsModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Pengaturan</h2>
+      <button class="modal-close" id="closeSettings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="lbl">Suara nama siswa</div><div class="desc">Bacakan nama saat absen berhasil</div></div>
+      <label class="switch"><input type="checkbox" id="toggleSound" checked><span class="track"></span></label>
+    </div>
+    <div class="settings-row">
+      <div><div class="lbl">Sinkron otomatis</div><div class="desc">Kirim data absen ke spreadsheet begitu online</div></div>
+      <label class="switch"><input type="checkbox" id="toggleAutoSync" checked><span class="track"></span></label>
+    </div>
+
+    <div class="field-label">Data tersimpan di perangkat</div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;" id="dataInfoText">-</p>
+
+    <div class="action-row" style="margin-bottom:10px;">
+      <button class="btn btn-ghost" id="btnResync">Sinkron ulang data siswa</button>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-ghost" id="btnClearSession">Reset daftar hadir hari ini</button>
+    </div>
+
+    <p style="font-size:11px;color:var(--ink-soft);margin-top:16px;">Versi data: <span id="verInfo">-</span></p>
+  </div>
+</div>
+
+<!-- face-api.js: deteksi & pengenalan wajah, berjalan di perangkat -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+  // Seluruh data siswa (dari MasterAbsenSiswa.csv di GitHub) — dipakai untuk
+  // fitur absen manual, supaya siswa yang BELUM sempat daftar wajah tetap
+  // bisa dicari & diabsen manual. Data pengenalan wajah (descriptor) tetap
+  // hanya diambil lewat sinkronisasi berpassword di layar kunci.
+  window.MASTER_ROSTER = [{"no": "1", "nama": "AKILA PUTRI RAMADANI HUNTOYUNGO", "jenisKelamin": "P", "nis": "2026001", "nisn": "0132394036", "tempatLahir": "BASAAN", "tanggalLahir": "2013-07-13", "nik": "7107045307130001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "2", "nama": "Anggoro Sandewa Adam", "jenisKelamin": "L", "nis": "2026002", "nisn": "3137036867", "tempatLahir": "Basaan", "tanggalLahir": "2013-10-05", "nik": "7107040510130001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "3", "nama": "BRAIN KENZO KALOH", "jenisKelamin": "L", "nis": "2026003", "nisn": "3135817530", "tempatLahir": "BASAAN", "tanggalLahir": "2013-09-27", "nik": "7107042709130001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "4", "nama": "CIKA ESTER VALERIE SAMBOW", "jenisKelamin": "P", "nis": "2026004", "nisn": "0134350425", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-06-14", "nik": "7107045406140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "5", "nama": "DRILEN PAJAMA", "jenisKelamin": "L", "nis": "2026005", "nisn": "0149825454", "tempatLahir": "BASAAN", "tanggalLahir": "2014-07-04", "nik": "7107040407140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "6", "nama": "Farel Bril Kasenda", "jenisKelamin": "L", "nis": "2026006", "nisn": "3141758901", "tempatLahir": "TOMOHON", "tanggalLahir": "2014-10-06", "nik": "7107010610140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "7", "nama": "GANSA ANGKATO", "jenisKelamin": "P", "nis": "2026007", "nisn": "0141870932", "tempatLahir": "BASAAN", "tanggalLahir": "2014-04-23", "nik": "7107046304140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "8", "nama": "IREYNE OVELIANA PANGAYOAN", "jenisKelamin": "P", "nis": "2026008", "nisn": "0141113741", "tempatLahir": "BASAAN", "tanggalLahir": "2014-10-22", "nik": "7107046210140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "9", "nama": "JIBRAEL JELLOME GANDARIA", "jenisKelamin": "L", "nis": "2026009", "nisn": "0147358475", "tempatLahir": "BASAAN", "tanggalLahir": "2014-08-18", "nik": "7107041808140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "10", "nama": "JUARES NEMAN", "jenisKelamin": "L", "nis": "2026010", "nisn": "3143179575", "tempatLahir": "TOMOHON", "tanggalLahir": "2014-05-12", "nik": "7107041205140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "11", "nama": "KEYZHA LAURENTH SAMBUAGA", "jenisKelamin": "P", "nis": "2026011", "nisn": "3141194887", "tempatLahir": "MINAHASA TENGGARA", "tanggalLahir": "2013-06-13", "nik": "7107045306130004", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "12", "nama": "MICHAEL CHRISTIAL LEWI", "jenisKelamin": "L", "nis": "2026012", "nisn": "0149184641", "tempatLahir": "MANADO", "tanggalLahir": "2014-06-19", "nik": "7107041906140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "13", "nama": "QUEENCY CATALEYA PIRI", "jenisKelamin": "P", "nis": "2026013", "nisn": "0147051594", "tempatLahir": "NONAPAN", "tanggalLahir": "2014-04-10", "nik": "7107045004140001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "14", "nama": "Raffilio Nehemia Palar", "jenisKelamin": "L", "nis": "2026014", "nisn": "0134440958", "tempatLahir": "Basaan", "tanggalLahir": "2013-11-15", "nik": "7107041511130001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "16", "nama": "WINRAIN EZRA ELLYA TUMANKEN", "jenisKelamin": "L", "nis": "2026016", "nisn": "0124028709", "tempatLahir": "MANADO", "tanggalLahir": "2012-12-30", "nik": "7171063012120001", "tahunMasuk": "2026", "kelas": "7A"}, {"no": "17", "nama": "ALGUERO FRANZISKO RAKIAN", "jenisKelamin": "L", "nis": "2026017", "nisn": "0146650006", "tempatLahir": "KAWANGKOAN", "tanggalLahir": "2014-08-29", "nik": "7107042908140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "18", "nama": "Aliando Sevilio Lineleyan", "jenisKelamin": "L", "nis": "2026018", "nisn": "3146529453", "tempatLahir": "Basaan", "tanggalLahir": "2014-09-24", "nik": "7107042409140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "19", "nama": "Andre Mikail Gumogar", "jenisKelamin": "L", "nis": "2026019", "nisn": "3134045173", "tempatLahir": "Basaan", "tanggalLahir": "2013-03-21", "nik": "7107042103130001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "20", "nama": "CLEIVO ALVARO PASUHUK", "jenisKelamin": "L", "nis": "2026020", "nisn": "3143583981", "tempatLahir": "TOMOHON", "tanggalLahir": "2014-04-19", "nik": "7107041904140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "21", "nama": "ELLSHA DIVASHEF SUOTH", "jenisKelamin": "P", "nis": "2026021", "nisn": "0144809197", "tempatLahir": "TOMOHON", "tanggalLahir": "2014-03-20", "nik": "7107046005140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "23", "nama": "GIOVANNI CHANDRA PIRI", "jenisKelamin": "L", "nis": "2026023", "nisn": "0139665204", "tempatLahir": "BASAAN", "tanggalLahir": "2013-09-05", "nik": "7107040509130001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "22", "nama": "Genji Imanuel Takaliuang", "jenisKelamin": "L", "nis": "2026022", "nisn": "3136503807", "tempatLahir": "Ratatotok", "tanggalLahir": "2013-10-07", "nik": "7107040710130002", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "24", "nama": "HAZAEL ISRAEL PIRI", "jenisKelamin": "L", "nis": "2026024", "nisn": "0143786572", "tempatLahir": "RATATOTOK", "tanggalLahir": "2014-02-15", "nik": "7107041502140002", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "25", "nama": "Hillary Injili onsu", "jenisKelamin": "P", "nis": "2026025", "nisn": "0158895176", "tempatLahir": "Basaan", "tanggalLahir": "2015-03-21", "nik": "7107046103150001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "26", "nama": "JUFANDI AHMAD WAHYU", "jenisKelamin": "L", "nis": "2026026", "nisn": "0143657218", "tempatLahir": "BALIKPAPAN", "tanggalLahir": "2014-01-29", "nik": "6471012901140002", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "27", "nama": "LAKISYYA DUAULU", "jenisKelamin": "P", "nis": "2026027", "nisn": "0143248295", "tempatLahir": "GORONTALO", "tanggalLahir": "2014-10-22", "nik": "7107046210140002", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "28", "nama": "MICHAEL KEVIN WOWOR", "jenisKelamin": "L", "nis": "2026028", "nisn": "0121467771", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-05-06", "nik": "7107040605120001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "29", "nama": "MORGAN NATANAEL PALASI", "jenisKelamin": "L", "nis": "2026029", "nisn": "0144627423", "tempatLahir": "BASAAN", "tanggalLahir": "2014-11-04", "nik": "7107040411140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "30", "nama": "NIZAM SOMBA", "jenisKelamin": "L", "nis": "2026030", "nisn": "0131387500", "tempatLahir": "BASAAN", "tanggalLahir": "2013-01-03", "nik": "7107040301130001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "31", "nama": "YOTANIA ONSU", "jenisKelamin": "P", "nis": "2026031", "nisn": "0146591973", "tempatLahir": "BASAAN", "tanggalLahir": "2014-10-23", "nik": "7107046310140001", "tahunMasuk": "2026", "kelas": "7B"}, {"no": "33", "nama": "ANGEL YESHA IMMANUELA MONINGKA", "jenisKelamin": "P", "nis": "2025001", "nisn": "0135745091", "tempatLahir": "MANADO", "tanggalLahir": "2013-11-26", "nik": "7107046611130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "ANGGUN KALIPE", "jenisKelamin": "P", "nis": "2025003", "nisn": "0132280508", "tempatLahir": "BASAAN", "tanggalLahir": "2013-08-18", "nik": "7107045808130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "Anggraini Firginia Naomi Logor", "jenisKelamin": "P", "nis": "2025002", "nisn": "3137734600", "tempatLahir": "Manado", "tanggalLahir": "2013-02-24", "nik": "7107036402130002", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "32", "nama": "CANTIKA MAHURI", "jenisKelamin": "P", "nis": "202508", "nisn": "3114531765", "tempatLahir": "Moreah", "tanggalLahir": "2011-09-02", "nik": "NULL", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "CHRISTY NATALIA PUTRI DAMOPOLII", "jenisKelamin": "P", "nis": "2025004", "nisn": "0134949890", "tempatLahir": "BASAAN", "tanggalLahir": "2013-12-09", "nik": "7107044912130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "ENJELI PALASI", "jenisKelamin": "P", "nis": "2025005", "nisn": "0128946334", "tempatLahir": "BASAAN", "tanggalLahir": "2013-01-21", "nik": "7107046101130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "FARLI EZRA SAMBEKA", "jenisKelamin": "L", "nis": "2025006", "nisn": "3131793407", "tempatLahir": "Ratatotok", "tanggalLahir": "2013-02-04", "nik": "7107040402130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "IIFTITHA SUOTH", "jenisKelamin": "P", "nis": "2025007", "nisn": "0136070800", "tempatLahir": "BASAAN", "tanggalLahir": "2013-06-06", "nik": "7107044606130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "JENNIFER MIKHA SEKEON", "jenisKelamin": "P", "nis": "2025008", "nisn": "3136287587", "tempatLahir": "MANADO", "tanggalLahir": "2013-06-27", "nik": "7171076706130005", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "MICHAEL LIONEL KAWATU", "jenisKelamin": "L", "nis": "2025009", "nisn": "0132066739", "tempatLahir": "TOMOHON", "tanggalLahir": "2013-03-05", "nik": "7107040503130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "MOZES ADAM", "jenisKelamin": "L", "nis": "2025010", "nisn": "3135635673", "tempatLahir": "MANADO", "tanggalLahir": "2013-03-26", "nik": "7107042603010001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "Muhammad Fadil Sehe", "jenisKelamin": "L", "nis": "2025011", "nisn": "0124726067", "tempatLahir": "Basaan", "tanggalLahir": "2012-09-23", "nik": "7107022309120001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "NURAQILA ADAM", "jenisKelamin": "P", "nis": "2025012", "nisn": "0126399538", "tempatLahir": "BASAAN", "tanggalLahir": "2012-12-06", "nik": "7107044612120001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "RAYNELLE DANIEL VARIYEL WANTALANGI", "jenisKelamin": "L", "nis": "2025013", "nisn": "3133449852", "tempatLahir": "TONDANO", "tanggalLahir": "2013-12-06", "nik": "7102040612130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "REQUELME CANIGIA PONAMON", "jenisKelamin": "L", "nis": "2025014", "nisn": "0135772343", "tempatLahir": "Minahasa Tenggara", "tanggalLahir": "2013-03-07", "nik": "7107040703130002", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "VIRJINIA AURA KAREPOWAN", "jenisKelamin": "P", "nis": "2025015", "nisn": "0137473349", "tempatLahir": "MINAHASA TENGGARA", "tanggalLahir": "2013-08-05", "nik": "7107044508130002", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "YEREMIA HOTMA", "jenisKelamin": "L", "nis": "2025016", "nisn": "0132671197", "tempatLahir": "SURABAYA", "tanggalLahir": "2013-05-29", "nik": "3578122905130002", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "ZYLQWYN JISRAEL WOLAYAN", "jenisKelamin": "L", "nis": "2025017", "nisn": "0139329391", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-10-21", "nik": "7107042110130001", "tahunMasuk": "2025", "kelas": "8A"}, {"no": "", "nama": "ABIGAIL BLESSY INJILIA GERUNGAN", "jenisKelamin": "P", "nis": "2025018", "nisn": "3132484796", "tempatLahir": "BASAAN", "tanggalLahir": "2013-06-15", "nik": "7107045506130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "AZARYA CHARITY PIRI", "jenisKelamin": "P", "nis": "2025019", "nisn": "0131122844", "tempatLahir": "TONDANO", "tanggalLahir": "2013-02-08", "nik": "7107044802130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "CHELSIE PATRISIA WURANGIAN", "jenisKelamin": "P", "nis": "2025020", "nisn": "0121772225", "tempatLahir": "Basaan", "tanggalLahir": "2012-12-27", "nik": "7107046712120001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "CHRISNA GANZA SUOTH", "jenisKelamin": "L", "nis": "2025021", "nisn": "0139749298", "tempatLahir": "BASAAN", "tanggalLahir": "2013-07-21", "nik": "7107042107130003", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "CHRISTLY MEIRALDO RAU", "jenisKelamin": "L", "nis": "2025022", "nisn": "0132812504", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-05-04", "nik": "7107040405130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "EXELO SAMUEL AHULENDING", "jenisKelamin": "L", "nis": "2025023", "nisn": "0125272453", "tempatLahir": "MANADO", "tanggalLahir": "2012-09-17", "nik": "7107041709120001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "FIKEN GERUNGAN", "jenisKelamin": "L", "nis": "2025024", "nisn": "0122797895", "tempatLahir": "BASAAN", "tanggalLahir": "2012-09-25", "nik": "7107042509120001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "GALATIA PAYOW", "jenisKelamin": "P", "nis": "2025037", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "JANET SOFLY PIRI", "jenisKelamin": "P", "nis": "2025025", "nisn": "3131787787", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-06-30", "nik": "7107047006130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "JHERALDO VIRJHIEL SOPUTAN", "jenisKelamin": "L", "nis": "2025026", "nisn": "3131235933", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-08-18", "nik": "7107041808130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "JHINSHIE JHACLINE ADAM", "jenisKelamin": "P", "nis": "2025027", "nisn": "0132420894", "tempatLahir": "BASAAN", "tanggalLahir": "2013-06-07", "nik": "7107044706130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "LEONARDO JILIO MOSES SUMAKUL", "jenisKelamin": "L", "nis": "2025028", "nisn": "0125958460", "tempatLahir": "SOYOAN", "tanggalLahir": "2012-11-07", "nik": "7107040711120001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "LIONEL EVAN MAPALIEY", "jenisKelamin": "L", "nis": "2025036", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "Quilla Hilary Lengkey", "jenisKelamin": "P", "nis": "2025029", "nisn": "3139046690", "tempatLahir": "Basaan", "tanggalLahir": "2013-04-19", "nik": "7107045904130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "REFALINA TILAAR", "jenisKelamin": "P", "nis": "2025030", "nisn": "0139971232", "tempatLahir": "BASAAN", "tanggalLahir": "2013-08-21", "nik": "7107046108130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "RIZKY LONDA", "jenisKelamin": "L", "nis": "2025031", "nisn": "0131556843", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-05-04", "nik": "7107040405130002", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "RIZKY RICARDO KASETI", "jenisKelamin": "L", "nis": "2025032", "nisn": "0122895473", "tempatLahir": "BASAAN", "tanggalLahir": "2012-03-26", "nik": "", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "SHALOMITA RONDONUWU", "jenisKelamin": "P", "nis": "2025033", "nisn": "0118032370", "tempatLahir": "BASAAN", "tanggalLahir": "2011-11-12", "nik": "7107041103120001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "ZEFANYA JULIO GERET", "jenisKelamin": "L", "nis": "2025034", "nisn": "0132561634", "tempatLahir": "RATATOTOK", "tanggalLahir": "2013-07-10", "nik": "7107041007130001", "tahunMasuk": "2025", "kelas": "8B"}, {"no": "", "nama": "ABIGEIL ROMBOT", "jenisKelamin": "P", "nis": "2024001", "nisn": "0114957137", "tempatLahir": "BASAAN", "tanggalLahir": "2011-07-20", "nik": "7107044911110001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "ALKALIFI PUTRA KAMBEY", "jenisKelamin": "L", "nis": "2024003", "nisn": "0125249711", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-04-05", "nik": "7107040504120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "ANATASYA BOSEKE", "jenisKelamin": "P", "nis": "2024005", "nisn": "3114930004", "tempatLahir": "BASAAN", "tanggalLahir": "2011-12-10", "nik": "7107045012110002", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "ANITA BALANSA", "jenisKelamin": "P", "nis": "2024006", "nisn": "0127131574", "tempatLahir": "BASAAN", "tanggalLahir": "2012-06-16", "nik": "7107041606120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "ARBIANSYAH TAHUPAHANGENG", "jenisKelamin": "L", "nis": "2024007", "nisn": "0124402697", "tempatLahir": "RATATOTOK TIGA", "tanggalLahir": "2012-11-22", "nik": "7107042211120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "AULIA MOLONGIO", "jenisKelamin": "P", "nis": "2024008", "nisn": "0122063704", "tempatLahir": "BASAAN SATU", "tanggalLahir": "2012-07-27", "nik": "7107046707120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "FELICIA GRACIA", "jenisKelamin": "P", "nis": "2024010", "nisn": "0126845416", "tempatLahir": "BASAAN", "tanggalLahir": "2012-01-14", "nik": "7107045401120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "FEREN FEBIOLA TOAR", "jenisKelamin": "P", "nis": "2025035", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2025", "kelas": "9A"}, {"no": "", "nama": "JIO MIYUKI KOYONGIAN", "jenisKelamin": "L", "nis": "2024035", "nisn": "0121824343", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-05-07", "nik": "", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "KINGSLY YEHESKIEL LONTOH", "jenisKelamin": "L", "nis": "2024015", "nisn": "0128421408", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-03-05", "nik": "7107040503120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "KIREY TIRSA ADAM", "jenisKelamin": "P", "nis": "2024016", "nisn": "0126034165", "tempatLahir": "TOMOHON", "tanggalLahir": "2012-05-23", "nik": "7107046305120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "MEYSIA FELI INDRI PUSUNG", "jenisKelamin": "P", "nis": "2024021", "nisn": "0118749897", "tempatLahir": "BASAAN", "tanggalLahir": "2011-01-04", "nik": "7107044403110003", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "MIKHAILA LUMINTANG", "jenisKelamin": "P", "nis": "2024023", "nisn": "0125185694", "tempatLahir": "BASAAN SATU", "tanggalLahir": "2012-04-23", "nik": "7107046304120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "Marcelano Sondakh", "jenisKelamin": "L", "nis": "2024018", "nisn": "0116190402", "tempatLahir": "Basaan", "tanggalLahir": "2011-03-21", "nik": "", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "NINDY ALDA TULAR", "jenisKelamin": "P", "nis": "2024026", "nisn": "0128873427", "tempatLahir": "TOMOHON", "tanggalLahir": "2012-08-21", "nik": "7107046108120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "PRINCE IMANUEL KEINTJEM", "jenisKelamin": "L", "nis": "2024027", "nisn": "0128752150", "tempatLahir": "BASAAN", "tanggalLahir": "2012-02-01", "nik": "7107040102120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "RASIMA FITRI NUSI", "jenisKelamin": "P", "nis": "2024030", "nisn": "0123933521", "tempatLahir": "LIKUPANG", "tanggalLahir": "2012-08-09", "nik": "7107044908120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "15", "nama": "SARAH AKILA ADISTYA SAMBEKA", "jenisKelamin": "P", "nis": "2026015", "nisn": "0113720394", "tempatLahir": "SORONG", "tanggalLahir": "2011-10-12", "nik": "", "tahunMasuk": "2026", "kelas": "9A"}, {"no": "", "nama": "TOAR TOLOLIU", "jenisKelamin": "L", "nis": "2024033", "nisn": "0114565901", "tempatLahir": "BASAAN", "tanggalLahir": "2013-11-17", "nik": "7107041711130001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "YEHESKIEL FRENLI KALIGIS", "jenisKelamin": "L", "nis": "2024034", "nisn": "3122010229", "tempatLahir": "Basaan", "tanggalLahir": "2012-07-29", "nik": "7107042907120001", "tahunMasuk": "2024", "kelas": "9A"}, {"no": "", "nama": "AISYA PUTRI PAENDONG", "jenisKelamin": "P", "nis": "2024002", "nisn": "0128484380", "tempatLahir": "MANADO", "tanggalLahir": "2012-08-31", "nik": "7107047108120002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "ALVESIO RUMENGAN", "jenisKelamin": "L", "nis": "2024004", "nisn": "3123893399", "tempatLahir": "Ratatotok", "tanggalLahir": "2012-05-13", "nik": "7107041305120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "ANUGRAH BILATULA", "jenisKelamin": "P", "nis": "2024036", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "AYU TOSIK", "jenisKelamin": "P", "nis": "2024009", "nisn": "3136911248", "tempatLahir": "BASAAN SATU", "tanggalLahir": "2013-01-17", "nik": "7107045701130002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "FLYRHEN BLESSING SUOTH", "jenisKelamin": "P", "nis": "2024011", "nisn": "0127471549", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-05-30", "nik": "7107047005120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "GABRIEL GUMOGAR", "jenisKelamin": "L", "nis": "2024037", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "GRACIA CALLISTA BINONGKO", "jenisKelamin": "P", "nis": "2024012", "nisn": "0128766567", "tempatLahir": "MANADO", "tanggalLahir": "2012-07-05", "nik": "7107044507120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "JISRAEL PIRI", "jenisKelamin": "L", "nis": "2024039", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "Jelovia Takaliuang", "jenisKelamin": "P", "nis": "2022018", "nisn": "0106976051", "tempatLahir": "Tomohon", "tanggalLahir": "2010-07-29", "nik": "7107046907100001", "tahunMasuk": "2022", "kelas": "9B"}, {"no": "", "nama": "KALLEN PUNU", "jenisKelamin": "L", "nis": "2024013", "nisn": "0123911262", "tempatLahir": "MANADO", "tanggalLahir": "2013-01-30", "nik": "7107043001130001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "KASIH KARUNYA EKLEYSIA NELWAN", "jenisKelamin": "P", "nis": "2024014", "nisn": "3121111312", "tempatLahir": "BASAAN", "tanggalLahir": "2012-12-29", "nik": "7107046912120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "KIREYLIA SAMBALAO", "jenisKelamin": "P", "nis": "2024017", "nisn": "0121685729", "tempatLahir": "BITUNG", "tanggalLahir": "2012-11-06", "nik": "", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "MESIAS ELSADAY SAMBEKA", "jenisKelamin": "L", "nis": "2024019", "nisn": "0127077820", "tempatLahir": "MANADO", "tanggalLahir": "2012-08-22", "nik": "7107042208120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "MESSIAS YOEL YOSUA WOWOR", "jenisKelamin": "L", "nis": "2024020", "nisn": "0129219129", "tempatLahir": "RATATOTOK BUYAT", "tanggalLahir": "2012-03-26", "nik": "7107042603120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "MIKHAEL LIONEL TUMEY", "jenisKelamin": "L", "nis": "2024022", "nisn": "0122456421", "tempatLahir": "BASAAN", "tanggalLahir": "2012-05-02", "nik": "7107040205120002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "MIKHAYLA RIANI RUINDUNGAN", "jenisKelamin": "P", "nis": "2024024", "nisn": "0127848759", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-03-19", "nik": "7107045903120001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "NAZRIL FAKHY RISKY ADAM", "jenisKelamin": "L", "nis": "2024025", "nisn": "3111094690", "tempatLahir": "MANADO", "tanggalLahir": "2011-12-13", "nik": "7171091312110002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "PUTRI CLAYRE BOKI", "jenisKelamin": "P", "nis": "2024028", "nisn": "0122886092", "tempatLahir": "Kabupaten Gorontalo", "tanggalLahir": "2012-06-06", "nik": "7501214606120002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "PUTRI NOVELIN LASUT", "jenisKelamin": "P", "nis": "2024029", "nisn": "0123352232", "tempatLahir": "RATATOTOK", "tanggalLahir": "2012-11-17", "nik": "7107045711120002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "ROGER ADAM", "jenisKelamin": "L", "nis": "2024031", "nisn": "0123078764", "tempatLahir": "BASAAN", "tanggalLahir": "2012-09-14", "nik": "7107042812130002", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "Silvia Rembet", "jenisKelamin": "P", "nis": "2024032", "nisn": "3114713405", "tempatLahir": "Basaan", "tanggalLahir": "2011-06-10", "nik": "7107045006110001", "tahunMasuk": "2024", "kelas": "9B"}, {"no": "", "nama": "VICENSO SAJOW", "jenisKelamin": "L", "nis": "2024038", "nisn": "", "tempatLahir": "", "tanggalLahir": "", "nik": "", "tahunMasuk": "2024", "kelas": "9B"}];
+</script>
+<!-- Logika aplikasi ada di app.js (satu folder dengan file ini) -->
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,354 +1,587 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMP Kristen Basaan</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        /* --- Variabel Global --- */
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-light: #ffffff;
-            --text-dark: #1a202c;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMP Kristen Basaan</title>
+<meta name="theme-color" content="#0B1D26">
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+<!-- ============================================================
+     PENGATURAN "INSTAL SEBAGAI APLIKASI" (PWA)
+     - manifest.json  -> nama, warna, dan daftar ikon aplikasi
+     - sw.js           -> agar Chrome mengizinkan tombol "Instal"
+     - folder icons/   -> gambar ikon aplikasi
+     Ketiga file/folder ini HARUS diunggah sejajar dengan index.html
+     di hosting, dan situs harus diakses lewat HTTPS agar fitur
+     instal muncul di Chrome.
+============================================================ -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMP Basaan">
 
-        body {
-            background: var(--primary-gradient);
-            background-attachment: fixed;
-            color: var(--text-light);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
 
-        /* --- Animasi Background Mengambang --- */
-        .blob {
-            position: absolute;
-            filter: blur(80px);
-            z-index: -1;
-            opacity: 0.6;
-            animation: float 10s infinite ease-in-out alternate;
-        }
-        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #ff6a00; }
-        .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #00f2fe; animation-delay: -5s; }
+/* =========================================================
+   1. TOKEN DESAIN (variabel warna, jarak, bentuk)
+   Tema: "Android" - hijau khas Android + permukaan gelap
+   bergaya Material Design, huruf Roboto (font resmi Android)
+   ========================================================= */
+:root{
+    --bg-base:#0B1D26;
+    --bg-surface:#122A38;
+    --bg-surface-2:#1B3B4B;
+    --green:#3DDC84;
+    --green-deep:#14A76C;
+    --on-green:#07271A;
+    --text-1:#F4F8F9;
+    --text-2:#A9BAC3;
+    --divider:rgba(255,255,255,.08);
+    --radius-lg:28px;
+    --radius-md:20px;
+    --radius-sm:14px;
+    --shadow-1:0 2px 8px rgba(0,0,0,.35);
+    --shadow-2:0 12px 28px rgba(0,0,0,.45);
+}
 
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(30px, 50px) scale(1.1); }
-        }
+*{ margin:0; padding:0; box-sizing:border-box; }
 
-        /* --- Header / Navigasi --- */
-        header {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border-bottom: 1px solid var(--glass-border);
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-        }
+html{ scroll-behavior:smooth; }
 
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 5%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+body{
+    background:var(--bg-base);
+    color:var(--text-1);
+    font-family:'Roboto', system-ui, sans-serif;
+    line-height:1.65;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+}
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+a{ color:inherit; }
 
-        .logo span {
-            color: #00f2fe;
-        }
+img,svg{ display:block; max-width:100%; }
 
-        /* --- Hero Section --- */
-        .hero {
-            padding: 180px 20px 100px;
-            text-align: center;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
+/* aksesibilitas: fokus keyboard jelas terlihat */
+a:focus-visible, button:focus-visible{
+    outline:2px solid var(--green);
+    outline-offset:3px;
+    border-radius:8px;
+}
 
-        .hero-badge {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            display: inline-block;
-        }
+@media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+}
 
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 20px;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
+/* =========================================================
+   2. APP BAR (header)
+   ========================================================= */
+.status-strip{
+    height:4px;
+    width:100%;
+    background:var(--green);
+    position:fixed; top:0; left:0; z-index:1001;
+}
 
-        .hero p {
-            font-size: 1.1rem;
-            margin-bottom: 40px;
-            max-width: 600px;
-            opacity: 0.9;
-        }
+header{
+    position:fixed;
+    top:4px; left:0; width:100%;
+    z-index:1000;
+    background:rgba(11,29,38,.85);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--divider);
+}
 
-        /* Tombol Modern */
-        .btn-container {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
+.navbar{
+    max-width:1200px;
+    margin:0 auto;
+    padding:14px 5%;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
 
-        .btn {
-            padding: 15px 35px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+.logo-mark{
+    width:38px; height:38px;
+    border-radius:12px;
+    background:var(--green);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem;
+    flex-shrink:0;
+}
 
-        .btn-primary {
-            background: #ffffff;
-            color: var(--text-dark);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-        }
+.logo-text{
+    font-weight:700;
+    font-size:1.05rem;
+    letter-spacing:.2px;
+}
+.logo-text span{ color:var(--green); }
 
-        .btn-primary:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 25px rgba(255,255,255,0.3);
-        }
+/* =========================================================
+   3. HERO
+   ========================================================= */
+.hero{
+    padding:120px 6% 70px;
+    max-width:720px;
+    margin:0 auto;
+    text-align:center;
+}
 
-        .btn-glass {
-            background: var(--glass-bg);
-            color: var(--text-light);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-        }
+.badge{
+    display:inline-block;
+    background:rgba(61,220,132,.14);
+    border:1px solid rgba(61,220,132,.4);
+    color:var(--green);
+    padding:7px 18px;
+    border-radius:50px;
+    font-size:.85rem;
+    font-weight:500;
+    margin-bottom:22px;
+}
 
-        .btn-glass:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-5px);
-        }
+.hero h1{
+    font-size:clamp(1.9rem, 6vw, 2.8rem);
+    font-weight:900;
+    letter-spacing:-.01em;
+    margin-bottom:18px;
+}
 
-        /* --- Kartu Fitur (Glassmorphism) --- */
-        .features {
-            padding: 60px 5%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+.notice-card{
+    background:var(--bg-surface);
+    border:1px solid var(--divider);
+    border-radius:var(--radius-md);
+    padding:20px 22px;
+    text-align:left;
+    margin-bottom:28px;
+    box-shadow:var(--shadow-1);
+}
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-        }
+.notice-card h2{
+    font-size:.78rem;
+    font-weight:700;
+    color:var(--green);
+    margin-bottom:12px;
+}
 
-        .card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 40px 30px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: transform 0.4s ease, border-color 0.4s ease;
-            text-align: left;
-        }
+.notice-card ul{ list-style:none; }
 
-        .card:hover {
-            transform: translateY(-10px);
-            border-color: rgba(255,255,255,0.6);
-            background: rgba(255,255,255,0.15);
-        }
+.notice-card li{
+    display:flex;
+    gap:10px;
+    color:var(--text-2);
+    font-size:.95rem;
+    margin-bottom:8px;
+}
+.notice-card li:last-child{ margin-bottom:0; }
 
-        .emoji-icon {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            display: inline-block;
-            background: #ffffff;
-            width: 80px;
-            height: 80px;
-            line-height: 80px;
-            text-align: center;
-            border-radius: 20px;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
+.btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:14px 30px;
+    border-radius:50px;
+    font-weight:700;
+    font-size:.95rem;
+    text-decoration:none;
+    background:var(--green);
+    color:var(--on-green);
+    box-shadow:var(--shadow-1);
+    transition:transform .15s ease, box-shadow .15s ease;
+    border:none;
+}
+.btn:active{ transform:scale(.96); box-shadow:var(--shadow-2); }
 
-        .card h3 {
-            font-size: 1.4rem;
-            margin-bottom: 10px;
-        }
+/* =========================================================
+   4. MENU UTAMA - grid bergaya "app drawer" Android
+   ========================================================= */
+.section{
+    max-width:1100px;
+    margin:0 auto;
+    padding:50px 6%;
+}
 
-        .card p {
-            font-size: 0.95rem;
-            opacity: 0.8;
-        }
+.section-title{
+    font-size:clamp(1.25rem, 4vw, 1.6rem);
+    font-weight:700;
+    margin-bottom:6px;
+}
 
-        /* --- Footer --- */
-        footer {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(20px);
-            padding: 50px 5% 30px;
-            border-top: 1px solid var(--glass-border);
-            margin-top: 50px;
-        }
+.section-sub{
+    color:var(--text-2);
+    font-size:.95rem;
+    margin-bottom:30px;
+}
 
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+#menu-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+    gap:22px 12px;
+    justify-items:center;
+}
 
-        .footer-col h4 {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: #00f2fe;
-        }
+.menu-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-decoration:none;
+    width:100%;
+    max-width:96px;
+}
 
-        .footer-col p, .footer-col a {
-            color: #ddd;
-            text-decoration: none;
-            display: block;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
-        }
+.app-icon{
+    width:60px; height:60px;
+    border-radius:18px;
+    background:var(--bg-surface-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem;
+    box-shadow:var(--shadow-1);
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
 
-        .footer-col a:hover {
-            color: #fff;
-        }
+.menu-item:hover .app-icon{ background:var(--green-deep); box-shadow:var(--shadow-2); }
+.menu-item:active .app-icon{ transform:scale(.9); }
 
-        .footer-bottom {
-            text-align: center;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            font-size: 0.85rem;
-            color: #aaa;
-        }
+.menu-item span{
+    margin-top:8px;
+    font-size:.75rem;
+    text-align:center;
+    color:var(--text-2);
+    line-height:1.3;
+}
 
-        .creator-tag {
-            color: #00f2fe;
-            font-weight: 600;
-        }
+/* =========================================================
+   5. KEUNGGULAN (kartu fitur)
+   ========================================================= */
+.grid-3{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+    gap:20px;
+}
 
-        /* --- Optimasi Khusus Layar HP --- */
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2.2rem; }
-            .hero p { font-size: 1rem; padding: 0 10px; }
-            .btn-container { flex-direction: column; width: 100%; padding: 0 20px; }
-            .btn { width: 100%; }
-            .card { padding: 30px 20px; text-align: center; }
-            .emoji-icon { width: 70px; height: 70px; line-height: 70px; font-size: 2.8rem; }
-            .footer-grid { text-align: center; }
-        }
-    </style>
+.card{
+    background:var(--bg-surface);
+    border:1px solid var(--divider);
+    border-radius:var(--radius-md);
+    padding:28px 24px;
+    box-shadow:var(--shadow-1);
+}
+
+.card-icon{
+    width:52px; height:52px;
+    border-radius:14px;
+    background:rgba(61,220,132,.14);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5rem;
+    margin-bottom:16px;
+}
+
+.card h3{ font-size:1.1rem; margin-bottom:8px; font-weight:700; }
+.card p{ color:var(--text-2); font-size:.92rem; }
+
+/* =========================================================
+   6. FOOTER
+   ========================================================= */
+footer{
+    background:#081620;
+    border-top:1px solid var(--divider);
+    padding:44px 6% 100px;
+}
+
+.footer-grid{
+    max-width:1100px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:28px;
+}
+
+.footer-col h4{
+    font-size:.95rem;
+    font-weight:700;
+    color:var(--green);
+    margin-bottom:14px;
+}
+
+.footer-col p, .footer-col a{
+    display:block;
+    color:var(--text-2);
+    text-decoration:none;
+    font-size:.9rem;
+    margin-bottom:8px;
+}
+.footer-col a:hover{ color:var(--text-1); }
+
+.footer-bottom{
+    max-width:1100px;
+    margin:36px auto 0;
+    padding-top:18px;
+    border-top:1px solid var(--divider);
+    text-align:center;
+    font-size:.8rem;
+    color:var(--text-2);
+}
+.creator-tag{ color:var(--green); font-weight:700; }
+
+/* =========================================================
+   7. BOTTOM NAVIGATION - hanya tampil di HP
+   ========================================================= */
+.bottom-nav{
+    display:none;
+}
+
+@media (max-width:768px){
+    body{ padding-bottom:74px; } /* beri ruang agar konten tidak tertutup nav bawah */
+
+    .bottom-nav{
+        display:flex;
+        justify-content:space-around;
+        align-items:center;
+        position:fixed;
+        bottom:0; left:0; width:100%;
+        height:64px;
+        background:rgba(9,23,31,.95);
+        backdrop-filter:blur(14px);
+        border-top:1px solid var(--divider);
+        z-index:1000;
+    }
+
+    .bottom-nav a{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:3px;
+        text-decoration:none;
+        color:var(--text-2);
+        font-size:.68rem;
+    }
+    .bottom-nav a .nav-icon{ font-size:1.15rem; }
+    .bottom-nav a:active{ color:var(--green); }
+
+    .hero{ padding:104px 6% 50px; }
+
+    /* naikkan tombol instal di HP agar tidak menumpuk dengan bottom-nav */
+    .install-fab{ bottom:84px; }
+}
+
+/* =========================================================
+   8. TOMBOL "INSTAL APLIKASI" (muncul otomatis jika didukung)
+   ========================================================= */
+[hidden]{ display:none !important; }
+
+.install-fab{
+    position:fixed;
+    right:20px;
+    bottom:24px;
+    z-index:1002;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:13px 22px;
+    border-radius:50px;
+    background:var(--green);
+    color:var(--on-green);
+    font-weight:700;
+    font-size:.88rem;
+    font-family:inherit;
+    border:none;
+    box-shadow:var(--shadow-2);
+    cursor:pointer;
+    transition:transform .15s ease;
+}
+.install-fab:active{ transform:scale(.94); }
+
+</style>
 </head>
 <body>
 
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
+<div class="status-strip"></div>
 
-    <header>
-        <div class="navbar">
-            <div class="logo">SMP KRISTEN  <span>Basaan</span></div>
-        </div>
-    </header>
+<header>
+    <div class="navbar">
+        <div class="logo-mark">🤖</div>
+        <div class="logo-text">SMP KRISTEN <span>BASAAN</span></div>
+    </div>
+</header>
 
-    <section class="hero">
-        <div class="hero-badge">🚀 Tahun Ajaran 2026/2027</div>
-        <h1>Masa Depan Hebat<br>Dimulai dari Sini.</h1>
-        <p><b>PENGUMUMAN</b>
-            <br>Silahkan Klik Tombol Tata Tertib dan Didownload File PDF
-            <br>Riawayat Pelanggaran Siswa bisa dilihat di Laporan
-        </p>
-        
-        <div class="btn-container">
-            <a href="tata_tertib.html" class="btn btn-primary">Tata Tertib & Laporan Kasus 🎓</a>
-            <a href="CetakKartu.html" class="btn btn-glass">Cetak Kartu Absen Siswa✨</a>
-            <a href="ABSENQR/index.html" class="btn btn-glass">ABSEN QR ✍🏼</a>
-            <a href="Daftar_Wajah.html" class="btn btn-glass">DAFTARKAN WAJAH ANDA</a>
-            <a href="https://script.google.com/macros/s/AKfycbzCAtiEc5MjlKygqZ0cScg5Fzak76ckBfkUW5hmgj_2BqM0RYqUzE3M96JAoUUHYxGwwA/exec" class="btn btn-glass">INPUT NILAI SEMESTER GENAP 👩🏼‍💻</a>
-            <a href="https://script.google.com/a/macros/guru.smp.belajar.id/s/AKfycbwapuBlgkOj8j7p1jPy0kOEyajsv6qeCKHcHNRrzyu3S3a9loH97MocRlyjk-eH_j7q9g/exec" class="btn btn-glass">INPUT NILAI US 👩🏼‍💻</a>
-            <a href="https://script.google.com/macros/s/AKfycbzSn5v1Jt4dQBb3uTniPrtDCVQmFwIEQJaQGvWhlKviPyC06zNjK4y-vB_fwQ_l9NSyLw/exec" class="btn btn-glass">PENILAIAN HARIAN📋</a>
-        </div>
-    </section>
+<section class="hero">
+    <div class="badge">Tahun Ajaran 2026/2027</div>
+    <h1>Masa Depan Hebat<br>Dimulai dari Sini</h1>
 
-    <section id="eksplor" class="features">
-        <div class="grid">
-            <div class="card">
-                <div class="emoji-icon">💻</div>
-                <h3>Belajar Interaktif</h3>
-                <p>Kurikulum modern yang tidak membosankan. Kami mengintegrasikan teknologi dalam setiap kelas agar belajar jadi lebih seru.</p>
-            </div>
-            <div class="card">
-                <div class="emoji-icon">🏆</div>
-                <h3>Ekskul Kekinian</h3>
-                <p>Dari e-sports, desain grafis, hingga klub sains dan seni. Kembangkan bakat dan passion kamu secara maksimal.</p>
-            </div>
-            <div class="card">
-                <div class="emoji-icon">🤝</div>
-                <h3>Karakter Positif</h3>
-                <p>Lingkungan persahabatan yang suportif berlandaskan iman Kristiani, anti-bullying, dan membentuk mental juara.</p>
-            </div>
-        </div>
-    </section>
+    <div class="notice-card">
+        <h2>PENGUMUMAN</h2>
+        <ul>
+            <li>📌 Silakan klik tombol <b>Tata Tertib</b> lalu unduh file PDF-nya.</li>
+            <li>📋 Riwayat pelanggaran siswa bisa dilihat pada menu <b>Laporan</b>.</li>
+        </ul>
+    </div>
 
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-col">
-                <h4>SMP Kristen Basaan</h4>
-                <p>Kabupaten Minahasa Tenggara</p>
-                <p>Sulawesi Utara, Indonesia</p>
-            </div>
-            <div class="footer-col">
-                <h4>Hubungi Kami</h4>
-                <p>📧 <a href="mailto:nardotuns@gmail.com">nardotuns@gmail.com</a></p>
-                <p>📱 <a href="tel:085399959869">085399959869</a></p>
-            </div>
-            <div class="footer-col">
-                <h4>Akses Cepat</h4>
-                <a href="#">Portal Siswa</a>
-                <a href="#">E-Learning</a>
-                <a href="#">Galeri Kegiatan</a>
-            </div>
+    <a href="#menu" class="btn">Lihat Semua Menu</a>
+</section>
+
+<section class="section" id="menu">
+    <div class="section-title">Menu Utama</div>
+    <div class="section-sub">Ketuk salah satu untuk membuka layanan sekolah.</div>
+
+    <!-- =====================================================
+         DATA TOMBOL / MENU
+         =====================================================
+         Semua tombol di grid bawah ini DIBUAT OTOMATIS dari
+         daftar "menuItems" pada bagian <script> di akhir file.
+         Untuk menambah, mengubah, atau menghapus tombol,
+         JANGAN edit HTML di sini — cukup edit daftar tersebut.
+         Lihat komentar lengkap di bagian <script>.
+    ====================================================== -->
+    <div id="menu-grid"></div>
+</section>
+
+<section class="section" id="keunggulan">
+    <div class="section-title">Keunggulan Sekolah</div>
+    <div class="section-sub">Alasan Basaan menjadi tempat belajar yang tepat.</div>
+    <div class="grid-3">
+        <div class="card">
+            <div class="card-icon">💻</div>
+            <h3>Belajar Interaktif</h3>
+            <p>Kurikulum modern yang tidak membosankan. Teknologi diintegrasikan di setiap kelas agar belajar jadi lebih seru.</p>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2026 SMP Kristen Basaan. Hak Cipta Dilindungi.</p>
-            <p>Didesain dengan ❤️ oleh <span class="creator-tag">Mikhael Tunas, S.Pd</span></p>
+        <div class="card">
+            <div class="card-icon">🏆</div>
+            <h3>Ekskul Kekinian</h3>
+            <p>Dari e-sports, desain grafis, hingga klub sains dan seni. Kembangkan bakat dan minat kamu secara maksimal.</p>
         </div>
-    </footer>
+        <div class="card">
+            <div class="card-icon">🤝</div>
+            <h3>Karakter Positif</h3>
+            <p>Lingkungan persahabatan yang suportif berlandaskan iman Kristiani, anti-bullying, dan membentuk mental juara.</p>
+        </div>
+    </div>
+</section>
+
+<footer id="kontak">
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>SMP Kristen Basaan</h4>
+            <p>Kabupaten Minahasa Tenggara</p>
+            <p>Sulawesi Utara, Indonesia</p>
+        </div>
+        <div class="footer-col">
+            <h4>Hubungi Kami</h4>
+            <a href="mailto:nardotuns@gmail.com">📧 nardotuns@gmail.com</a>
+            <a href="tel:085399959869">📱 085399959869</a>
+        </div>
+        <div class="footer-col">
+            <h4>Akses Cepat</h4>
+            <a href="#menu">Menu Utama</a>
+            <a href="#keunggulan">Keunggulan</a>
+            <a href="#kontak">Kontak</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2026 SMP Kristen Basaan. Hak Cipta Dilindungi.</p>
+        <p>Didesain dengan ❤️ oleh <span class="creator-tag">Mikhael Tunas, S.Pd</span></p>
+    </div>
+</footer>
+
+<nav class="bottom-nav">
+    <a href="#"><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="#menu"><span class="nav-icon">🤖</span>Menu</a>
+    <a href="#keunggulan"><span class="nav-icon">🏆</span>Info</a>
+    <a href="#kontak"><span class="nav-icon">☎️</span>Kontak</a>
+</nav>
+
+<!-- Tombol ini otomatis tersembunyi, dan hanya muncul kalau
+     Chrome mendeteksi situs ini boleh diinstal sebagai aplikasi -->
+<button id="install-btn" class="install-fab" hidden>⬇️ Instal Aplikasi</button>
+
+<script>
+/* =============================================================
+   CARA MENAMBAHKAN TOMBOL / MENU BARU (BACA INI DULU)
+   =============================================================
+   1. Setiap tombol menu adalah satu baris di dalam daftar
+      "menuItems" di bawah ini.
+   2. Untuk menambah tombol baru: salin satu baris contoh
+      (dari tanda "{" sampai "},"), tempel di baris baru,
+      lalu ganti isinya:
+
+        icon  -> emoji yang mewakili menu, contoh: "📅"
+        label -> nama menu yang tampil di layar, contoh: "Jadwal Pelajaran"
+        url   -> alamat tujuan saat tombol diklik
+                 (bisa nama file seperti "jadwal.html"
+                 atau alamat lengkap seperti "https://...")
+
+   3. Untuk menghapus tombol: hapus saja satu baris "{ ... },".
+   4. Untuk mengubah urutan tombol: pindahkan baris ke atas/bawah.
+   5. Simpan file lalu buka/refresh halaman — tombol baru akan
+      otomatis muncul di grid dengan gaya (warna, ukuran, animasi)
+      yang sama seperti tombol lain. Tidak perlu menyentuh
+      HTML atau CSS sama sekali.
+============================================================= */
+
+const menuItems = [
+    { icon: "📋", label: "Tata Tertib & Laporan Kasus", url: "tata_tertib.html" },
+    { icon: "🪪", label: "Cetak Kartu Absen Siswa", url: "CetakKartu.html" },
+    { icon: "📷", label: "Absen QR", url: "ABSENQR/index.html" },
+    { icon: "🙂", label: "Daftarkan Wajah Anda", url: "Daftar_Wajah.html" },
+    { icon: "📝", label: "Input Nilai Semester Genap", url: "https://script.google.com/macros/s/AKfycbzCAtiEc5MjlKygqZ0cScg5Fzak76ckBfkUW5hmgj_2BqM0RYqUzE3M96JAoUUHYxGwwA/exec" },
+    { icon: "🎓", label: "Input Nilai US", url: "https://script.google.com/a/macros/guru.smp.belajar.id/s/AKfycbwapuBlgkOj8j7p1jPy0kOEyajsv6qeCKHcHNRrzyu3S3a9loH97MocRlyjk-eH_j7q9g/exec" },
+    { icon: "📊", label: "Penilaian Harian", url: "https://script.google.com/macros/s/AKfycbzSn5v1Jt4dQBb3uTniPrtDCVQmFwIEQJaQGvWhlKviPyC06zNjK4y-vB_fwQ_l9NSyLw/exec" },
+
+    // Contoh menambah tombol baru (hapus tanda "//" di 2 baris
+    // di bawah ini dan isi datanya jika ingin memakainya):
+    // { icon: "📅", label: "Jadwal Pelajaran", url: "jadwal.html" },
+];
+
+const grid = document.getElementById("menu-grid");
+grid.innerHTML = menuItems.map(item => `
+    <a class="menu-item" href="${item.url}">
+        <div class="app-icon">${item.icon}</div>
+        <span>${item.label}</span>
+    </a>
+`).join("");
+
+/* =============================================================
+   "INSTAL SEBAGAI APLIKASI" (PWA)
+   =============================================================
+   - Mendaftarkan sw.js supaya Chrome menganggap situs ini
+     "boleh diinstal" (syarat wajib Chrome).
+   - Menyimpan event "beforeinstallprompt" yang dikirim Chrome,
+     lalu memunculkan tombol hijau "Instal Aplikasi" di pojok
+     kanan bawah. Kalau tombol itu ditekan, jendela instal
+     bawaan Chrome akan muncul.
+   - Tidak perlu diubah-ubah, kecuali ingin memindah tombolnya.
+============================================================= */
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+}
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById("install-btn");
+
+window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installBtn.hidden = false;
+});
+
+installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.hidden = true;
+});
+
+window.addEventListener("appinstalled", () => {
+    installBtn.hidden = true;
+});
+</script>
 
 </body>
 </html>

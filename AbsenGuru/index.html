@@ -7,6 +7,70 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="stylesheet" href="assets/style.css">
+<style>
+  /* --- STYLING TAMBAHAN UNTUK MENGGANTI SIDEBAR MENJADI BOTTOM NAV --- */
+  
+  /* Sembunyikan sidebar bawaan */
+  #sidebar {
+    display: none !important;
+  }
+
+  /* Sesuaikan margin konten karena sidebar dihilangkan */
+  .app-shell {
+    display: block !important; 
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    padding-bottom: 85px !important; /* Beri ruang agar konten tidak tertutup menu bawah */
+  }
+
+  /* Styling Menu Bawah (Bottom Nav) sesuai Mockup Gambar */
+  .bottom-nav-mockup {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto; /* Memungkinkan scroll horizontal jika layar sempit */
+    padding: 8px 5px 12px 5px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    border-top: 1px solid #f1f5f9;
+    z-index: 1000;
+    /* Menyembunyikan scrollbar tapi tetap bisa di-scroll */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; 
+  }
+  .bottom-nav-mockup::-webkit-scrollbar {
+    display: none; 
+  }
+  
+  .bnav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-decoration: none;
+    color: #64748b;
+    min-width: 62px; /* Lebar minimum per ikon */
+    padding: 0 2px;
+  }
+  .bnav-item.active {
+    color: #3b82f6; /* Warna biru saat aktif */
+  }
+  .bnav-item .icon {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .bnav-item .label {
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
+  }
+</style>
 </head>
 <body>
 
@@ -65,28 +129,6 @@
 <!-- ===================== APP SHELL ===================== -->
 <div id="appShell" class="app-shell hidden">
 
-  <!-- Sidebar -->
-  <nav id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-      <span class="sidebar-logo">🏫</span>
-      <div>
-        <div class="sidebar-title">SIABSEN</div>
-        <div class="sidebar-sub" id="sidebarSchool">Sekolah</div>
-      </div>
-    </div>
-    <ul class="nav-list">
-      <li><a href="#" class="nav-link active" data-page="dashboard"><span>📊</span> Dashboard</a></li>
-      <li><a href="#" class="nav-link" data-page="absensi"><span>✅</span> Absensi Guru</a></li>
-      <li><a href="#" class="nav-link" data-page="guru"><span>👤</span> Data Guru (Admin)</a></li>
-      <li><a href="#" class="nav-link" data-page="laporan"><span>📊</span> Laporan</a></li>
-      <li><a href="#" class="nav-link" data-page="pengaturan"><span>⚙️</span> Pengaturan</a></li>
-    </ul>
-    <div class="sidebar-footer">
-      <div id="syncStatusMini" class="sync-mini">🟢 Tersinkron</div>
-      <button class="btn btn-outline btn-sm btn-block" id="btnLogout">Keluar</button>
-    </div>
-  </nav>
-
   <!-- Mobile top bar -->
   <div class="topbar">
     <span class="topbar-logo">🏫</span>
@@ -94,26 +136,40 @@
     <button id="btnSyncTop" class="icon-btn" title="Sinkronkan">🔄</button>
   </div>
 
-  <!-- Bottom tab bar (mobile) -->
-  <nav id="bottomNav" class="bottom-nav">
-    <a href="#" class="bnav-link active" data-page="dashboard">
-      <span class="bnav-icon">📊</span><span class="bnav-label">Beranda</span>
+  <!-- BOTTOM NAV BAR (PENGGANTI SIDEBAR, MENYESUAIKAN GAMBAR) -->
+  <nav id="bottomNav" class="bottom-nav-mockup">
+    <!-- Mengarah ke index root sesuai permintaan -->
+    <a href="index.html" class="bnav-item active">
+      <span class="icon">🏠</span><span class="label">HOME</span>
     </a>
-    <a href="#" class="bnav-link" data-page="absensi">
-      <span class="bnav-icon">✅</span><span class="bnav-label">Absensi</span>
+    <!-- Tautan di bawah ini tetap disambungkan dengan fitur data-page asli Anda agar aplikasi tidak error -->
+    <a href="#" class="bnav-item" data-page="absensi">
+      <span class="icon">📷</span><span class="label">SCAN</span>
     </a>
-    <a href="#" class="bnav-link" data-page="guru">
-      <span class="bnav-icon">👤</span><span class="bnav-label">Guru</span>
+    <a href="#" class="bnav-item" data-page="absensi">
+      <span class="icon">✍️</span><span class="label">MANUAL</span>
     </a>
-    <a href="#" class="bnav-link" data-page="laporan">
-      <span class="bnav-icon">📈</span><span class="bnav-label">Laporan</span>
+    <a href="#" class="bnav-item" data-page="absensi">
+      <span class="icon">📄</span><span class="label">ABSEN<br>MAPEL</span>
     </a>
-    <a href="#" class="bnav-link" data-page="pengaturan">
-      <span class="bnav-icon">⚙️</span><span class="bnav-label">Atur</span>
+    <a href="#" class="bnav-item" data-page="guru">
+      <span class="icon">👥</span><span class="label">SISWA</span>
+    </a>
+    <a href="#" class="bnav-item" data-page="dashboard">
+      <span class="icon">🔍</span><span class="label">CEK<br>ABSEN</span>
+    </a>
+    <a href="#" class="bnav-item" data-page="pengaturan">
+      <span class="icon">✏️</span><span class="label">EDIT</span>
+    </a>
+    <a href="#" class="bnav-item" data-page="laporan">
+      <span class="icon">📊</span><span class="label">LAPORAN</span>
+    </a>
+    <a href="#" class="bnav-item" data-page="pengaturan">
+      <span class="icon">🔄</span><span class="label">SYNC</span>
     </a>
   </nav>
 
-  <!-- Main content -->
+  <!-- Main content (Halaman-halaman tetap sama) -->
   <main class="main-content">
 
     <!-- ===== DASHBOARD ===== -->

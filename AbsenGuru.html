@@ -2070,7 +2070,9 @@ function renderSync(){
     <div class="card">
       <button class="btn btn-gold" style="margin-bottom:8px;" onclick="doSync()">Sinkronkan sekarang</button>
       <button class="btn btn-outline" style="margin-bottom:8px;" onclick="tarikPaksa()">Ambil ulang semua data spreadsheet</button>
-      <div style="font-size:11.5px;color:var(--ink-soft);">Sinkron mengirim data baru dari HP ke spreadsheet, lalu menarik seluruh data spreadsheet ke HP.</div>
+      <button class="btn btn-outline" style="margin-bottom:8px;" onclick="tesKoneksi()">Tes koneksi &amp; lihat isi spreadsheet</button>
+      <button class="btn btn-danger" onclick="mulaiUlangDariServer()">Ganti total data HP dengan data spreadsheet</button>
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Sinkron mengirim data baru dari HP ke spreadsheet, lalu menarik seluruh data spreadsheet ke HP. Gunakan "Tes koneksi" bila data tidak kunjung masuk.</div>
     </div>
 
     <div class="card">
@@ -2216,6 +2218,69 @@ function restoreData(ev){
 function doLogout(){
   sessionStorage.removeItem('ag_authed');
   location.reload();
+}
+
+
+/* ---------- Alat bantu pemeriksaan ---------- */
+async function tesKoneksi(){
+  if(!DB.config.sheetUrl){ toast('Alamat Web App belum diisi.','err'); return; }
+  toast('Menghubungi spreadsheet…');
+  let data;
+  try{
+    data = await apiKirim({action:'pull', password:DB.config.password});
+  }catch(e){
+    tampilkanHasilTes('Tidak bisa terhubung', 'Aplikasi tidak menerima balasan dari alamat Web App. Kemungkinan: alamat salah, deployment belum diperbarui ke versi baru, atau akses belum disetel ke "Anyone".');
+    return;
+  }
+  if(!data.ok){
+    tampilkanHasilTes('Ditolak server', esc(data.message||'Server menolak permintaan.'));
+    return;
+  }
+  const jg = (data.guru||[]).length, ja = (data.absensi||[]).length;
+  const contoh = (data.absensi||[])[0];
+  const contohGuru = (data.guru||[])[0];
+  let isi = `<div class="chip-row" style="margin-bottom:10px;">
+      <span class="badge ${jg?'b-hadir':'b-alpa'}">${jg} guru</span>
+      <span class="badge ${ja?'b-hadir':'b-alpa'}">${ja} absensi</span>
+    </div>`;
+  if(!jg && !ja){
+    isi += `<div class="mini-note warn">Server menjawab, tetapi tidak mengirim satu pun baris. Biasanya karena judul kolom di sheet tidak dikenali, atau deployment masih memakai Code.gs versi lama. Pasang Code.gs versi terbaru lalu Deploy sebagai <b>New version</b>.</div>`;
+  } else {
+    isi += `<div class="mini-note ok">Data dari spreadsheet berhasil dibaca aplikasi.</div>`;
+  }
+  if(contohGuru) isi += `<div class="section-label">Contoh baris guru</div><div style="font-size:11px;background:var(--cream);padding:8px;border-radius:6px;word-break:break-all;margin-bottom:10px;">${esc(JSON.stringify(contohGuru))}</div>`;
+  if(contoh) isi += `<div class="section-label">Contoh baris absensi</div><div style="font-size:11px;background:var(--cream);padding:8px;border-radius:6px;word-break:break-all;">${esc(JSON.stringify(contoh))}</div>`;
+  if(contoh && (!contoh.tanggal || !/^\d{4}-\d{2}-\d{2}$/.test(contoh.tanggal))){
+    isi += `<div class="mini-note danger" style="margin-top:10px;">Kolom tanggal terbaca sebagai "${esc(contoh.tanggal)}" — bukan format tahun-bulan-tanggal. Laporan akan kosong sampai ini benar.</div>`;
+  }
+  tampilkanHasilTes('Hasil tes koneksi', isi);
+}
+function tampilkanHasilTes(judul, isiHTML){
+  const back = document.createElement('div');
+  back.className = 'modal-backdrop center';
+  back.innerHTML = `<div class="modal-sheet">
+      <div class="modal-head"><h3>${esc(judul)}</h3><button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">&times;</button></div>
+      ${isiHTML}
+      <button class="btn btn-outline" style="margin-top:12px;" onclick="this.closest('.modal-backdrop').remove()">Tutup</button>
+    </div>`;
+  document.body.appendChild(back);
+}
+async function mulaiUlangDariServer(){
+  if(pendingCount()>0 && !confirm(`Ada ${pendingCount()} data di HP yang belum terkirim. Data itu akan HILANG. Lanjutkan?`)) return;
+  if(!confirm('Seluruh data guru dan absensi di HP akan dihapus, lalu diganti dengan isi spreadsheet. Lanjutkan?')) return;
+  if(!navigator.onLine){ toast('Tidak ada koneksi internet.','err'); return; }
+  try{
+    const data = await apiKirim({action:'pull', password:DB.config.password});
+    if(!data.ok){ toast(data.message||'Server menolak permintaan.','err'); return; }
+    DB.guru = []; DB.absensi = [];
+    const hasil = gabungDataServer(data);
+    DB.config.lastSync = new Date().toISOString();
+    saveDB();
+    toast(`${hasil.guru} guru dan ${hasil.absensi} absensi dimuat dari spreadsheet.`, 'ok');
+    renderSync(); updateSyncPill();
+  }catch(e){
+    toast('Gagal terhubung ke spreadsheet.','err');
+  }
 }
 
 /* ============================================================

@@ -232,6 +232,8 @@ main{
 .badge.b-alpa{background:var(--danger-bg);color:var(--danger);}
 .badge.b-sync{background:var(--info-bg);color:var(--info);}
 .badge.b-pending{background:var(--warning-bg);color:#8A5613;}
+.badge.b-belum{background:var(--border);color:var(--ink-soft);}
+.list-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 
 .list-item{
   display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-bottom:1px solid var(--border-2);
@@ -400,17 +402,21 @@ table.rpt th{background:var(--cream);font-size:11px;}
    DATA LAYER
 ============================================================ */
 const DBKEY = 'agdb_v1';
+// URL Web App Google Apps Script sekolah — sudah ditanamkan agar pengguna tidak perlu mengisi manual.
+const DEFAULT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbymqczAaBU71v8jviuUdnyVRngx3xSSLbSt4lIk4VtZQRoXhdCuJIIh3bRpscWtF66L/exec';
 const defaultDB = () => ({
-  config:{ setupDone:false, sheetUrl:'', password:'', lastSync:null, schoolName:'SMP KRISTEN BASAAN' },
+  config:{ setupDone:false, sheetUrl:DEFAULT_SHEET_URL, password:'', lastSync:null, schoolName:'SMP KRISTEN BASAAN' },
   guru:[],      // {id, nama, nip, jk, nuptk, synced, deleted}
   absensi:[],   // {id, guruId, tanggal, jenis, ketBebas, status, ketDetail, alasanLain, synced, ts}
 });
 function loadDB(){
   try{
     const raw = localStorage.getItem(DBKEY);
-    if(!raw) return defaultDB();
-    const parsed = JSON.parse(raw);
-    return Object.assign(defaultDB(), parsed);
+    let db;
+    if(!raw) db = defaultDB();
+    else db = Object.assign(defaultDB(), JSON.parse(raw));
+    if(!db.config.sheetUrl) db.config.sheetUrl = DEFAULT_SHEET_URL; // jaga-jaga jika data lama kosong
+    return db;
   }catch(e){ return defaultDB(); }
 }
 function saveDB(){ localStorage.setItem(DBKEY, JSON.stringify(DB)); }
@@ -468,19 +474,10 @@ function renderGate(){
           <div class="gate-crest">SKB</div>
           <div class="gate-title">Absensi Guru</div>
           <div class="gate-sub">SMP Kristen Basaan · Kec. Ratatotok · Kab. Minahasa Tenggara</div>
-          <div class="mini-note">Penyiapan pertama kali memerlukan koneksi internet untuk sinkron ke Google Spreadsheet. Setelah itu aplikasi dapat dipakai offline.</div>
+          <div class="mini-note">Masukkan password yang sudah diatur di Spreadsheet sekolah. Aplikasi akan sinkron otomatis dan mengambil data guru.</div>
           <div class="field">
-            <label>Alamat Web App Google Apps Script</label>
-            <input type="url" id="setupUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${DB.config.sheetUrl||''}">
-            <div class="hint">Tempel URL deploy Apps Script (lihat panduan). Bisa diisi nanti dan disinkron manual.</div>
-          </div>
-          <div class="field">
-            <label>Buat Password Aplikasi</label>
-            <input type="password" id="setupPass" placeholder="Minimal 4 karakter">
-          </div>
-          <div class="field">
-            <label>Ulangi Password</label>
-            <input type="password" id="setupPass2" placeholder="Ulangi password">
+            <label>Password Spreadsheet</label>
+            <input type="password" id="setupPass" placeholder="Password dari admin/spreadsheet" onkeydown="if(event.key==='Enter')doInitialSync()">
           </div>
           <div id="setupErr" class="mini-note danger hidden"></div>
           <button class="btn btn-gold" style="margin-bottom:8px" onclick="doInitialSync()">Sinkronkan &amp; Mulai</button>
@@ -512,13 +509,10 @@ function renderGate(){
 
 function doSkipSetup(){
   const pass = document.getElementById('setupPass').value;
-  const pass2 = document.getElementById('setupPass2').value;
-  const url = document.getElementById('setupUrl').value.trim();
   const err = document.getElementById('setupErr');
   if(pass.length<4){ err.textContent='Password minimal 4 karakter.'; err.classList.remove('hidden'); return; }
-  if(pass!==pass2){ err.textContent='Password tidak sama.'; err.classList.remove('hidden'); return; }
   DB.config.password = pass;
-  DB.config.sheetUrl = url;
+  DB.config.sheetUrl = DB.config.sheetUrl || DEFAULT_SHEET_URL;
   DB.config.setupDone = true;
   saveDB();
   sessionStorage.setItem('ag_authed','1');
@@ -528,18 +522,15 @@ function doSkipSetup(){
 
 async function doInitialSync(){
   const pass = document.getElementById('setupPass').value;
-  const pass2 = document.getElementById('setupPass2').value;
-  const url = document.getElementById('setupUrl').value.trim();
   const err = document.getElementById('setupErr');
   err.classList.add('hidden');
-  if(pass.length<4){ err.textContent='Password minimal 4 karakter.'; err.classList.remove('hidden'); return; }
-  if(pass!==pass2){ err.textContent='Password tidak sama.'; err.classList.remove('hidden'); return; }
-  if(!url){ err.textContent='Isi alamat Web App Apps Script, atau tekan "Lewati sinkron" untuk mulai offline dulu.'; err.classList.remove('hidden'); return; }
+  if(!pass){ err.textContent='Masukkan password terlebih dahulu.'; err.classList.remove('hidden'); return; }
+  const url = DB.config.sheetUrl || DEFAULT_SHEET_URL;
   try{
     toast('Menghubungi spreadsheet…');
     const res = await fetch(url+'?action=init&pass='+encodeURIComponent(pass));
     const data = await res.json();
-    if(!data.ok){ err.textContent = data.message || 'Gagal sinkron. Periksa URL/koneksi.'; err.classList.remove('hidden'); return; }
+    if(!data.ok){ err.textContent = data.message || 'Password salah atau gagal terhubung.'; err.classList.remove('hidden'); return; }
     (data.guru||[]).forEach(g=>{
       DB.guru.push({ id: g.id||uid(), nama:g.nama, nip:g.nip||'', jk:g.jk||'L', nuptk:g.nuptk||'', synced:true, deleted:false });
     });
@@ -552,7 +543,7 @@ async function doInitialSync(){
     toast('Sinkron berhasil. Selamat datang!', 'ok');
     bootApp();
   }catch(e){
-    err.textContent = 'Tidak dapat terhubung ke internet/spreadsheet. Tekan "Lewati sinkron" untuk mulai offline, sinkron nanti.';
+    err.textContent = 'Tidak dapat terhubung ke internet. Tekan "Lewati sinkron" untuk mulai offline, sinkron nanti di menu Sinkron.';
     err.classList.remove('hidden');
   }
 }
@@ -655,18 +646,25 @@ function renderBeranda(){
     </div>
 
     <div class="card card-flush">
-      <div style="padding:12px 14px 6px;" class="section-label">Belum Absen Hari Ini (${belumAbsen.length})</div>
-      ${belumAbsen.length===0 ? `<div class="empty"><div class="t">Semua guru sudah tercatat</div><div class="d">Kerja bagus! 👏</div></div>` :
-        belumAbsen.slice(0,8).map(g=>`
+      <div style="padding:12px 14px 6px;" class="section-label">Status Absen Guru Hari Ini (${guruAktif.length-belumAbsen.length}/${guruAktif.length} tercatat)</div>
+      ${guruAktif.length===0 ? `<div class="empty"><div class="t">Belum ada data guru</div></div>` :
+        guruAktif.slice().sort((a,b)=>a.nama.localeCompare(b.nama)).map(g=>{
+          const rec = todays.find(a=>a.guruId===g.id);
+          const bcls = rec ? ({Hadir:'b-hadir',Sakit:'b-sakit',Izin:'b-izin',Alpa:'b-alpa'}[rec.status]) : 'b-belum';
+          const label = rec ? rec.status : 'Belum Absen';
+          return `
           <div class="list-item">
             <div class="list-avatar">${initials(g.nama)}</div>
             <div class="list-main">
-              <div class="list-name">${esc(g.nama)}</div>
+              <div class="list-name-row">
+                <span class="list-name">${esc(g.nama)}</span>
+                <span class="badge ${bcls}">${label}</span>
+              </div>
               <div class="list-sub">${g.jk==='L'?'Laki-laki':'Perempuan'} · NIP ${g.nip||'-'}</div>
             </div>
-            <button class="btn btn-sm btn-outline" onclick="openAbsenFor('${g.id}')">Absen</button>
-          </div>`).join('')}
-      ${belumAbsen.length>8?`<div style="padding:10px 14px;font-size:12px;color:var(--ink-soft);">+${belumAbsen.length-8} guru lainnya…</div>`:''}
+            ${rec ? '' : `<button class="btn btn-sm btn-outline" onclick="openAbsenFor('${g.id}')">Absen</button>`}
+          </div>`;
+        }).join('')}
     </div>
 
     <div class="card card-flush">

@@ -1,0 +1,10 @@
+{
+  "name": "SIABSEN - Sistem Absensi Guru",
+  "short_name": "SIABSEN",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#4f46e5",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": []
+}

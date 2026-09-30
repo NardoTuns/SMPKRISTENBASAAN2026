@@ -439,6 +439,7 @@ const URL_POLA = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/(e
 const STATUS = ['Hadir','Sakit','Izin','Alpa'];
 const KET_BAKU = ['Terlambat','Tugas Luar','Pulang Cepat','Dinas Luar','Cuti'];
 const MAKS_HARI_RENTANG = 92;
+const BATAS_TUNGGU_MS = 120000;
 
 const NAMA_HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -825,7 +826,7 @@ async function doSkipSetup(){
 function pesanGagalKoneksi(e){
   const k = e && e.kode;
   if(!navigator.onLine) return 'Perangkat sedang offline. Nyalakan data/Wi-Fi, atau pilih "Mulai tanpa internet dulu".';
-  if(k==='waktu') return 'Spreadsheet terlalu lama membalas (lebih dari 25 detik). Sinyal mungkin lemah, coba lagi di tempat dengan sinyal lebih baik.';
+  if(k==='waktu') return `Spreadsheet tidak membalas dalam ${Math.round(BATAS_TUNGGU_MS/1000)} detik. Skrip Apps Script kemungkinan macet atau datanya sangat besar; buka URL Web App di browser untuk memeriksa.`;
   if(k==='akses') return 'Spreadsheet meminta login Google. Di Apps Script, deploy ulang Web App dengan "Execute as: Me" dan "Who has access: Anyone".';
   if(k==='url') return 'Alamat Web App tidak ditemukan. Deployment mungkin sudah dihapus atau URL-nya berubah.';
   if(k==='bukan-json') return `Spreadsheet membalas, tetapi isinya bukan data absensi (kode ${e.status||'?'}). Periksa skrip Apps Script dan deployment-nya.`;
@@ -837,6 +838,12 @@ async function doInitialSync(){
   const btn = document.getElementById('btnSetup');
   if(!pass){ tampilErrGate('Masukkan password terlebih dahulu.'); return; }
   btn.disabled = true; btn.textContent = 'Menghubungkan…';
+  const mulai = Date.now();
+  const detik = setInterval(()=>{
+    if(!document.body.contains(btn)) return;
+    const s = Math.round((Date.now()-mulai)/1000);
+    btn.textContent = s < 15 ? `Menghubungkan… ${s} dtk` : `Spreadsheet sedang memproses… ${s} dtk`;
+  }, 1000);
   try{
     const data = await apiKirim({action:'pull', password:pass}, DB.config.sheetUrl||DEFAULT_SHEET_URL);
     if(!data.ok){ tampilErrGate(esc(data.message||'Password salah atau spreadsheet menolak.')); return; }
@@ -851,7 +858,7 @@ async function doInitialSync(){
     bootApp();
   }catch(e){
     tampilErrGate(esc(pesanGagalKoneksi(e)));
-  }finally{ if(document.body.contains(btn)){ btn.disabled=false; btn.textContent='Hubungkan & mulai'; } }
+  }finally{ clearInterval(detik); if(document.body.contains(btn)){ btn.disabled=false; btn.textContent='Hubungkan & mulai'; } }
 }
 async function doLogin(){
   const input = document.getElementById('loginPass');
@@ -925,7 +932,8 @@ async function apiKirim(payload, urlOverride){
   const url = urlOverride || DB.config.sheetUrl;
   if(!url || !URL_POLA.test(url)) throw new Error('Alamat Web App tidak valid');
   const ctrl = window.AbortController ? new AbortController() : null;
-  const t = ctrl ? setTimeout(()=>ctrl.abort(), 25000) : null;
+  /* Google Apps Script bisa lambat (start dingin + membaca seluruh sheet), jadi beri waktu cukup */
+  const t = ctrl ? setTimeout(()=>ctrl.abort(), BATAS_TUNGGU_MS) : null;
   try{
     let res;
     try{

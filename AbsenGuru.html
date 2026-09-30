@@ -822,6 +822,16 @@ async function doSkipSetup(){
   toast('Aplikasi siap dipakai. Hubungkan ke spreadsheet dari menu Pengaturan.');
   bootApp();
 }
+function pesanGagalKoneksi(e){
+  const k = e && e.kode;
+  if(!navigator.onLine) return 'Perangkat sedang offline. Nyalakan data/Wi-Fi, atau pilih "Mulai tanpa internet dulu".';
+  if(k==='waktu') return 'Spreadsheet terlalu lama membalas (lebih dari 25 detik). Sinyal mungkin lemah, coba lagi di tempat dengan sinyal lebih baik.';
+  if(k==='akses') return 'Spreadsheet meminta login Google. Di Apps Script, deploy ulang Web App dengan "Execute as: Me" dan "Who has access: Anyone".';
+  if(k==='url') return 'Alamat Web App tidak ditemukan. Deployment mungkin sudah dihapus atau URL-nya berubah.';
+  if(k==='bukan-json') return `Spreadsheet membalas, tetapi isinya bukan data absensi (kode ${e.status||'?'}). Periksa skrip Apps Script dan deployment-nya.`;
+  if(k==='jaringan') return 'Permintaan ke Google gagal atau jaringan terputus. Coba ganti jaringan (Wi-Fi/data), matikan penghemat data atau pemblokir iklan, lalu coba lagi.';
+  return 'Tidak dapat terhubung. Periksa internet, atau pilih "Mulai tanpa internet dulu".';
+}
 async function doInitialSync(){
   const pass = document.getElementById('setupPass').value;
   const btn = document.getElementById('btnSetup');
@@ -840,7 +850,7 @@ async function doInitialSync(){
     toast(`Berhasil. ${hasil.guru} guru dan ${hasil.absensi} catatan absensi dimuat.`, 'ok');
     bootApp();
   }catch(e){
-    tampilErrGate('Tidak dapat terhubung. Periksa internet, atau pilih "Mulai tanpa internet dulu".');
+    tampilErrGate(esc(pesanGagalKoneksi(e)));
   }finally{ if(document.body.contains(btn)){ btn.disabled=false; btn.textContent='Hubungkan & mulai'; } }
 }
 async function doLogin(){
@@ -917,9 +927,17 @@ async function apiKirim(payload, urlOverride){
   const ctrl = window.AbortController ? new AbortController() : null;
   const t = ctrl ? setTimeout(()=>ctrl.abort(), 25000) : null;
   try{
-    const res = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload), redirect:'follow', credentials:'omit', referrerPolicy:'no-referrer', signal:ctrl?ctrl.signal:undefined});
+    let res;
+    try{
+      res = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload), redirect:'follow', credentials:'omit', referrerPolicy:'no-referrer', signal:ctrl?ctrl.signal:undefined});
+    }catch(e){
+      const err = new Error(e && e.name==='AbortError' ? 'waktu' : 'jaringan'); err.kode = err.message; throw err;
+    }
     const isi = await res.text();
-    try{ return JSON.parse(isi); }catch(e){ throw new Error('Balasan server tidak valid'); }
+    try{ return JSON.parse(isi); }catch(e){
+      const err = new Error('bukan-json'); err.kode = /accounts\.google|ServiceLogin|signin/i.test(isi) ? 'akses' : (res.status===404 || /not found|tidak ditemukan/i.test(isi) ? 'url' : 'bukan-json');
+      err.status = res.status; throw err;
+    }
   } finally { if(t) clearTimeout(t); }
 }
 

@@ -1,0 +1,17 @@
+{
+  "name": "Absensi Petugas",
+  "short_name": "Absen Petugas",
+  "description": "Input absen dan cetak laporan untuk petugas siswa",
+  "start_url": "./absen-petugas.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

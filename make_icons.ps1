@@ -1,0 +1,15 @@
+Add-Type -AssemblyName System.Drawing
+$bmp = New-Object System.Drawing.Bitmap(512, 512)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::FromArgb(61, 220, 132))
+$font = New-Object System.Drawing.Font("Arial", 200, [System.Drawing.FontStyle]::Bold)
+$brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+$g.DrawString("KB", $font, $brush, 70, 100)
+$bmp.Save("c:\SIMPAN\DOKUMEN\ANTIGRAVITY\KRISBA\icons\icon-512.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+$bmp192 = New-Object System.Drawing.Bitmap(192, 192)
+$g192 = [System.Drawing.Graphics]::FromImage($bmp192)
+$g192.Clear([System.Drawing.Color]::FromArgb(61, 220, 132))
+$font192 = New-Object System.Drawing.Font("Arial", 75, [System.Drawing.FontStyle]::Bold)
+$g192.DrawString("KB", $font192, $brush, 15, 30)
+$bmp192.Save("c:\SIMPAN\DOKUMEN\ANTIGRAVITY\KRISBA\icons\icon-192.png", [System.Drawing.Imaging.ImageFormat]::Png)

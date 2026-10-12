@@ -6,6 +6,11 @@
 <title>SMP Kristen Basaan</title>
 <meta name="theme-color" content="#10b981">
 
+<!-- 1. CACHE BUSTER META TAGS (Mencegah browser menyimpan HTML lama) -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
@@ -297,7 +302,7 @@ const menuItems = [
     { icon: "⏱️", label: "UJIAN ONLINE", url: "https://mikhaelnardotunas-afk.github.io/siber_ujian_v2/" },
     { icon: "👨🏾‍💻", label: "UJIAN ESSAY / PG", url: "https://mikhaelnardotunas-afk.github.io/siber-essay-Gemini-V3/" },
     { icon: "🙂", label: "Daftar Wajah", url: "Daftar_Wajah.html" },
-    { icon: "📝", label: "INPUT NILAI UJIAN MID", url: "Input_Nilai.html" }
+    { icon: "📝", label: "INPUT NILAI UJIAN MID", url: "Input_Nilai.html" }, /* <-- 3. MEMPERBAIKI KOMA YANG HILANG DI SINI */
     { icon: "📝", label: "INPUT NILAI UJIAN SEMESTER", url: "DKN/SEMESTER/index.html" }
 ];
 
@@ -312,8 +317,17 @@ grid.innerHTML = menuItems.map(item => `
 // --- 2. PWA SERVICE WORKER & INSTALL PROMPT ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('SW Registered!', reg))
+        // 2. TRIK CACHE-BUSTER UNTUK SERVICE WORKER
+        // Parameter ?v=waktu_saat_ini memaksa browser dan GitHub Pages untuk
+        // selalu mendownload file sw.js yang terbaru
+        const swUrl = 'sw.js?v=' + new Date().getTime();
+        
+        navigator.serviceWorker.register(swUrl)
+            .then(reg => {
+                console.log('SW Registered!', reg);
+                // Memaksa service worker untuk update secara instan
+                reg.update();
+            })
             .catch(err => console.log('SW Registration Failed!', err));
     });
 }

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>E-Raport Mid Semester</title>
+  <meta name="description" content="Masuk ke aplikasi E-Raport Mid Semester SMP Kristen 65 Basaan untuk Guru dan Admin.">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="card login-card">
+      <div class="login-brand">
+        <img src="assets/logo_left.png" alt="Logo sekolah">
+        <div>
+          <h1>E-Raport Mid Semester</h1>
+          <p>SMP KRISTEN 65 BASAAN</p>
+        </div>
+      </div>
+
+      <div id="resume-box" class="resume-box hidden"></div>
+
+      <div class="role-tabs" role="tablist">
+        <button type="button" class="role-tab active" data-role="guru">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m-6-9.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
+          Guru
+        </button>
+        <button type="button" class="role-tab" data-role="admin">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6-4A12 12 0 0112 2.9 12 12 0 013.4 6 12 12 0 003 9c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1-.1-2-.4-3z"/></svg>
+          Admin
+        </button>
+      </div>
+
+      <form id="login-form" autocomplete="on">
+        <div class="field" id="field-nama">
+          <label for="nama">Nama Guru</label>
+          <input class="input" id="nama" name="nama" placeholder="Contoh: Mikhael N. Tunas, S.Pd" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pass-wrap">
+            <input class="input" type="password" id="password" name="password" placeholder="Masukkan password" autocomplete="current-password" required>
+            <button type="button" class="pass-toggle" id="pass-toggle" aria-label="Lihat password">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.5 12C3.7 7.9 7.5 5 12 5s8.3 2.9 9.5 7c-1.2 4.1-5 7-9.5 7s-8.3-2.9-9.5-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-login">Masuk</button>
+      </form>
+
+      <div class="net-status" id="net-status"><span class="dot"></span><span id="net-text">Memeriksa koneksi...</span></div>
+
+      <div class="login-foot">
+        Setiap kali masuk, aplikasi mengambil data terbaru dari spreadsheet sekolah.<br>
+        <span id="app-version"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading"><div class="spinner"></div><div id="loading-text">Mengambil data...</div></div>
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/seed.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

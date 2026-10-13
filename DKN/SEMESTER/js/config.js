@@ -15,5 +15,5 @@ window.APP_CONFIG = {
   PASSWORD_ADMIN: 'admin123',
 
   NAMA_APLIKASI: 'E-Raport SMP Kristen 65 Basaan',
-  VERSI: '3.0.0'
+  VERSI: '3.1.0'
 };

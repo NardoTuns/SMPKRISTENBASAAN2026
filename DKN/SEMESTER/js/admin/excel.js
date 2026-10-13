@@ -472,6 +472,12 @@ window.exportAllExcel = function () {
   XLSX.utils.book_append_sheet(wb, makeSheet(['KODE_MAPEL', 'TINGKAT', 'DESKRIPSI', 'DIBUAT_OLEH'], db.deskripsi.map(d => [d.kode, d.tingkat, d.teks, d.oleh]), [12, 10, 90, 22]), 'Daftar_Deskripsi');
   XLSX.utils.book_append_sheet(wb, makeSheet(['KODE', 'NAMA', 'KELOMPOK', 'KKM', 'URUT', 'AKTIF'], db.mapel.map(m => [m.kode, m.nama, m.kelompok, m.kkm, m.urut, m.aktif ? 'Y' : 'N']), [10, 32, 10, 8, 8, 8]), 'Ref_Mapel');
   XLSX.utils.book_append_sheet(wb, makeSheet(['KELAS', 'LABEL_RAPORT', 'WALI_KELAS', 'NIP_WALI'], db.kelas.map(k => [k.kelas, k.label, k.wali, k.nip]), [8, 12, 34, 22], [3]), 'Kelas');
+  const ambil = Object.values(db.pengambilan || {});
+  if (ambil.length) {
+    XLSX.utils.book_append_sheet(wb, makeSheet(['NISN', 'NAMA', 'KELAS', 'STATUS', 'TANGGAL', 'PENGAMBIL', 'HUBUNGAN', 'NO_HP', 'CATATAN', 'PETUGAS'],
+      ambil.map(p => [p.nisn, p.nama, p.kelas, p.status, p.tanggal ? C.fmtDateTime(p.tanggal) : '', p.pengambil, p.hubungan, p.hp, p.catatan, p.petugas]),
+      [14, 30, 8, 9, 20, 26, 14, 16, 24, 16], [0, 7]), 'Pengambilan_Raport');
+  }
   XLSX.writeFile(wb, 'Export_Data_Raport_' + new Date().toISOString().slice(0, 10) + '.xlsx');
   C.toast('Seluruh data diexport ke Excel', 'success');
 };
@@ -488,7 +494,8 @@ function dbToRaw(db) {
     siswa: db.siswa.map(C.siswaToRow),
     nilai: Object.values(db.nilai).map(C.nilaiToRow),
     deskripsi: db.deskripsi.map(C.deskToRow),
-    pelengkap: Object.values(db.pelengkap).map(p => Object.assign(C.pelengkapToRow(p), { Diperbarui: p.updated || C.nowIso() }))
+    pelengkap: Object.values(db.pelengkap).map(p => Object.assign(C.pelengkapToRow(p), { Diperbarui: p.updated || C.nowIso() })),
+    pengambilan: Object.values(db.pengambilan || {}).map(C.pengambilanToRow)
   };
 }
 

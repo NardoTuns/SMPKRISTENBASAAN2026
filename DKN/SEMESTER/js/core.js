@@ -49,6 +49,10 @@
     guruPrefs: 'rpt_guru_prefs',
     syncLog: 'rpt_sync_log',
     demo: 'rpt_demo_db',
+    adminKelas: 'rpt_admin_kelas',
+    ambilQueue: 'rpt_ambil_queue',
+    cekNilai: 'rpt_cek_nilai',
+    cekDaftar: 'rpt_cek_daftar',
     theme: 'theme'
   };
 
@@ -236,6 +240,7 @@
         });
         Store.set(KEY.demo, db);
       }
+      if (!Array.isArray(db.pengambilan)) db.pengambilan = [];
       return db;
     },
     save(db) {
@@ -281,9 +286,13 @@
         case 'getAll':
           out = {
             config: Object.assign({}, db.config), kelas: db.kelas, mapel: db.mapel, siswa: db.siswa,
-            nilai: db.nilai, deskripsi: db.deskripsi, pelengkap: db.pelengkap, serverTime: nowIso()
+            nilai: db.nilai, deskripsi: db.deskripsi, pelengkap: db.pelengkap, pengambilan: db.pengambilan, serverTime: nowIso()
           };
           return JSON.parse(JSON.stringify(out));
+        case 'cekDaftar':
+          return JSON.parse(JSON.stringify(cekDaftarFromRaw(db)));
+        case 'cekNilai':
+          return JSON.parse(JSON.stringify(cekNilaiFromRaw(db, req.nisn)));
         case 'seed': out = { seeded: false }; break;
         case 'syncNilai':
           (req.rows || []).forEach(r => { r.ID = String(r.NISN) + '|' + String(r.Kode_Mapel); });
@@ -313,9 +322,14 @@
         case 'saveConfig': Object.assign(db.config, req.config || {}); out = { saved: true }; this.log(db, req, 'Simpan Pengaturan', ''); break;
         case 'savePelengkap': out = this.upsert(db.pelengkap, 'NISN', req.rows || [], false); this.log(db, req, 'Simpan Pelengkap Raport', out.saved + ' siswa'); break;
         case 'getLog': return db.log.slice().reverse();
+        case 'savePengambilan':
+          out = this.upsert(db.pengambilan, 'NISN', req.rows || [], true);
+          this.log(db, req, 'Pengambilan Raport', out.saved + ' disimpan' + (req.info ? ' | ' + req.info : ''));
+          break;
+        case 'deletePengambilan': { const r = rm(db.pengambilan, 'NISN', req.ids); db.pengambilan = r.kept; out = { deleted: r.n }; this.log(db, req, 'Hapus Pengambilan', r.n + ' baris'); break; }
         case 'restore': {
           const d = req.data || {};
-          ['kelas', 'mapel', 'siswa', 'nilai', 'deskripsi', 'pelengkap'].forEach(k => { if (Array.isArray(d[k])) db[k] = d[k]; });
+          ['kelas', 'mapel', 'siswa', 'nilai', 'deskripsi', 'pelengkap', 'pengambilan'].forEach(k => { if (Array.isArray(d[k])) db[k] = d[k]; });
           if (d.config) db.config = d.config;
           out = { restored: true };
           break;
@@ -344,7 +358,7 @@
     const def = (window.SEED && window.SEED.config) || {};
     const c = Object.assign({}, def, raw || {});
     ['predikat_a', 'predikat_b', 'predikat_c'].forEach(k => { c[k] = parseFloat(c[k]) || def[k]; });
-    ['tampilkan_keterangan', 'tampilkan_qr', 'tampilkan_keputusan'].forEach(k => { c[k] = parseBool(c[k], def[k]); });
+    ['tampilkan_keterangan', 'tampilkan_qr', 'tampilkan_keputusan', 'cek_nilai_aktif', 'cek_nilai_ranking'].forEach(k => { c[k] = parseBool(c[k], def[k]); });
     return c;
   }
 
@@ -395,9 +409,15 @@
       if (nisn) pelengkap[nisn] = rowToPelengkap(p);
     });
 
+    const pengambilan = {};
+    (raw.pengambilan || []).forEach(r => {
+      const p = rowToPengambilan(r);
+      if (p.nisn) pengambilan[p.nisn] = p;
+    });
+
     return {
       config: normalizeConfig(raw.config),
-      kelas, mapel, siswa, nilai, deskripsi, pelengkap,
+      kelas, mapel, siswa, nilai, deskripsi, pelengkap, pengambilan,
       serverTime: raw.serverTime || nowIso(),
       fetchedAt: nowIso()
     };
@@ -443,6 +463,24 @@
       Ekskul2: p.ek2 || '', Ekskul2_Nilai: p.ek2_nilai || '', Ekskul2_Deskripsi: p.ek2_desk || '',
       Sakit: p.sakit || '', Izin: p.izin || '', Alpa: p.alpa || '',
       Keputusan: p.keputusan || '', Catatan_Wali: p.catatan || '', Diperbarui: nowIso()
+    };
+  }
+
+  // Pengambilan raport (siswa / orang tua datang mengambil raport)
+  function rowToPengambilan(r) {
+    return {
+      nisn: str(r.NISN), nama: str(r.Nama).toUpperCase(), kelas: str(r.Kelas).toUpperCase(),
+      status: str(r.Status) || 'Belum', tanggal: str(r.Tanggal), pengambil: str(r.Pengambil),
+      hubungan: str(r.Hubungan), hp: str(r.No_HP), catatan: str(r.Catatan), petugas: str(r.Petugas),
+      updated: str(r.Diperbarui)
+    };
+  }
+
+  function pengambilanToRow(p) {
+    return {
+      NISN: p.nisn, Nama: p.nama || '', Kelas: p.kelas || '', Status: p.status || 'Belum', Tanggal: p.tanggal || '',
+      Pengambil: p.pengambil || '', Hubungan: p.hubungan || '', No_HP: p.hp || '', Catatan: p.catatan || '',
+      Petugas: p.petugas || '', Diperbarui: p.updated || nowIso()
     };
   }
 
@@ -590,6 +628,114 @@
   function round2(v) { return Math.round(v * 100) / 100; }
 
   /* ===========================================================
+     CEK NILAI SISWA (halaman Cek_Nilai.html)
+     Dipakai backend demo. Logika yang sama ada di backend/Code.gs (aksi cekNilai),
+     sehingga siswa hanya menerima data miliknya sendiri.
+     =========================================================== */
+  function samaKunci(a, b) {
+    const x = str(a).toUpperCase(), y = str(b).toUpperCase();
+    if (!x || !y) return false;
+    return x === y || (/^\d+$/.test(x) && /^\d+$/.test(y) && x.replace(/^0+/, '') === y.replace(/^0+/, ''));
+  }
+
+  // Daftar kelas & nama siswa untuk dipilih di halaman Cek Nilai
+  function cekDaftarFromRaw(raw) {
+    const cfg = normalizeConfig(raw.config);
+    if (cfg.cek_nilai_aktif === false) throw new Error('Halaman cek nilai sedang ditutup oleh sekolah. Silakan coba lagi nanti.');
+    const kelasRows = (raw.kelas || []).map(k => ({ kelas: str(k.Kelas).toUpperCase(), wali: str(k.Wali_Kelas), urut: num(k.Urut) || 99 }))
+      .filter(k => k.kelas);
+    const siswa = (raw.siswa || []).filter(x => str(x.NISN) && str(x.Nama))
+      .map(x => ({ nisn: str(x.NISN), nama: str(x.Nama).toUpperCase(), kelas: str(x.Kelas).toUpperCase(), no: num(x.No_Absen) || 999 }))
+      .sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
+    siswa.forEach(s => { if (!kelasRows.some(k => k.kelas === s.kelas)) kelasRows.push({ kelas: s.kelas, wali: '', urut: 99 }); });
+    kelasRows.sort((a, b) => (a.urut - b.urut) || a.kelas.localeCompare(b.kelas));
+    return {
+      sekolah: { nama: cfg.nama_sekolah, semester: cfg.semester, tahun_ajaran: cfg.tahun_ajaran },
+      kelas: kelasRows.map(k => ({ kelas: k.kelas, wali: k.wali, jumlah: siswa.filter(s => s.kelas === k.kelas).length })).filter(k => k.jumlah),
+      siswa: siswa.map(s => ({ nisn: s.nisn, nama: s.nama, kelas: s.kelas })),
+      serverTime: nowIso()
+    };
+  }
+
+  function cekNilaiFromRaw(raw, nisn) {
+    const cfg = normalizeConfig(raw.config);
+    if (cfg.cek_nilai_aktif === false) throw new Error('Halaman cek nilai sedang ditutup oleh sekolah. Silakan coba lagi nanti.');
+    const siswa = (raw.siswa || []).filter(x => str(x.NISN) && str(x.Nama));
+    const s = siswa.find(x => samaKunci(x.NISN, nisn));
+    const nis = s ? str(s.NIS) : '';
+    if (!s) throw new Error('Data siswa tidak ditemukan. Muat ulang daftar nama.');
+
+    const terpisah = cfg.mode_keterampilan === 'terpisah';
+    const mapel = (raw.mapel || []).map(m => ({
+      kode: str(m.Kode).toUpperCase(), nama: str(m.Nama), kelompok: str(m.Kelompok).toUpperCase() || 'A',
+      kkm: num(m.KKM) || 75, urut: num(m.Urut) || 99, aktif: parseBool(m.Aktif, true)
+    })).filter(m => m.kode && m.aktif).sort((a, b) => (a.urut - b.urut) || a.nama.localeCompare(b.nama));
+    const nil = {};
+    (raw.nilai || []).forEach(r => { const n = rowToNilai(r); if (n.nisn && n.kode) nil[n.id] = n; });
+
+    const hitung = x => {
+      let total = 0, count = 0, countP = 0;
+      mapel.forEach(m => {
+        const n = nil[str(x.NISN) + '|' + m.kode];
+        const p = n ? n.nilai : null;
+        const k = n ? (terpisah ? n.nilai_k : p) : null;
+        if (p !== null) { total += p; count++; countP++; }
+        if (k !== null) { total += k; count++; }
+      });
+      return { total: round1(total), count, countP, average: count ? round2(total / count) : 0 };
+    };
+    const rankIn = list => {
+      const arr = list.map(x => Object.assign({ nisn: str(x.NISN) }, hitung(x)))
+        .sort((a, b) => (b.total - a.total) || (b.average - a.average));
+      let rank = 0;
+      arr.forEach((r, i) => {
+        if (!(i > 0 && r.total === arr[i - 1].total && r.average === arr[i - 1].average)) rank = i + 1;
+        r.rank = rank;
+      });
+      const me = arr.find(r => r.nisn === str(s.NISN));
+      return { rank: me ? me.rank : 0, dari: arr.length };
+    };
+
+    const kelas = str(s.Kelas).toUpperCase();
+    const tingkat = tingkatOf(kelas);
+    const ringkasan = Object.assign({ jumlahMapel: mapel.length }, hitung(s));
+    const tampilRanking = cfg.cek_nilai_ranking !== false;
+    if (tampilRanking) {
+      const rk = rankIn(siswa.filter(x => str(x.Kelas).toUpperCase() === kelas));
+      const rt = rankIn(siswa.filter(x => tingkatOf(x.Kelas) === tingkat));
+      Object.assign(ringkasan, { rankKelas: rk.rank, jumlahKelas: rk.dari, rankTingkat: rt.rank, jumlahTingkat: rt.dari, tingkat });
+    }
+    const kel = (raw.kelas || []).find(k => str(k.Kelas).toUpperCase() === kelas) || {};
+    const pel = (raw.pelengkap || []).find(p => str(p.NISN) === str(s.NISN));
+    const amb = (raw.pengambilan || []).find(p => str(p.NISN) === str(s.NISN));
+    const keys = ['nama_sekolah', 'semester', 'tahun_ajaran', 'predikat_a', 'predikat_b', 'predikat_c', 'kata_a', 'kata_b', 'kata_c', 'kata_d',
+      'format_deskripsi', 'mode_keterampilan', 'sikap_spiritual_predikat', 'sikap_spiritual_deskripsi', 'sikap_sosial_predikat',
+      'sikap_sosial_deskripsi', 'ekskul_deskripsi_default'];
+    const outCfg = {};
+    keys.forEach(k => { outCfg[k] = cfg[k]; });
+
+    return {
+      siswa: { nisn: str(s.NISN), nis, nama: str(s.Nama).toUpperCase(), kelas, jk: str(s.JK).toUpperCase() },
+      wali: str(kel.Wali_Kelas),
+      config: outCfg,
+      mapel: mapel.map(m => {
+        const n = nil[str(s.NISN) + '|' + m.kode];
+        return {
+          kode: m.kode, nama: m.nama, kelompok: m.kelompok, kkm: m.kkm,
+          nilai: n ? n.nilai : null, nilai_k: n && terpisah ? n.nilai_k : null,
+          kuasai: n ? n.kuasai : '', tingkatkan: n ? n.tingkatkan : ''
+        };
+      }),
+      ringkasan, tampilRanking,
+      pelengkap: pel ? rowToPelengkap(pel) : null,
+      pengambilan: amb && str(amb.Status) === 'Sudah'
+        ? { status: 'Sudah', tanggal: str(amb.Tanggal), pengambil: str(amb.Pengambil), hubungan: str(amb.Hubungan) }
+        : { status: 'Belum' },
+      serverTime: nowIso()
+    };
+  }
+
+  /* ===========================================================
      TEMA (gelap / terang)
      =========================================================== */
   function applyTheme() {
@@ -621,6 +767,7 @@
     CFG, Store, KEY, esc, fmtNum, isFilled, nowIso, fmtDateTime, uid, toast, downloadBlob, safeFileName,
     tingkatOf, romawi, isOnline, getSession, setSession, logout, requireRole, isDemo, api, DemoBackend,
     normalizeDB, normalizeConfig, rowToNilai, nilaiToRow, rowToPelengkap, pelengkapToRow, deskToRow, siswaToRow,
+    rowToPengambilan, pengambilanToRow, cekNilaiFromRaw, cekDaftarFromRaw,
     mapelToRow, kelasToRow, loadDB, saveDB, fetchDB, predikat, kataPredikat, buildDeskripsi, trimDot,
     activeMapel, computeStudents, classList, kelasInfo, round1, round2, num, str, applyTheme, toggleTheme, registerSW
   };

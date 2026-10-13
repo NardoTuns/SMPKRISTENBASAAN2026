@@ -58,26 +58,53 @@ Semua fitur versi lama tetap ada, dengan tambahan:
 - **Data Siswa**: tambah, ubah, hapus, pindah kelas, urut nomor absen, import & template Excel.
 - **Sikap, Ekskul & Kehadiran** per kelas (+ isi massal), **Bank Deskripsi**, **Log Aktivitas Guru**, monitoring progres input per mapel.
 - **Excel**: template import lengkap (Siswa, 1 sheet per mapel, Pelengkap, Daftar_Deskripsi) yang sudah terisi data saat ini; import dengan **pratinjau & validasi** sebelum disimpan; file format lama (sheet Siswa + Nilai) dan Leger tetap terbaca; export seluruh data; Leger Excel berwarna.
-- Cadangan & pemulihan lengkap (.json), hapus nilai per mapel/kelas (misal pergantian semester).
+- **Ranking Tingkat & Sekolah** (baru, v3.1): ranking gabungan semua rombel per tingkat — pilih **Kelas 7**, **8**,
+  atau **9** (misal 7A + 7B dirangking bersama) — dan **Ranking Keseluruhan** siswa kelas 7-9. Dasar peringkat jumlah
+  atau rata-rata, batasi 3/5/10/20 besar, cari siswa. Cetak ranking, cetak **Juara 1-3 tiap kelas**, cetak **nilai
+  tertinggi per mapel**, export Excel (1 sheet per tingkat + keseluruhan).
+- **Pengambilan Raport** (baru, v3.1): catat siswa / orang tua yang datang mengambil raport (tanggal & jam, nama
+  pengambil, hubungan, no. HP, catatan) → tersimpan di sheet **Pengambilan**. Tombol **✓ Cepat** & tandai massal,
+  kotak cari (ketik nama/NISN lalu Enter). Saat **offline** catatan disimpan dulu di perangkat lalu dikirim otomatis
+  ketika online. Cetak: laporan (semua / sudah / belum ambil, per kelas / tingkat / semua), **daftar tanda tangan**
+  per kelas, **rekap per kelas**, **tanda terima** per siswa. Export Excel & salin pengumuman WA siswa yang belum ambil.
+- Cadangan & pemulihan lengkap (.json, termasuk data pengambilan raport), hapus nilai per mapel/kelas (misal pergantian semester).
 - **Pengaturan**: identitas, semester & tahun pelajaran, batas & kata predikat, pola kalimat deskripsi, teks bawaan sikap/ekskul/keputusan, kepala sekolah + gambar tanda tangan, kelas & wali kelas, mapel & KKM, nilai keterampilan sama/terpisah.
+
+## Halaman Cek Nilai Siswa (baru, v3.1)
+Alamat: `https://<username>.github.io/<repo>/Cek_Nilai.html` (juga ada tombol **Siswa: Cek Nilai Saya** di halaman masuk).
+- **Tanpa kata sandi**: siswa memilih **kelas**, lalu mengetuk **namanya** (ada kotak cari nama).
+- Yang tampil: identitas, rata-rata (grafik lingkaran), jumlah nilai, **ranking kelas** dan **ranking tingkat**
+  (semua rombel) dengan medali untuk juara 1-3, nilai tiap mapel + predikat + tuntas/belum + bar nilai terhadap KKM +
+  kalimat deskripsi (ketuk mapel), sikap, ekskul, ketidakhadiran, catatan wali kelas, dan status pengambilan raport.
+  Bisa dicetak / disimpan PDF. Mendukung mode gelap.
+- Server hanya mengirim daftar nama (aksi `cekDaftar`) dan nilai siswa yang dipilih (aksi `cekNilai`), bukan seluruh database.
+- Daftar nama & nilai yang pernah dibuka tersimpan di HP sehingga tetap bisa dilihat saat offline.
+- Karena tanpa kata sandi, siapa pun yang membuka halaman ini bisa melihat nilai siswa mana pun.
+- Admin dapat **menutup** halaman ini atau **menyembunyikan ranking** di menu Pengaturan → "Halaman Cek Nilai Siswa".
 
 ## Struktur
 ```
 index.html            Login (Guru / Admin)
+Cek_Nilai.html        Cek nilai untuk siswa (js/cek_nilai.js)
 guru.html             Aplikasi guru (mobile)
 admin.html            Aplikasi admin
 js/config.js          URL API & password  <- diedit
 js/seed.js            Data bawaan (mapel, kelas, bank deskripsi)
 js/core.js            API, penyimpanan HP, perhitungan nilai/predikat/deskripsi
 js/guru.js            Logika aplikasi guru
-js/admin/*.js         Modul admin (raport, laporan, data, excel, pengaturan)
+js/admin/*.js         Modul admin (raport, laporan, data, excel, pengaturan,
+                      peringkat = ranking tingkat/keseluruhan, pengambilan = pengambilan raport)
 backend/Code.gs       Backend Google Apps Script
 sw.js, manifest.json  Mode offline / pasang di HP
 _arsip_versi_lama/    Versi Python sebelumnya (tidak diunggah ke GitHub)
 ```
 
 ## Sheet di Spreadsheet
-`Pengaturan`, `Kelas`, `Mapel`, `Siswa`, `Nilai`, `Deskripsi`, `Pelengkap`, `Log` — dibuat otomatis. Sebaiknya data diubah lewat aplikasi, bukan langsung di spreadsheet.
+`Pengaturan`, `Kelas`, `Mapel`, `Siswa`, `Nilai`, `Deskripsi`, `Pelengkap`, `Log`, `Pengambilan` — dibuat otomatis. Sebaiknya data diubah lewat aplikasi, bukan langsung di spreadsheet.
+
+> **Pembaruan v3.1 (WAJIB):** tempel ulang `backend/Code.gs` ke Apps Script, lalu **Terapkan → Kelola deployment → Edit →
+> Versi: Versi baru**. Tanpa ini, Pengambilan Raport hanya tersimpan di perangkat dan Cek Nilai menampilkan
+> "Aksi tidak dikenal". Sheet `Pengambilan` dibuat otomatis. URL `/exec` tidak berubah.
 
 ## Catatan Keamanan
 Sesuai kebutuhan sekolah, password disimpan di kode (`js/config.js`) dan dapat dilihat oleh siapa pun yang membuka kode sumber di GitHub. Jangan simpan data yang sangat rahasia. Jika repository publik, pertimbangkan mengganti password & `API_KEY` secara berkala.

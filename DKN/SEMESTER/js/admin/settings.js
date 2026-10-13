@@ -41,7 +41,9 @@ const CFG_FIELDS = {
 const CFG_CHECKS = {
   'cfg-tampilkan-qr': 'tampilkan_qr',
   'cfg-tampilkan-keputusan': 'tampilkan_keputusan',
-  'cfg-tampilkan-ket': 'tampilkan_keterangan'
+  'cfg-tampilkan-ket': 'tampilkan_keterangan',
+  'cfg-cek-nilai-aktif': 'cek_nilai_aktif',
+  'cfg-cek-nilai-ranking': 'cek_nilai_ranking'
 };
 
 let ttdDataUrl = '';

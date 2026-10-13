@@ -36,6 +36,9 @@ window.SEED = (function () {
     keputusan_default: 'Berdasarkan Hasil yang telah dicapai, maka peserta didik dinyatakan\nTUNTAS dan NAIK KE KELAS SELANJUTNYA',
     tampilkan_keputusan: true,
     tampilkan_qr: true,
+    // halaman Cek_Nilai.html untuk siswa
+    cek_nilai_aktif: true,
+    cek_nilai_ranking: true,
     ttd_kepsek: '',
     // format lama (laporan mid semester)
     judul_laporan: 'LAPORAN HASIL UJIAN TENGAH SEMESTER GANJIL',

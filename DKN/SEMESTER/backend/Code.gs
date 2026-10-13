@@ -29,7 +29,9 @@ const SHEETS = {
   Pelengkap: ['NISN', 'Spiritual_Predikat', 'Spiritual_Deskripsi', 'Sosial_Predikat', 'Sosial_Deskripsi',
               'Ekskul1', 'Ekskul1_Nilai', 'Ekskul1_Deskripsi', 'Ekskul2', 'Ekskul2_Nilai', 'Ekskul2_Deskripsi',
               'Sakit', 'Izin', 'Alpa', 'Keputusan', 'Catatan_Wali', 'Diperbarui'],
-  Log: ['Waktu', 'Pengguna', 'Peran', 'Aksi', 'Detail']
+  Log: ['Waktu', 'Pengguna', 'Peran', 'Aksi', 'Detail'],
+  // Catatan siswa / orang tua yang datang mengambil raport
+  Pengambilan: ['NISN', 'Nama', 'Kelas', 'Status', 'Tanggal', 'Pengambil', 'Hubungan', 'No_HP', 'Catatan', 'Petugas', 'Diperbarui']
 };
 
 // Kolom yang harus disimpan sebagai teks (agar angka 0 di depan NISN tidak hilang)
@@ -41,7 +43,8 @@ const TEXT_COLUMNS = {
   Kelas: ['Kelas', 'NIP_Wali'],
   Mapel: ['Kode'],
   Pengaturan: ['Kunci', 'Nilai'],
-  Deskripsi: ['ID', 'Kode_Mapel', 'Tingkat', 'Diperbarui']
+  Deskripsi: ['ID', 'Kode_Mapel', 'Tingkat', 'Diperbarui'],
+  Pengambilan: ['NISN', 'Kelas', 'Tanggal', 'No_HP', 'Diperbarui']
 };
 
 // Kunci-kunci tabel (untuk upsert)
@@ -51,7 +54,8 @@ const KEYS = {
   Deskripsi: 'ID',
   Pelengkap: 'NISN',
   Kelas: 'Kelas',
-  Mapel: 'Kode'
+  Mapel: 'Kode',
+  Pengambilan: 'NISN'
 };
 
 /* =============================================================
@@ -74,7 +78,7 @@ function doPost(e) {
   if (req.key !== KUNCI_API) return jsonOut({ ok: false, message: 'Kunci API salah. Samakan API_KEY di js/config.js dengan KUNCI_API di Code.gs' });
 
   const lock = LockService.getScriptLock();
-  const isWrite = req.action !== 'getAll' && req.action !== 'ping' && req.action !== 'getLog';
+  const isWrite = req.action !== 'getAll' && req.action !== 'ping' && req.action !== 'getLog' && req.action !== 'cekNilai' && req.action !== 'cekDaftar';
   try {
     if (isWrite) lock.waitLock(30000);
     const data = handle(req);
@@ -174,6 +178,25 @@ function handle(req) {
     case 'getLog':
       return readTable('Log').slice(-(req.limit || 300)).reverse();
 
+    case 'savePengambilan': {
+      const res = upsertWithTime('Pengambilan', (req.rows || []).map(r => { r.NISN = String(r.NISN || '').trim(); return r; }));
+      log(user, role, 'Pengambilan Raport', res.saved + ' disimpan, ' + res.skipped + ' dilewati' + (req.info ? ' | ' + req.info : ''));
+      return res;
+    }
+
+    case 'deletePengambilan': {
+      const n = deleteByKeys('Pengambilan', req.ids || []);
+      log(user, role, 'Hapus Pengambilan', n + ' baris');
+      return { deleted: n };
+    }
+
+    // Halaman Cek_Nilai.html: siswa hanya menerima data miliknya sendiri
+    case 'cekDaftar':
+      return cekDaftar();
+
+    case 'cekNilai':
+      return cekNilai(req.nisn);
+
     case 'restore':
       restore(req.data || {});
       log(user, role, 'Pulihkan Backup', 'Seluruh data diganti dari file backup');
@@ -241,6 +264,7 @@ function getAll() {
     nilai: readTable('Nilai'),
     deskripsi: readTable('Deskripsi'),
     pelengkap: readTable('Pelengkap'),
+    pengambilan: readTable('Pengambilan'),
     serverTime: new Date().toISOString()
   };
 }
@@ -375,10 +399,160 @@ function restore(data) {
     writeTable('Pengaturan', []);
     saveConfig(data.config);
   }
-  ['Kelas', 'Mapel', 'Siswa', 'Nilai', 'Deskripsi', 'Pelengkap'].forEach(name => {
+  ['Kelas', 'Mapel', 'Siswa', 'Nilai', 'Deskripsi', 'Pelengkap', 'Pengambilan'].forEach(name => {
     const k = name.toLowerCase();
     if (Array.isArray(data[k])) writeTable(name, data[k]);
   });
+}
+
+/* =============================================================
+   CEK NILAI SISWA (Cek_Nilai.html) - hanya membaca, sama dengan cekNilaiFromRaw di js/core.js
+   ============================================================= */
+
+function cnStr(v) {
+  return v === null || v === undefined ? '' : String(v).trim();
+}
+
+function cnNum(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
+function cnBool(v, def) {
+  if (v === true || v === false) return v;
+  if (v === undefined || v === null || v === '') return def;
+  const s = String(v).toLowerCase();
+  return s === 'true' || s === 'y' || s === 'ya' || s === '1';
+}
+
+function cnTingkat(kelas) {
+  const m = String(kelas || '').match(/\d+/);
+  return m ? m[0] : '';
+}
+
+function cnSama(a, b) {
+  const x = cnStr(a).toUpperCase(), y = cnStr(b).toUpperCase();
+  if (!x || !y) return false;
+  return x === y || (/^\d+$/.test(x) && /^\d+$/.test(y) && x.replace(/^0+/, '') === y.replace(/^0+/, ''));
+}
+
+function cnConfig() {
+  const cfg = {};
+  readTable('Pengaturan').forEach(r => { if (r.Kunci) cfg[r.Kunci] = r.Nilai; });
+  if (cnBool(cfg.cek_nilai_aktif, true) === false) throw new Error('Halaman cek nilai sedang ditutup oleh sekolah. Silakan coba lagi nanti.');
+  return cfg;
+}
+
+// Daftar kelas & nama siswa untuk dipilih di halaman Cek Nilai
+function cekDaftar() {
+  const cfg = cnConfig();
+  const kelasRows = readTable('Kelas').map(k => ({ kelas: cnStr(k.Kelas).toUpperCase(), wali: cnStr(k.Wali_Kelas), urut: cnNum(k.Urut) || 99 }))
+    .filter(k => k.kelas);
+  const siswa = readTable('Siswa').filter(x => cnStr(x.NISN) && cnStr(x.Nama))
+    .map(x => ({ nisn: cnStr(x.NISN), nama: cnStr(x.Nama).toUpperCase(), kelas: cnStr(x.Kelas).toUpperCase() }))
+    .sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
+  siswa.forEach(s => { if (!kelasRows.some(k => k.kelas === s.kelas)) kelasRows.push({ kelas: s.kelas, wali: '', urut: 99 }); });
+  kelasRows.sort((a, b) => (a.urut - b.urut) || a.kelas.localeCompare(b.kelas));
+  return {
+    sekolah: { nama: cfg.nama_sekolah, semester: cfg.semester, tahun_ajaran: cfg.tahun_ajaran },
+    kelas: kelasRows.map(k => ({ kelas: k.kelas, wali: k.wali, jumlah: siswa.filter(s => s.kelas === k.kelas).length })).filter(k => k.jumlah),
+    siswa: siswa,
+    serverTime: new Date().toISOString()
+  };
+}
+
+function cekNilai(nisn) {
+  const cfg = cnConfig();
+  const siswa = readTable('Siswa').filter(x => cnStr(x.NISN) && cnStr(x.Nama));
+  const s = siswa.filter(x => cnSama(x.NISN, nisn))[0];
+  const nis = s ? cnStr(s.NIS) : '';
+  if (!s) throw new Error('Data siswa tidak ditemukan. Muat ulang daftar nama.');
+
+  const terpisah = cfg.mode_keterampilan === 'terpisah';
+  const mapel = readTable('Mapel').map(m => ({
+    kode: cnStr(m.Kode).toUpperCase(), nama: cnStr(m.Nama), kelompok: cnStr(m.Kelompok).toUpperCase() || 'A',
+    kkm: cnNum(m.KKM) || 75, urut: cnNum(m.Urut) || 99, aktif: cnBool(m.Aktif, true)
+  })).filter(m => m.kode && m.aktif).sort((a, b) => (a.urut - b.urut) || a.nama.localeCompare(b.nama));
+  const nil = {};
+  readTable('Nilai').forEach(r => {
+    const id = cnStr(r.NISN) + '|' + cnStr(r.Kode_Mapel).toUpperCase();
+    nil[id] = {
+      nilai: cnNum(r.Nilai), nilai_k: cnNum(r.Nilai_Keterampilan),
+      kuasai: cnStr(r.Deskripsi_Dikuasai), tingkatkan: cnStr(r.Deskripsi_Ditingkatkan)
+    };
+  });
+
+  const r1 = v => Math.round(v * 10) / 10;
+  const r2 = v => Math.round(v * 100) / 100;
+  const hitung = x => {
+    let total = 0, count = 0, countP = 0;
+    mapel.forEach(m => {
+      const n = nil[cnStr(x.NISN) + '|' + m.kode];
+      const p = n ? n.nilai : null;
+      const k = n ? (terpisah ? n.nilai_k : p) : null;
+      if (p !== null) { total += p; count++; countP++; }
+      if (k !== null) { total += k; count++; }
+    });
+    return { total: r1(total), count: count, countP: countP, average: count ? r2(total / count) : 0 };
+  };
+  const rankIn = list => {
+    const arr = list.map(x => Object.assign({ nisn: cnStr(x.NISN) }, hitung(x)))
+      .sort((a, b) => (b.total - a.total) || (b.average - a.average));
+    let rank = 0;
+    arr.forEach((r, i) => {
+      if (!(i > 0 && r.total === arr[i - 1].total && r.average === arr[i - 1].average)) rank = i + 1;
+      r.rank = rank;
+    });
+    const me = arr.filter(r => r.nisn === cnStr(s.NISN))[0];
+    return { rank: me ? me.rank : 0, dari: arr.length };
+  };
+
+  const kelas = cnStr(s.Kelas).toUpperCase();
+  const tingkat = cnTingkat(kelas);
+  const ringkasan = Object.assign({ jumlahMapel: mapel.length }, hitung(s));
+  const tampilRanking = cnBool(cfg.cek_nilai_ranking, true) !== false;
+  if (tampilRanking) {
+    const rk = rankIn(siswa.filter(x => cnStr(x.Kelas).toUpperCase() === kelas));
+    const rt = rankIn(siswa.filter(x => cnTingkat(x.Kelas) === tingkat));
+    Object.assign(ringkasan, { rankKelas: rk.rank, jumlahKelas: rk.dari, rankTingkat: rt.rank, jumlahTingkat: rt.dari, tingkat: tingkat });
+  }
+  const kel = readTable('Kelas').filter(k => cnStr(k.Kelas).toUpperCase() === kelas)[0] || {};
+  const pel = readTable('Pelengkap').filter(p => cnStr(p.NISN) === cnStr(s.NISN))[0];
+  const amb = readTable('Pengambilan').filter(p => cnStr(p.NISN) === cnStr(s.NISN))[0];
+  const keys = ['nama_sekolah', 'semester', 'tahun_ajaran', 'predikat_a', 'predikat_b', 'predikat_c', 'kata_a', 'kata_b', 'kata_c', 'kata_d',
+    'format_deskripsi', 'mode_keterampilan', 'sikap_spiritual_predikat', 'sikap_spiritual_deskripsi', 'sikap_sosial_predikat',
+    'sikap_sosial_deskripsi', 'ekskul_deskripsi_default'];
+  const outCfg = {};
+  keys.forEach(k => { if (cfg[k] !== undefined) outCfg[k] = cfg[k]; });
+
+  return {
+    siswa: { nisn: cnStr(s.NISN), nis: nis, nama: cnStr(s.Nama).toUpperCase(), kelas: kelas, jk: cnStr(s.JK).toUpperCase() },
+    wali: cnStr(kel.Wali_Kelas),
+    config: outCfg,
+    mapel: mapel.map(m => {
+      const n = nil[cnStr(s.NISN) + '|' + m.kode];
+      return {
+        kode: m.kode, nama: m.nama, kelompok: m.kelompok, kkm: m.kkm,
+        nilai: n ? n.nilai : null, nilai_k: n && terpisah ? n.nilai_k : null,
+        kuasai: n ? n.kuasai : '', tingkatkan: n ? n.tingkatkan : ''
+      };
+    }),
+    ringkasan: ringkasan,
+    tampilRanking: tampilRanking,
+    pelengkap: pel ? {
+      sp_pred: cnStr(pel.Spiritual_Predikat), sp_desk: cnStr(pel.Spiritual_Deskripsi),
+      so_pred: cnStr(pel.Sosial_Predikat), so_desk: cnStr(pel.Sosial_Deskripsi),
+      ek1: cnStr(pel.Ekskul1), ek1_nilai: cnStr(pel.Ekskul1_Nilai), ek1_desk: cnStr(pel.Ekskul1_Deskripsi),
+      ek2: cnStr(pel.Ekskul2), ek2_nilai: cnStr(pel.Ekskul2_Nilai), ek2_desk: cnStr(pel.Ekskul2_Deskripsi),
+      sakit: cnStr(pel.Sakit), izin: cnStr(pel.Izin), alpa: cnStr(pel.Alpa),
+      keputusan: cnStr(pel.Keputusan), catatan: cnStr(pel.Catatan_Wali)
+    } : null,
+    pengambilan: amb && cnStr(amb.Status) === 'Sudah'
+      ? { status: 'Sudah', tanggal: cnStr(amb.Tanggal), pengambil: cnStr(amb.Pengambil), hubungan: cnStr(amb.Hubungan) }
+      : { status: 'Belum' },
+    serverTime: new Date().toISOString()
+  };
 }
 
 function log(user, role, aksi, detail) {

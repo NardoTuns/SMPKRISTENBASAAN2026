@@ -3,13 +3,14 @@
  * Data nilai disimpan terpisah di localStorage oleh aplikasi.
  * Naikkan CACHE_VERSION setiap kali file aplikasi diperbarui.
  */
-const CACHE_VERSION = 'eraport-v3.0.0';
+const CACHE_VERSION = 'eraport-v3.1.0';
 
 const APP_SHELL = [
   './',
   'index.html',
   'guru.html',
   'admin.html',
+  'Cek_Nilai.html',
   'manifest.json',
   'css/app.css',
   'css/admin.css',
@@ -25,6 +26,9 @@ const APP_SHELL = [
   'js/admin/data.js',
   'js/admin/excel.js',
   'js/admin/settings.js',
+  'js/admin/peringkat.js',
+  'js/admin/pengambilan.js',
+  'js/cek_nilai.js',
   'assets/logo_left.png',
   'assets/logo_right.png',
   'assets/vendor/xlsx-style.bundle.js',

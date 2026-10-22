@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Angry HOTS Academy - Asesmen Interaktif</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@600;800&display=swap"
+        rel="stylesheet">
+    <!-- Library QR Code (dengan Fallback Canvas Otomatis jika 100% Offline) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --sky-top: #38bdf8;
+            --sky-bottom: #bae6fd;
+            --wood-dark: #5c3a21;
+            --wood-mid: #8b5a2b;
+            --wood-light: #cd853f;
+            --wood-cream: #fef3c7;
+            --red-bird: #ef4444;
+            --red-dark: #b91c1c;
+            --yellow-bird: #facc15;
+            --green-pig: #22c55e;
+            --green-dark: #15803d;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 75%, #4ade80 75%, #16a34a 100%);
+            background-attachment: fixed;
+            color: #291708;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        .cartoon-font {
+            font-family: 'Fredoka', 'Comic Sans MS', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        /* Dekorasi Awan Bergerak */
+        .clouds {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 220px;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50px;
+            filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.08));
+            animation: floatCloud linear infinite;
+        }
+
+        @keyframes floatCloud {
+            from {
+                transform: translateX(-200px);
+            }
+
+            to {
+                transform: translateX(110vw);
+            }
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* Papan Kayu ala Angry Birds */
+        .wood-panel {
+            background: var(--wood-cream);
+            border: 6px solid var(--wood-mid);
+            border-radius: 24px;
+            box-shadow:
+                0 10px 0 var(--wood-dark),
+                0 16px 25px rgba(0, 0, 0, 0.35),
+                inset 0 0 0 4px var(--wood-light);
+            padding: 22px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .wood-header {
+            background: linear-gradient(180deg, #d97706 0%, #92400e 100%);
+            color: #fff;
+            text-shadow: 2px 3px 0 #451a03;
+            border: 5px solid #451a03;
+            border-radius: 18px;
+            padding: 12px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 7px 0 #451a03;
+            margin-bottom: 20px;
+        }
+
+        /* Tombol Kartun Interaktif */
+        .btn-bird {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            padding: 12px 22px;
+            border-radius: 16px;
+            border: 4px solid #3b0707;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-bird:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #3b0707 !important;
+        }
+
+        .btn-red {
+            background: linear-gradient(180deg, #f87171 0%, var(--red-bird) 50%, var(--red-dark) 100%);
+            box-shadow: 0 6px 0 #450a0a;
+        }
+
+        .btn-green {
+            background: linear-gradient(180deg, #4ade80 0%, var(--green-pig) 50%, var(--green-dark) 100%);
+            border-color: #052e16;
+            box-shadow: 0 6px 0 #052e16;
+        }
+
+        .btn-yellow {
+            background: linear-gradient(180deg, #fef08a 0%, var(--yellow-bird) 50%, #ca8a04 100%);
+            color: #422006;
+            text-shadow: none;
+            border-color: #422006;
+            box-shadow: 0 6px 0 #422006;
+        }
+
+        .btn-blue {
+            background: linear-gradient(180deg, #60a5fa 0%, #2563eb 50%, #1d4ed8 100%);
+            border-color: #172554;
+            box-shadow: 0 6px 0 #172554;
+        }
+
+        /* Grid & Kartu */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            border: 2px solid #291708;
+        }
+
+        .badge-hots {
+            background: #ef4444;
+            color: white;
+        }
+
+        .badge-type {
+            background: #facc15;
+            color: #3b1905;
+        }
+
+        /* Kotak Simulasi */
+        .sim-box {
+            background: linear-gradient(180deg, #7dd3fc 0%, #e0f2fe 78%, #86efac 78%, #22c55e 100%);
+            border: 4px solid var(--wood-dark);
+            border-radius: 18px;
+            padding: 14px;
+            margin: 14px 0;
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        canvas.sim-canvas {
+            width: 100%;
+            max-width: 720px;
+            height: 270px;
+            display: block;
+            margin: 0 auto;
+            background: transparent;
+            border-radius: 12px;
+            touch-action: none;
+        }
+
+        .sim-controls {
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid var(--wood-mid);
+            border-radius: 14px;
+            padding: 12px;
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 160px;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            accent-color: var(--red-bird);
+            height: 8px;
+            cursor: pointer;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 3px solid var(--wood-mid);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            background: #fffbeb;
+            user-select: text;
+        }
+
+        /* Pilihan Ganda */
+        .option-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            border: 4px solid var(--wood-mid);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .option-btn:hover {
+            background: #fef9c3;
+            transform: translateX(4px);
+        }
+
+        .option-btn.selected {
+            background: #fde047;
+            border-color: #b91c1c;
+            box-shadow: 0 4px 0 #b91c1c;
+        }
+
+        /* Mencocokkan (Matching) */
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 12px;
+        }
+
+        .match-item {
+            background: #fff;
+            border: 3px solid var(--wood-mid);
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .match-item.active {
+            background: #fde047;
+            border-color: #dc2626;
+            transform: scale(1.02);
+        }
+
+        .match-item.paired {
+            background: #dcfce7;
+            border-color: #15803d;
+        }
+
+        /* Avatar Selector */
+        .avatar-list {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            margin: 14px 0;
+            flex-wrap: wrap;
+        }
+
+        .avatar-card {
+            width: 82px;
+            height: 82px;
+            border-radius: 50%;
+            border: 4px solid var(--wood-mid);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .avatar-card.selected {
+            border-color: var(--red-bird);
+            background: #fef08a;
+            transform: scale(1.12);
+            box-shadow: 0 6px 0 var(--red-dark);
+        }
+
+        /* Tabel Leaderboard IFP */
+        table.ifp-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        table.ifp-table th {
+            background: var(--wood-mid);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            border-radius: 8px;
+        }
+
+        table.ifp-table td {
+            background: #fff;
+            padding: 12px;
+            font-weight: 800;
+            border-top: 3px solid var(--wood-light);
+            border-bottom: 3px solid var(--wood-light);
+        }
+
+        .stars {
+            font-size: 1.5rem;
+            color: #facc15;
+            text-shadow: 1px 2px 0 #713f12;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+        }
+
+        .modal-content {
+            max-width: 760px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 640px) {
+            .match-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .wood-header {
+                text-align: center;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Dekorasi Awan -->
+    <div class="clouds">
+        <div class="cloud" style="width:140px;height:45px;top:30px;animation-duration:28s;"></div>
+        <div class="cloud" style="width:200px;height:60px;top:90px;animation-duration:38s;animation-delay:-12s;"></div>
+        <div class="cloud" style="width:120px;height:40px;top:150px;animation-duration:22s;animation-delay:-6s;"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="wood-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:2.4rem;">🐦🎯</span>
+                <div>
+                    <h1 style="margin:0;font-size:1.65rem;">ANGRY HOTS ACADEMY</h1>
+                    <small style="font-weight:700;color:#fde68a;">Asesmen Interaktif Berbasis Simulasi & AI</small>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-bird btn-yellow" onclick="switchMode('teacher')">🖥️ Dashboard Guru / IFP</button>
+                <button class="btn-bird btn-red" onclick="switchMode('student')">📱 Mode Siswa / Kerjakan</button>
+                <button class="btn-bird btn-blue" onclick="openQuestionManager()">➕ Tambah / JSON Soal</button>
+            </div>
+        </header>
+
+        <!-- ========================================== -->
+        <!-- 1. TAMPILAN DASHBOARD GURU & LAYAR IFP     -->
+        <!-- ========================================== -->
+        <section id="view-teacher">
+            <div class="grid-2">
+                <!-- Panel Barcode & Server Info -->
+                <div class="wood-panel" style="text-align:center;">
+                    <h2 style="margin-top:0;">📡 KONEKSI KELAS & BARCODE SISWA</h2>
+                    <p style="font-weight:700;margin-bottom:12px;">
+                        Scan QR Code di bawah menggunakan HP Siswa atau buka alamat IP di browser HP:
+                    </p>
+
+                    <div
+                        style="background:#fff;padding:16px;border-radius:18px;border:4px solid var(--wood-mid);display:inline-block;margin-bottom:12px;">
+                        <div id="qrcode-box"></div>
+                        <canvas id="qrcode-fallback" width="200" height="200" class="hidden"></canvas>
+                    </div>
+
+                    <div style="margin:10px 0;">
+                        <label style="font-weight:800;font-size:0.9rem;">URL / IP Server Laptop Guru (Bisa
+                            Diedit):</label>
+                        <div style="display:flex;gap:8px;margin-top:6px;">
+                            <input type="text" id="server-url-input" value="" onchange="updateQRCode()" />
+                            <button class="btn-bird btn-green" onclick="updateQRCode()">🔄 Update QR</button>
+                        </div>
+                        <small id="server-status-badge"
+                            style="display:block;margin-top:8px;font-weight:800;color:#15803d;">
+                            ✅ Siap digunakan di IFP, LAN Offline, maupun GitHub Pages
+                        </small>
+                    </div>
+
+                    <hr style="border:2px dashed var(--wood-mid);margin:16px 0;" />
+
+                    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                        <button class="btn-bird btn-red" style="font-size:1.15rem;" onclick="startOnIFP()">
+                            🖐️ Siswa Buat Langsung di Layar IFP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel Pengaturan AI & Hasil Live -->
+                <div class="wood-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <h2 style="margin:0;">🏆 HASIL LIVE SISWA / KELOMPOK (IFP)</h2>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn-bird btn-yellow" style="padding:8px 12px;font-size:0.85rem;"
+                                onclick="fetchResultsFromServer()">🔄 Refresh</button>
+                            <button class="btn-bird btn-red" style="padding:8px 12px;font-size:0.85rem;"
+                                onclick="clearAllResults()">🗑️ Reset</button>
+                        </div>
+                    </div>
+
+                    <div
+                        style="margin:12px 0;background:#fef9c3;padding:10px 14px;border-radius:12px;border:2px solid var(--wood-mid);">
+                        <label style="font-size:0.85rem;font-weight:800;">🔑 Gemini AI API Key (Penilai Otomatis Essay &
+                            Feedback):</label>
+                        <input type="text" id="gemini-api-key" value="AIzaSyBHg7oXPzWtlbDcjUTci_jYlhkMEyb1zBA"
+                            style="margin-top:4px;padding:8px;font-size:0.9rem;" />
+                    </div>
+
+                    <div style="overflow-x:auto;max-height:360px;">
+                        <table class="ifp-table">
+                            <thead>
+                                <tr>
+                                    <th>Tim / Siswa</th>
+                                    <th>Skor</th>
+                                    <th>Bintang</th>
+                                    <th>Waktu</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-body">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;color:#78350f;">
+                                        Belum ada siswa yang mengumpulkan. Silakan scan QR lewat HP atau klik "Kerjakan
+                                        Langsung di IFP"!
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 2. TAMPILAN MODE SISWA (HP / LANGSUNG IFP) -->
+        <!-- ========================================== -->
+        <section id="view-student" class="hidden">
+            <!-- Kartu Login Siswa / Kelompok -->
+            <div id="student-login-card" class="wood-panel" style="max-width:620px;margin:0 auto;text-align:center;">
+                <h2 style="font-size:1.8rem;margin-top:0;">🚀 SIAPKAN KETAPELMU!</h2>
+                <p style="font-weight:700;">Pilih Karakter Burung & Masukkan Nama Siswa atau Kelompok:</p>
+
+                <div class="avatar-list" id="avatar-selector">
+                    <div class="avatar-card selected" onclick="selectAvatar(this, '🐦 Red')">🐦<span
+                            style="font-size:0.75rem;font-weight:800;">Red</span></div>
+                    <div class="avatar-card" onclick="selectAvatar(this, '🐤 Chuck')">🐤<span
+                            style="font-size:0.75rem;font-weight:800;">Chuck</span></div>
+                    <div class="avatar-card" onclick="selectAvatar(this, '💣 Bomb')">💣<span
+                            style="font-size:0.75rem;font-weight:800;">Bomb</span></div>
+                    <div class="avatar-card" onclick="selectAvatar(this, '🦅 Mighty')">🦅<span
+                            style="font-size:0.75rem;font-weight:800;">Mighty</span></div>
+                </div>
+
+                <div style="margin:16px 0;text-align:left;">
+                    <label style="font-weight:800;">Nama Siswa / Nama Kelompok:</label>
+                    <input type="text" id="student-name-input" placeholder="Contoh: Kelompok Elang / Budi Santoso"
+                        style="margin-top:6px;font-size:1.15rem;" />
+                </div>
+
+                <button class="btn-bird btn-green" style="font-size:1.25rem;width:100%;justify-content:center;"
+                    onclick="beginAssessment()">
+                    🎯 MULAI MISI ASESMEN HOTS!
+                </button>
+            </div>
+
+            <!-- Kontainer Soal Asesmen -->
+            <div id="student-quiz-container" class="hidden">
+                <div class="wood-panel"
+                    style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:14px 22px;">
+                    <div>
+                        <span id="active-student-badge" style="font-weight:900;font-size:1.2rem;">🐦 Red - Siswa</span>
+                    </div>
+                    <div id="question-progress-dots" style="display:flex;gap:8px;"></div>
+                </div>
+
+                <!-- Tempat Soal & Simulasi Dirender -->
+                <div id="question-stage"></div>
+
+                <!-- Navigasi Soal -->
+                <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                    <button class="btn-bird btn-yellow" id="btn-prev-q" onclick="navigateQuestion(-1)">⬅️ Soal
+                        Sebelumnya</button>
+                    <button class="btn-bird btn-green" id="btn-next-q" onclick="navigateQuestion(1)">Soal Berikutnya
+                        ➡️</button>
+                    <button class="btn-bird btn-red hidden" id="btn-submit-quiz" onclick="submitAssessment()">🚀 KIRIM &
+                        NILAI DENGAN AI!</button>
+                </div>
+            </div>
+
+            <!-- Kontainer Hasil, Penilaian AI & Kunci Jawaban -->
+            <div id="student-result-container" class="hidden"></div>
+        </section>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL TAMBAH SOAL & GENERATOR JSON/HTML    -->
+    <!-- ========================================== -->
+    <div id="modal-question-manager" class="modal-backdrop hidden">
+        <div class="wood-panel modal-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h2 style="margin:0;">🛠️ KELOLA SOAL (JSON / HTML / PROMPT AI)</h2>
+                <button class="btn-bird btn-red" style="padding:6px 14px;" onclick="closeQuestionManager()">✖
+                    Tutup</button>
+            </div>
+
+            <p style="font-weight:700;margin-top:10px;">
+                Anda dapat menambahkan soal baru menggunakan file <b>.JSON</b>, menempelkan kode JSON dari prompt AI,
+                atau mengunduh paket soal saat ini.
+            </p>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <button class="btn-bird btn-yellow" onclick="copyAIPromptTemplate()">📋 Salin Prompt Pembuat Soal (Untuk
+                    ChatGPT/Gemini)</button>
+                <button class="btn-bird btn-blue" onclick="exportQuestionsJSON()">💾 Download Soal (.JSON)</button>
+                <label class="btn-bird btn-green" style="cursor:pointer;">
+                    📂 Upload File JSON / HTML
+                    <input type="file" accept=".json,.html" style="display:none;"
+                        onchange="importQuestionsFile(event)" />
+                </label>
+            </div>
+
+            <label style="font-weight:800;">Editor JSON Bank Soal (Bisa Diedit / Paste Langsung):</label>
+            <textarea id="json-question-editor" rows="10"
+                style="font-family:monospace;font-size:0.85rem;margin-top:6px;"></textarea>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+                <button class="btn-bird btn-yellow" onclick="resetDefaultQuestions()">🔄 Reset ke 3 Soal
+                    Default</button>
+                <button class="btn-bird btn-green" onclick="saveQuestionsFromEditor()">✅ Terapkan Soal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**************************************************************
+         * 1. EFEK SUARA KARTUN (WEB AUDIO API - 100% OFFLINE)
+         **************************************************************/
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new AudioCtx();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (type === 'launch') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(620, now + 0.35);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.38);
+                    osc.start(now);
+                    osc.stop(now + 0.38);
+                } else if (type === 'hit') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'win') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554, now + 0.12);
+                    osc.frequency.setValueAtTime(659, now + 0.24);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                }
+            } catch (e) { }
+        }
+
+        /**************************************************************
+         * 2. BANK SOAL DEFAULT (3 SOAL HOTS + PARAMETER SIMULASI)
+         **************************************************************/
+        const DEFAULT_QUESTIONS = [
+            {
+                id: "q1",
+                type: "multiple_choice",
+                badge: "SOAL 1 • PILIHAN GANDA (HOTS ANALISIS C4)",
+                title: "Misi Ketapel Parabola: Melewati Benteng Tinggi!",
+                simulationType: "slingshot_parabola",
+                story: "Seekor babi hijau bersembunyi tepat pada jarak <b>80 meter</b> di balik benteng batu setinggi <b>18 meter</b> yang berdiri di titik tengah (jarak 40 meter). Gunakan simulasi ketapel di bawah untuk menguji sudut tembak dan daya lontar!",
+                question: "Berdasarkan uji coba pada simulasi di atas, jika gaya tarik ketapel diatur pada kekuatan <b>72%</b>, mengapa sudut tembak <b>60°</b> berhasil menghancurkan target sedangkan sudut komplemennya (<b>30°</b>) gagal meskipun keduanya memiliki jangkauan horizontal teoritis yang hampir sama?",
+                options: [
+                    "A. Sudut 30° memiliki kecepatan awal total yang lebih kecil dibandingkan sudut 60°.",
+                    "B. Pada sudut 30°, komponen kecepatan vertikal (Vy) terlalu kecil sehingga tinggi maksimum lintasan lebih rendah dari benteng 18 meter.",
+                    "C. Sudut 60° menghilangkan gaya gravitasi bumi saat burung berada di puncak lintasan.",
+                    "D. Sudut 30° menghasilkan waktu tempuh di udara yang lebih lama sehingga kehabisan energi."
+                ],
+                correctAnswer: 1,
+                explanation: "Pada gerak parabola tanpa hambatan udara, sudut 30° dan 60° (sudut komplemen, jumlah 90°) menghasilkan jarak jangkauan horizontal yang sama. Namun tinggi maksimum (H_max = v₀²·sin²θ / 2g) sangat bergantung pada nilai sin(θ). Pada sudut 30°, puncak lintasan tidak mencapai 18 meter sehingga menabrak benteng tengah, sedangkan sudut 60° melambung tinggi melewati benteng."
+            },
+            {
+                id: "q2",
+                type: "matching",
+                badge: "SOAL 2 • MENCOCOKKAN (HOTS EVALUASI C5)",
+                title: "Misi Uji Tumbukan & Material Benteng Pertahanan!",
+                simulationType: "material_impact",
+                story: "Uji kekuatan 3 jenis material benteng (<b>Balok Es</b>, <b>Balok Kayu</b>, dan <b>Balok Batu</b>) dengan menjatuhkan/menembakkan burung berkecepatan berbeda pada simulasi interaktif berikut!",
+                question: "Pasangkanlah skenario rekayasa tumbukan di kolom kiri dengan analisis fisika (Impuls, Momentum, & Struktur) yang paling tepat di kolom kanan! (Klik item Kiri lalu klik pasangannya di Kanan)",
+                pairs: [
+                    {
+                        left: "1. Burung Chuck (massa kecil, kecepatan 2x lipat) menghantam Balok Kayu",
+                        right: "Menghasilkan energi kinetik (½mv²) 4x lebih besar sehingga sanggup mematahkan serat kayu"
+                    },
+                    {
+                        left: "2. Balok Batu tebal diletakkan di atas tiang Balok Es yang tipis",
+                        right: "Titik berat (pusat massa) berada terlalu tinggi dengan penumpu rapuh sehingga mudah runtuh saat alas es pecah"
+                    },
+                    {
+                        left: "3. Bantalan karet/jerami dipasang di depan dinding Benteng Batu",
+                        right: "Memperpanjang selang waktu kontak (Δt) saat tumbukan sehingga gaya impuls (F = Δp/Δt) yang diterima dinding mengecil"
+                    }
+                ],
+                explanation: "1) Energi kinetik sebanding dengan kuadrat kecepatan (v²), sehingga menggandakan kecepatan meningkatkan energi 4 kali lipat. 2) Batu berat di atas es tipis menciptakan ketidakstabilan struktur karena pusat massa tinggi. 3) Bantalan memperbesar Δt sehingga gaya rata-rata tumbukan F berkurang."
+            },
+            {
+                id: "q3",
+                type: "essay",
+                badge: "SOAL 3 • ESSAY HOTS (KREASI & PEMECAHAN MASALAH C6)",
+                title: "Misi Penyelamatan Telur Emas: Ayunan & Angin Lembah!",
+                simulationType: "wind_drop",
+                story: "Burung Matilda berayun pada tali sepanjang <b>L</b> untuk menjatuhkan paket pelindung ke sarang di bawah. Namun, terdapat <b>Angin Lembah</b> yang bertiup kencang ke arah kiri/kanan. Coba ubah kecepatan angin dan massa paket pada simulasi di bawah lalu klik <b>'LEPASKAN PAKET'</b>!",
+                question: "Ketika angin bertiup kencang dari kiri ke kanan (+15 m/s), menjatuhkan paket tepat di atas sarang membuat paket meleset jauh ke kanan. Jelaskan secara ilmiah (1) bagaimana pengaruh kecepatan angin dan massa paket terhadap lintasan jatuh, serta (2) rumuskan strategi waktu pelepasan dan modifikasi massa paket agar tepat sasaran!",
+                rubricKeywords: ["angin", "massa", "inersia", "sebelum", "kiri", "horizontal", "percepatan"],
+                idealAnswer: "1) Angin memberikan gaya dorong horizontal (F_angin). Berdasarkan Hukum II Newton (a = F/m), semakin kecil massa paket, semakin besar percepatan simpangan akibat angin. 2) Strategi agar tepat sasaran: (a) Menambah massa paket untuk memperbesar inersia sehingga tidak mudah terdorong angin, dan (b) Melepaskan paket lebih awal (di sebelah kiri sebelum titik tengah sarang) agar saat terdorong angin horizontal, paket mendarat tepat di sarang.",
+                explanation: "Gerak jatuh paket merupakan perpaduan gerak jatuh bebas vertikal dan gerak dipercepat horizontal akibat gaya dorong angin (a_x = F_angin / m). Memperbesar massa (m) memperkecil percepatan horizontal (a_x), dan melepaskan paket lebih awal mengompensasi pergeseran horizontal."
+            }
+        ];
+
+        let questions = JSON.parse(localStorage.getItem("ANGRY_HOTS_QUESTIONS")) || DEFAULT_QUESTIONS;
+        let currentStudent = { name: "", avatar: "🐦 Red" };
+        let currentQuestionIndex = 0;
+        let studentAnswers = {};
+        let selectedLeftMatch = null;
+        let activeSimAnimFrame = null;
+
+        /**************************************************************
+         * 3. INISIALISASI SERVER URL, QR CODE & LIVE POLLING
+         **************************************************************/
+        window.addEventListener("DOMContentLoaded", () => {
+            initServerInfo();
+            fetchResultsFromServer();
+            // Polling otomatis tiap 4 detik untuk layar IFP
+            setInterval(() => {
+                if (!document.getElementById("view-teacher").classList.contains("hidden")) {
+                    fetchResultsFromServer();
+                }
+            }, 4000);
+        });
+
+        async function initServerInfo() {
+            const urlInput = document.getElementById("server-url-input");
+            let detectedUrl = window.location.href.split("?")[0];
+
+            // Coba cek apakah berjalan di atas server.js lokal
+            try {
+                const res = await fetch("/api/info");
+                if (res.ok) {
+                    const data = await res.json();
+                    detectedUrl = data.url + "?mode=student";
+                    document.getElementById("server-status-badge").innerHTML =
+                        `🟢 <b>Server Lokal Aktif!</b> HP Siswa di Wi-Fi/Hotspot yang sama bisa langsung scan QR (${data.ip}:${data.port})`;
+                } else {
+                    detectedUrl += "?mode=student";
+                }
+            } catch (e) {
+                detectedUrl += "?mode=student";
+            }
+
+            urlInput.value = detectedUrl;
+            updateQRCode();
+
+            // Jika dibuka dengan parameter ?mode=student (dari scan HP siswa), langsung masuk mode siswa
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("mode") === "student") {
+                switchMode("student");
+            }
+        }
+
+        function updateQRCode() {
+            const url = document.getElementById("server-url-input").value.trim();
+            const qrBox = document.getElementById("qrcode-box");
+            const fallbackCanvas = document.getElementById("qrcode-fallback");
+            qrBox.innerHTML = "";
+
+            if (typeof QRCode !== "undefined") {
+                fallbackCanvas.classList.add("hidden");
+                qrBox.classList.remove("hidden");
+                new QRCode(qrBox, {
+                    text: url,
+                    width: 190,
+                    height: 190,
+                    colorDark: "#291708",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } else {
+                // Fallback visual jika 100% offline tanpa cache CDN
+                qrBox.classList.add("hidden");
+                fallbackCanvas.classList.remove("hidden");
+                drawOfflineNoticeQR(fallbackCanvas, url);
+            }
+        }
+
+        function drawOfflineNoticeQR(canvas, url) {
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, 200, 200);
+            ctx.strokeStyle = "#5c3a21";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(6, 6, 188, 188);
+            ctx.fillStyle = "#291708";
+            ctx.font = "bold 14px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("BUKA DI BROWSER HP:", 100, 65);
+            ctx.fillStyle = "#b91c1c";
+            ctx.font = "bold 13px monospace";
+            const cleanUrl = url.replace("?mode=student", "");
+            ctx.fillText(cleanUrl, 100, 105);
+            ctx.fillStyle = "#15803d";
+            ctx.font = "bold 12px sans-serif";
+            ctx.fillText("(Wi-Fi / Hotspot Sama)", 100, 145);
+        }
+
+        function switchMode(mode) {
+            if (activeSimAnimFrame) cancelAnimationFrame(activeSimAnimFrame);
+            document.getElementById("view-teacher").classList.toggle("hidden", mode !== "teacher");
+            document.getElementById("view-student").classList.toggle("hidden", mode !== "student");
+            if (mode === "teacher") fetchResultsFromServer();
+        }
+
+        function startOnIFP() {
+            switchMode("student");
+            document.getElementById("student-name-input").focus();
+        }
+
+        function selectAvatar(el, avatarName) {
+            document.querySelectorAll(".avatar-card").forEach(c => c.classList.remove("selected"));
+            el.classList.add("selected");
+            currentStudent.avatar = avatarName;
+            playSound("hit");
+        }
+
+        /**************************************************************
+         * 4. ALUR PENGERJAAN SOAL & SIMULASI INTERAKTIF
+         **************************************************************/
+        function beginAssessment() {
+            const nameVal = document.getElementById("student-name-input").value.trim();
+            if (!nameVal) {
+                alert("Masukkan Nama Siswa atau Nama Kelompok terlebih dahulu!");
+                return;
+            }
+            currentStudent.name = nameVal;
+            currentQuestionIndex = 0;
+            studentAnswers = {};
+
+            document.getElementById("student-login-card").classList.add("hidden");
+            document.getElementById("student-result-container").classList.add("hidden");
+            document.getElementById("student-quiz-container").classList.remove("hidden");
+            document.getElementById("active-student-badge").textContent = `${currentStudent.avatar} • ${currentStudent.name}`;
+
+            playSound("launch");
+            renderCurrentQuestion();
+        }
+
+        function renderCurrentQuestion() {
+            if (activeSimAnimFrame) cancelAnimationFrame(activeSimAnimFrame);
+            const q = questions[currentQuestionIndex];
+            const stage = document.getElementById("question-stage");
+
+            // Update indikator progres
+            const dots = document.getElementById("question-progress-dots");
+            dots.innerHTML = questions.map((item, idx) => `
+        <span style="padding:6px 14px;border-radius:12px;font-weight:900;border:3px solid #451a03;background:${idx === currentQuestionIndex ? '#facc15' : (studentAnswers[item.id] !== undefined ? '#4ade80' : '#fff')}">
+          Soal ${idx + 1}
+        </span>
+      `).join("");
+
+            // Tampilan Input Jawaban sesuai tipe soal
+            let answerInputHTML = "";
+            if (q.type === "multiple_choice") {
+                const saved = studentAnswers[q.id];
+                answerInputHTML = `<div style="margin-top:14px;">` +
+                    q.options.map((opt, idx) => `
+            <button class="option-btn ${saved === idx ? 'selected' : ''}" onclick="selectMCOption('${q.id}', ${idx})">
+              ${opt}
+            </button>
+          `).join("") + `</div>`;
+            } else if (q.type === "matching") {
+                const savedPairs = studentAnswers[q.id] || {};
+                // Acak urutan kanan secara konsisten
+                const rightItems = q.pairs.map((p, i) => ({ text: p.right, origIdx: i })).reverse();
+                answerInputHTML = `
+          <div class="match-grid">
+            <div>
+              <h4 style="margin:4px 0;">📌 Skenario (Klik dulu):</h4>
+              ${q.pairs.map((p, lIdx) => {
+                    const isPaired = savedPairs[lIdx] !== undefined;
+                    return `<div class="match-item ${selectedLeftMatch === lIdx ? 'active' : ''} ${isPaired ? 'paired' : ''}" onclick="clickLeftMatch('${q.id}',${lIdx})">
+                  ${p.left}${isPaired ? `<br><small style="color:#15803d;">✅ Terpasang ke Analisis #${savedPairs[lIdx] + 1}</small>` : ''}
+                </div>`;
+                }).join("")}
+            </div>
+            <div>
+              <h4 style="margin:4px 0;">🔬 Analisis HOTS (Klik pasangan):</h4>
+              ${rightItems.map((rItem, displayIdx) => `
+                <div class="match-item" onclick="clickRightMatch('${q.id}', ${rItem.origIdx},${displayIdx})">
+                  <b>[Analisis #${displayIdx + 1}]</b>${rItem.text}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+            } else if (q.type === "essay") {
+                const savedText = studentAnswers[q.id] || "";
+                answerInputHTML = `
+          <div style="margin-top:14px;">
+            <label style="font-weight:800;">✍️ Tuliskan Analisis & Solusi HOTS Kamu:</label>
+            <textarea rows="5" placeholder="Ketik alasan ilmiah dan solusi rekayasamu di sini..." oninput="saveEssayAnswer('${q.id}', this.value)" style="margin-top:8px;">${savedText}</textarea>
+          </div>
+        `;
+            }
+
+            stage.innerHTML = `
+        <div class="wood-panel">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="badge badge-hots">🔥 HOTS LEVEL</span>
+            <span class="badge badge-type">${q.badge}</span>
+          </div>
+          <h2 style="margin:6px 0 10px 0;">${q.title}</h2>
+          <p style="font-size:1.05rem;line-height:1.5;margin:0 0 12px 0;">${q.story}</p>
+
+          <!-- AREA SIMULASI INTERAKTIF -->
+          <div class="sim-box">
+            <canvas id="sim-canvas" class="sim-canvas" width="700" height="260"></canvas>
+            <div id="sim-controls" class="sim-controls"></div>
+          </div>
+
+          <div style="background:#fffbeb;border:3px solid var(--wood-mid);border-radius:16px;padding:16px;margin-top:14px;">
+            <h3 style="margin-top:0;color:#9a3412;">❓ Pertanyaan HOTS:</h3>
+            <p style="font-size:1.08rem;font-weight:700;line-height:1.5;">${q.question}</p>
+            ${answerInputHTML}
+          </div>
+        </div>
+      `;
+
+            // Tombol Navigasi
+            document.getElementById("btn-prev-q").style.visibility = currentQuestionIndex === 0 ? "hidden" : "visible";
+            const isLast = currentQuestionIndex === questions.length - 1;
+            document.getElementById("btn-next-q").classList.toggle("hidden", isLast);
+            document.getElementById("btn-submit-quiz").classList.toggle("hidden", !isLast);
+
+            // Inisialisasi Simulasi sesuai soal
+            initSimulation(q.simulationType || "slingshot_parabola");
+        }
+
+        function selectMCOption(qId, optIdx) {
+            studentAnswers[qId] = optIdx;
+            playSound("hit");
+            renderCurrentQuestion();
+        }
+
+        function clickLeftMatch(qId, lIdx) {
+            selectedLeftMatch = lIdx;
+            playSound("hit");
+            renderCurrentQuestion();
+        }
+
+        function clickRightMatch(qId, origRightIdx, displayIdx) {
+            if (selectedLeftMatch === null) {
+                alert("Klik salah satu Skenario di sebelah Kiri terlebih dahulu!");
+                return;
+            }
+            if (!studentAnswers[qId]) studentAnswers[qId] = {};
+            studentAnswers[qId][selectedLeftMatch] = displayIdx;
+            studentAnswers[qId + "_map"] = studentAnswers[qId + "_map"] || {};
+            studentAnswers[qId + "_map"][selectedLeftMatch] = origRightIdx;
+            selectedLeftMatch = null;
+            playSound("win");
+            renderCurrentQuestion();
+        }
+
+        function saveEssayAnswer(qId, val) {
+            studentAnswers[qId] = val;
+        }
+
+        function navigateQuestion(dir) {
+            currentQuestionIndex += dir;
+            selectedLeftMatch = null;
+            renderCurrentQuestion();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        /**************************************************************
+         * 5. ENGINE 3 SIMULASI INTERAKTIF (HTML5 CANVAS)
+         **************************************************************/
+        function initSimulation(simType) {
+            const canvas = document.getElementById("sim-canvas");
+            const controls = document.getElementById("sim-controls");
+            if (!canvas || !controls) return;
+            const ctx = canvas.getContext("2d");
+
+            // ==========================================================
+            // SIMULASI 1: KETAPEL PARABOLA ANGRY BIRDS
+            // ==========================================================
+            if (simType === "slingshot_parabola") {
+                controls.innerHTML = `
+          <div class="control-group">
+            <label>📐 Sudut Tembak: <span id="lbl-angle">60</span>°</label>
+            <input type="range" id="sim-angle" min="15" max="75" value="60" oninput="document.getElementById('lbl-angle').textContent=this.value" />
+          </div>
+          <div class="control-group">
+            <label>💪 Kekuatan Ketapel: <span id="lbl-power">72</span>%</label>
+            <input type="range" id="sim-power" min="30" max="100" value="72" oninput="document.getElementById('lbl-power').textContent=this.value" />
+          </div>
+          <button class="btn-bird btn-red" id="btn-fire-bird">🚀 LUNCURKAN BURUNG!</button>
+          <div id="sim1-telemetry" style="font-weight:800;font-size:0.9rem;color:#1e3a8a;width:100%;text-align:center;">
+            Ubah sudut ke 30° lalu 60° pada kekuatan 72% untuk membandingkan lintasan!
+          </div>
+        `;
+
+                let bird = { x: 80, y: 200, vx: 0, vy: 0, flying: false, trail: [], hitStatus: "" };
+                const wallX = 350, wallH = 95; // Representasi tinggi 18m di tengah (40m)
+                const pigX = 610, pigY = 205;  // Representasi target di jarak 80m
+
+                function drawScene1() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Tanah
+                    ctx.fillStyle = "#15803d";
+                    ctx.fillRect(0, 220, canvas.width, 40);
+
+                    // Ketapel Kayu
+                    ctx.strokeStyle = "#5c3a21";
+                    ctx.lineWidth = 7;
+                    ctx.beginPath();
+                    ctx.moveTo(80, 220); ctx.lineTo(80, 185);
+                    ctx.moveTo(80, 195); ctx.lineTo(70, 175);
+                    ctx.moveTo(80, 195); ctx.lineTo(90, 175);
+                    ctx.stroke();
+
+                    // Benteng Penghalang (Jarak 40m, Tinggi 18m)
+                    ctx.fillStyle = "#64748b";
+                    ctx.strokeStyle = "#334155";
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(wallX - 12, 220 - wallH, 24, wallH);
+                    ctx.strokeRect(wallX - 12, 220 - wallH, 24, wallH);
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 11px sans-serif";
+                    ctx.fillText("Benteng 18m", wallX - 34, 220 - wallH - 6);
+
+                    // Target Babi Hijau (Jarak 80m)
+                    ctx.font = "28px sans-serif";
+                    ctx.fillText(bird.hitStatus === "WIN" ? "💥" : "🐷", pigX - 14, pigY + 8);
+                    ctx.fillStyle = "#1e293b";
+                    ctx.font = "bold 11px sans-serif";
+                    ctx.fillText("Target 80m", pigX - 28, 236);
+
+                    // Jejak Lintasan Parabola
+                    ctx.fillStyle = "rgba(255,255,255,0.85)";
+                    bird.trail.forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+
+                    // Gambar Burung
+                    ctx.font = "26px sans-serif";
+                    ctx.fillText("🐦", bird.x - 13, bird.y + 9);
+
+                    if (bird.flying) {
+                        bird.x += bird.vx;
+                        bird.y += bird.vy;
+                        bird.vy += 0.24; // Gravitasi
+                        if (bird.trail.length === 0 || Math.hypot(bird.x - bird.trail[bird.trail.length - 1].x, bird.y - bird.trail[bird.trail.length - 1].y) > 14) {
+                            bird.trail.push({ x: bird.x, y: bird.y });
+                        }
+
+                        // Cek Tabrakan dengan Benteng Tengah
+                        if (bird.x > wallX - 16 && bird.x < wallX + 16 && bird.y > 220 - wallH) {
+                            bird.flying = false;
+                            bird.hitStatus = "WALL";
+                            playSound("hit");
+                            document.getElementById("sim1-telemetry").innerHTML =
+                                `❌ <b>GAGAL!</b> Burung menabrak Benteng Tengah karena tinggi puncak lintasan tidak mencapai 18 meter!`;
+                        }
+                        // Cek Mengenai Target Babi
+                        else if (Math.hypot(bird.x - pigX, bird.y - pigY) < 28) {
+                            bird.flying = false;
+                            bird.hitStatus = "WIN";
+                            playSound("win");
+                            document.getElementById("sim1-telemetry").innerHTML =
+                                `🎯 <b>TEPAT SASARAN!</b> Lintasan melambung melewati benteng 18m dan menghancurkan target di 80m!`;
+                        }
+                        // Cek Jatuh ke Tanah
+                        else if (bird.y >= 210 || bird.x > canvas.width) {
+                            bird.flying = false;
+                            playSound("hit");
+                            const estDist = Math.round(((bird.x - 80) / (pigX - 80)) * 80);
+                            document.getElementById("sim1-telemetry").innerHTML =
+                                `📍 Burung mendarat pada jarak sekitar <b>${estDist} meter</b>.`;
+                        }
+                    }
+
+                    activeSimAnimFrame = requestAnimationFrame(drawScene1);
+                }
+
+                document.getElementById("btn-fire-bird").onclick = () => {
+                    const deg = parseFloat(document.getElementById("sim-angle").value);
+                    const power = parseFloat(document.getElementById("sim-power").value);
+                    const rad = (deg * Math.PI) / 180;
+                    const speed = power * 0.16;
+                    bird = {
+                        x: 80,
+                        y: 195,
+                        vx: Math.cos(rad) * speed,
+                        vy: -Math.sin(rad) * speed,
+                        flying: true,
+                        trail: [],
+                        hitStatus: ""
+                    };
+                    playSound("launch");
+                };
+
+                drawScene1();
+            }
+
+            // ==========================================================
+            // SIMULASI 2: UJI TUMBUKAN & STRUKTUR MATERIAL
+            // ==========================================================
+            else if (simType === "material_impact") {
+                controls.innerHTML = `
+          <div class="control-group">
+            <label>🐦 Kecepatan Burung: <span id="lbl-vel">2x</span> Lipat</label>
+            <input type="range" id="sim-vel" min="1" max="3" step="0.5" value="2" oninput="document.getElementById('lbl-vel').textContent=this.value+'x'" />
+          </div>
+          <div class="control-group">
+            <label>🧱 Struktur Target:</label>
+            <select id="sim-struct">
+              <option value="wood">Balok Kayu Standar</option>
+              <option value="ice_stone">Batu Berat di Atas Es Tipis</option>
+              <option value="padded_stone">Benteng Batu + Bantalan Karet</option>
+            </select>
+          </div>
+          <button class="btn-bird btn-red" id="btn-test-impact">💥 UJI TUMBUKAN!</button>
+          <div id="sim2-telemetry" style="font-weight:800;font-size:0.9rem;color:#1e3a8a;width:100%;text-align:center;">
+            Amati bagaimana Energi Kinetik (½mv²) dan waktu kontak (Δt) memengaruhi kerusakan benteng!
+          </div>
+        `;
+
+                let proj = { x: 90, y: 175, vx: 0, active: false, collapsed: false };
+
+                function drawScene2() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "#15803d";
+                    ctx.fillRect(0, 220, canvas.width, 40);
+
+                    const structEl = document.getElementById("sim-struct");
+                    const mode = structEl ? structEl.value : "wood";
+
+                    // Gambar Struktur di X = 480
+                    if (!proj.collapsed) {
+                        if (mode === "wood") {
+                            ctx.fillStyle = "#b45309";
+                            ctx.fillRect(470, 120, 35, 100);
+                            ctx.fillStyle = "#fff";
+                            ctx.font = "bold 12px sans-serif";
+                            ctx.fillText("Balok Kayu", 455, 110);
+                        } else if (mode === "ice_stone") {
+                            ctx.fillStyle = "#38bdf8";
+                            ctx.fillRect(478, 175, 18, 45); // Es tipis di bawah
+                            ctx.fillStyle = "#475569";
+                            ctx.fillRect(450, 110, 75, 65); // Batu besar di atas
+                            ctx.fillStyle = "#fff";
+                            ctx.font = "bold 12px sans-serif";
+                            ctx.fillText("Batu di atas Es Tipis", 435, 100);
+                        } else {
+                            ctx.fillStyle = "#facc15";
+                            ctx.fillRect(455, 130, 15, 90); // Bantalan Karet
+                            ctx.fillStyle = "#475569";
+                            ctx.fillRect(470, 120, 45, 100); // Benteng Batu
+                            ctx.fillStyle = "#fff";
+                            ctx.font = "bold 12px sans-serif";
+                            ctx.fillText("Batu + Bantalan Δt", 440, 110);
+                        }
+                    } else {
+                        ctx.font = "36px sans-serif";
+                        ctx.fillText("💥🪵🧱🐷", 445, 212);
+                    }
+
+                    // Gambar Burung Chuck
+                    ctx.font = "30px sans-serif";
+                    ctx.fillText("🐤", proj.x - 15, proj.y + 10);
+
+                    if (proj.active) {
+                        proj.x += proj.vx;
+                        if (proj.x >= 445) {
+                            proj.active = false;
+                            const vMult = parseFloat(document.getElementById("sim-vel").value);
+                            const ekRatio = (vMult * vMult).toFixed(1);
+
+                            if (mode === "wood" && vMult >= 2) {
+                                proj.collapsed = true;
+                                playSound("win");
+                                document.getElementById("sim2-telemetry").innerHTML =
+                                    `💥 <b>HANCUR!</b> Kecepatan ${vMult}x lipat menghasilkan Energi Kinetik <b>${ekRatio}x lipat</b> sehingga mematahkan kayu!`;
+                            } else if (mode === "ice_stone") {
+                                proj.collapsed = true;
+                                playSound("win");
+                                document.getElementById("sim2-telemetry").innerHTML =
+                                    `💥 <b>RUNTUH TOTAL!</b> Titik berat batu terlalu tinggi di atas es rapuh sehingga langsung ambruk!`;
+                            } else if (mode === "padded_stone") {
+                                proj.collapsed = false;
+                                proj.x = 420;
+                                playSound("hit");
+                                document.getElementById("sim2-telemetry").innerHTML =
+                                    `🛡️ <b>TERTAHAN!</b> Bantalan memperbesar waktu kontak (Δt) sehingga gaya tumbukan (F = Δp/Δt) teredam!`;
+                            } else {
+                                proj.collapsed = false;
+                                proj.x = 430;
+                                playSound("hit");
+                                document.getElementById("sim2-telemetry").innerHTML =
+                                    `⚠️ Kecepatan 1x belum cukup. Coba naikkan kecepatan menjadi 2x lipat!`;
+                            }
+                        }
+                    }
+
+                    activeSimAnimFrame = requestAnimationFrame(drawScene2);
+                }
+
+                document.getElementById("btn-test-impact").onclick = () => {
+                    const vMult = parseFloat(document.getElementById("sim-vel").value);
+                    proj = { x: 90, y: 175, vx: 4.5 * vMult, active: true, collapsed: false };
+                    playSound("launch");
+                };
+
+                drawScene2();
+            }
+
+            // ==========================================================
+            // SIMULASI 3: PENYELAMATAN TELUR EMAS & ANGIN LEMBAH
+            // ==========================================================
+            else if (simType === "wind_drop") {
+                controls.innerHTML = `
+          <div class="control-group">
+            <label>💨 Angin Horizontal: <span id="lbl-wind">+15</span> m/s (Kanan)</label>
+            <input type="range" id="sim-wind" min="-15" max="15" step="5" value="15" oninput="document.getElementById('lbl-wind').textContent=(this.value>0?'+'+this.value:this.value)" />
+          </div>
+          <div class="control-group">
+            <label>⚖️ Massa Paket: <span id="lbl-mass">1</span> kg</label>
+            <input type="range" id="sim-mass" min="1" max="5" step="1" value="1" oninput="document.getElementById('lbl-mass').textContent=this.value" />
+          </div>
+          <div class="control-group">
+            <label>📍 Titik Lepas: <span id="lbl-drop-x">Tengah (0m)</span></label>
+            <select id="sim-drop-pos">
+              <option value="350">Tepat di Atas Sarang (Tengah)</option>
+              <option value="250">Lebih Awal di Sebelah Kiri (-10m)</option>
+              <option value="450">Di Sebelah Kanan (+10m)</option>
+            </select>
+          </div>
+          <button class="btn-bird btn-green" id="btn-drop-egg">🥚 LEPASKAN PAKET!</button>
+          <div id="sim3-telemetry" style="font-weight:800;font-size:0.9rem;color:#1e3a8a;width:100%;text-align:center;">
+            Uji bagaimana massa paket & titik pelepasan melawan dorongan angin!
+          </div>
+        `;
+
+                let egg = { x: 350, y: 55, vx: 0, vy: 0, dropping: false, result: "" };
+                const nestX = 350, nestY = 212;
+
+                function drawScene3() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "#15803d";
+                    ctx.fillRect(0, 220, canvas.width, 40);
+
+                    const posSelect = document.getElementById("sim-drop-pos");
+                    const startX = posSelect ? parseFloat(posSelect.value) : 350;
+                    if (!egg.dropping && !egg.result) egg.x = startX;
+
+                    // Indikator Arah Angin
+                    const windVal = parseFloat(document.getElementById("sim-wind")?.value || 15);
+                    ctx.fillStyle = "#0369a1";
+                    ctx.font = "bold 13px sans-serif";
+                    ctx.fillText(`💨 Angin: ${windVal > 0 ? '➡️ +' + windVal : (windVal < 0 ? '⬅️ ' + windVal : 'Tenang 0')} m/s`, 20, 30);
+
+                    // Sarang Target di Tengah (X = 350)
+                    ctx.fillStyle = "#92400e";
+                    ctx.beginPath();
+                    ctx.arc(nestX, nestY, 28, 0, Math.PI);
+                    ctx.fill();
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 11px sans-serif";
+                    ctx.fillText("SARANG TARGET", nestX - 44, 240);
+
+                    // Burung Pembawa di Atas
+                    ctx.font = "28px sans-serif";
+                    ctx.fillText("🦅", startX - 14, 42);
+
+                    // Paket Telur Emas
+                    ctx.font = "24px sans-serif";
+                    ctx.fillText("🥚", egg.x - 12, egg.y + 8);
+
+                    if (egg.dropping) {
+                        const massVal = parseFloat(document.getElementById("sim-mass").value);
+                        // Percepatan horizontal a_x = F_angin / m
+                        const ax = (windVal * 0.012) / massVal;
+                        egg.vx += ax;
+                        egg.vy += 0.18;
+                        egg.x += egg.vx;
+                        egg.y += egg.vy;
+
+                        if (egg.y >= nestY - 6) {
+                            egg.dropping = false;
+                            const distError = Math.round(egg.x - nestX);
+                            if (Math.abs(distError) <= 26) {
+                                egg.result = "WIN";
+                                playSound("win");
+                                document.getElementById("sim3-telemetry").innerHTML =
+                                    `🎉 <b>SEMPURNA!</b> Paket mendarat tepat di dalam sarang (Simpangan hanya ${distError} px)!`;
+                            } else {
+                                egg.result = "MISS";
+                                playSound("hit");
+                                document.getElementById("sim3-telemetry").innerHTML =
+                                    `❌ <b>MELESET!</b> Paket terdorong angin sejauh <b>${distError > 0 ? '+' + distError + ' ke Kanan' : distError + ' ke Kiri'}</b> dari sarang!`;
+                            }
+                        }
+                    }
+
+                    activeSimAnimFrame = requestAnimationFrame(drawScene3);
+                }
+
+                document.getElementById("btn-drop-egg").onclick = () => {
+                    const startX = parseFloat(document.getElementById("sim-drop-pos").value);
+                    egg = { x: startX, y: 55, vx: 0, vy: 0, dropping: true, result: "" };
+                    playSound("launch");
+                };
+
+                drawScene3();
+            }
+        }
+
+        /**************************************************************
+         * 6. PENILAIAN AI (GEMINI API) + KUNCI JAWABAN & SINKRONISASI
+         **************************************************************/
+        async function submitAssessment() {
+            const submitBtn = document.getElementById("btn-submit-quiz");
+            submitBtn.disabled = true;
+            submitBtn.textContent = "⏳ AI SEDANG MENILAI JAWABANMU...";
+
+            let totalScore = 0;
+            let maxScore = questions.length * 100;
+            let details = [];
+
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                const ans = studentAnswers[q.id];
+
+                if (q.type === "multiple_choice") {
+                    const isCorrect = ans === q.correctAnswer;
+                    const qScore = isCorrect ? 100 : 0;
+                    totalScore += qScore;
+                    details.push({
+                        title: q.title,
+                        type: "Pilihan Ganda",
+                        studentAnswer: ans !== undefined ? q.options[ans] : "(Tidak dijawab)",
+                        correctAnswerKey: q.options[q.correctAnswer],
+                        score: qScore,
+                        aiFeedback: isCorrect
+                            ? "Tepat sekali! Kamu memahami hubungan sudut elevasi terhadap tinggi maksimum parabola."
+                            : "Kurang tepat. Perhatikan kembali tinggi maksimum lintasan pada simulasi sudut 30° vs 60°.",
+                        explanation: q.explanation
+                    });
+                } else if (q.type === "matching") {
+                    const mapAns = studentAnswers[q.id + "_map"] || {};
+                    let correctCount = 0;
+                    q.pairs.forEach((p, idx) => {
+                        if (mapAns[idx] === idx) correctCount++;
+                    });
+                    const qScore = Math.round((correctCount / q.pairs.length) * 100);
+                    totalScore += qScore;
+                    details.push({
+                        title: q.title,
+                        type: "Mencocokkan",
+                        studentAnswer: `Benar ${correctCount} dari ${q.pairs.length} pasangan`,
+                        correctAnswerKey: q.pairs.map(p => `• ${p.left} ➔ ${p.right}`).join("<br>"),
+                        score: qScore,
+                        aiFeedback: qScore === 100
+                            ? "Sempurna! Semua pasangan konsep tumbukan dan struktur bangunan tepat."
+                            : `Kamu berhasil mencocokkan ${correctCount} dari ${q.pairs.length} skenario dengan tepat.`,
+                        explanation: q.explanation
+                    });
+                } else if (q.type === "essay") {
+                    const essayText = (ans || "").trim();
+                    const aiEval = await evaluateEssayWithGemini(q, essayText);
+                    totalScore += aiEval.score;
+                    details.push({
+                        title: q.title,
+                        type: "Essay HOTS (Dinilai oleh AI)",
+                        studentAnswer: essayText || "(Kosong)",
+                        correctAnswerKey: q.idealAnswer,
+                        score: aiEval.score,
+                        aiFeedback: aiEval.feedback,
+                        explanation: q.explanation
+                    });
+                }
+            }
+
+            const finalScore = Math.round(totalScore / questions.length);
+            const starsCount = finalScore >= 85 ? 3 : (finalScore >= 60 ? 2 : (finalScore > 0 ? 1 : 0));
+            const starsStr = "⭐".repeat(starsCount) + "☆".repeat(3 - starsCount);
+
+            const resultPayload = {
+                id: "res_" + Date.now(),
+                name: currentStudent.name,
+                avatar: currentStudent.avatar,
+                score: finalScore,
+                stars: starsStr,
+                time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+                details
+            };
+
+            await saveStudentResult(resultPayload);
+            playSound("win");
+            renderStudentResultView(resultPayload);
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = "🚀 KIRIM & NILAI DENGAN AI!";
+        }
+
+        async function evaluateEssayWithGemini(questionObj, studentEssay) {
+            if (!studentEssay || studentEssay.length < 5) {
+                return {
+                    score: 0,
+                    feedback: "Jawaban masih kosong atau terlalu singkat. Pastikan menjelaskan pengaruh angin, massa, dan titik pelepasan."
+                };
+            }
+
+            const apiKey = document.getElementById("gemini-api-key")?.value?.trim() || "AIzaSyBHg7oXPzWtlbDcjUTci_jYlhkMEyb1zBA";
+            const prompt = `Anda adalah guru Fisika/STEM profesional yang menilai jawaban Essay HOTS siswa.
+Pertanyaan: "${questionObj.question}"
+Kunci Jawaban Ideal: "${questionObj.idealAnswer}"
+Jawaban Siswa: "${studentEssay}"
+
+Berikan penilaian dalam format JSON murni tanpa markdown:
+{"score": <angka 0 sampai 100>, "feedback": "<komentar membangun maksimal 2 kalimat Bahasa Indonesia>"}`;
+
+            try {
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+                    if (typeof parsed.score === "number") {
+                        return {
+                            score: Math.min(100, Math.max(0, Math.round(parsed.score))),
+                            feedback: "🤖 [Penilaian Gemini AI]: " + parsed.feedback
+                        };
+                    }
+                }
+            } catch (err) {
+                console.warn("Fallback ke Penilai Rubrik Offline:", err);
+            }
+
+            // Fallback Penilai AI Rubrik Lokal (Jika 100% Offline Tanpa Internet)
+            const keywords = questionObj.rubricKeywords || ["angin", "massa", "kiri", "sebelum"];
+            let matched = 0;
+            const lowerAns = studentEssay.toLowerCase();
+            keywords.forEach(kw => {
+                if (lowerAns.includes(kw.toLowerCase())) matched++;
+            });
+            const wordBonus = studentEssay.split(/\s+/).length >= 15 ? 25 : 10;
+            const calcScore = Math.min(100, Math.round((matched / keywords.length) * 75) + wordBonus);
+            return {
+                score: calcScore,
+                feedback: `🤖 [AI Rubric Grader]: Jawabanmu memuat ${matched} konsep kunci ilmiah. Penjelasan tentang hubungan massa, gaya dorong angin, dan waktu lepas sudah dianalisis dengan baik!`
+            };
+        }
+
+        function renderStudentResultView(result) {
+            document.getElementById("student-quiz-container").classList.add("hidden");
+            const container = document.getElementById("student-result-container");
+            container.classList.remove("hidden");
+
+            container.innerHTML = `
+        <div class="wood-panel" style="text-align:center;">
+          <h1 style="font-size:2.2rem;margin:0;">🎉 MISI SELESAI!</h1>
+          <h2 style="margin:6px 0;color:#b91c1c;">${result.avatar} • ${result.name}</h2>
+          <div style="font-size:3.2rem;margin:8px 0;">${result.stars}</div>
+          <div style="font-size:2.4rem;font-weight:900;background:#fef08a;display:inline-block;padding:10px 28px;border-radius:20px;border:4px solid #451a03;">
+            SKOR AKHIR: ${result.score} / 100
+          </div>
+          <p style="font-weight:800;color:#15803d;margin-top:12px;">
+            ✅ Hasilmu telah otomatis dikirim ke Layar IFP Guru!
+          </p>
+
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+            <button class="btn-bird btn-yellow" onclick="resetForNextStudent()">🔄 Siswa / Kelompok Berikutnya</button>
+            <button class="btn-bird btn-blue" onclick="switchMode('teacher')">🖥️ Lihat Papan Skor di IFP</button>
+          </div>
+        </div>
+
+        <div class="wood-panel">
+          <h2 style="margin-top:0;">🔑 KUNCI JAWABAN, PEMBAHASAN & EVALUASI AI</h2>
+          ${result.details.map((d, idx) => `
+            <div style="background:#fff;border:3px solid var(--wood-mid);border-radius:16px;padding:16px;margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                <h3 style="margin:0;">Soal ${idx + 1}: ${d.title} (${d.type})</h3>
+                <span class="badge" style="background:${d.score >= 75 ? '#4ade80' : '#facc15'};font-size:1rem;">
+                  Skor: ${d.score}/100
+                </span>
+              </div>
+              <p style="margin:8px 0;"><b>Jawabanmu:</b> <br>${d.studentAnswer}</p>
+              <div style="background:#dcfce7;border-left:5px solid #15803d;padding:10px;border-radius:8px;margin:8px 0;">
+                <b>✅ Kunci Jawaban Ideal:</b><br>${d.correctAnswerKey}
+              </div>
+              <div style="background:#e0f2fe;border-left:5px solid #0284c7;padding:10px;border-radius:8px;margin:8px 0;">
+                <b>🤖 Umpan Balik AI:</b><br>${d.aiFeedback}
+              </div>
+              <p style="margin:8px 0 0 0;font-size:0.95rem;color:#451a03;">
+                <b>💡 Pembahasan Konsep:</b> ${d.explanation}
+              </p>
+            </div>
+          `).join("")}
+        </div>
+      `;
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetForNextStudent() {
+            document.getElementById("student-name-input").value = "";
+            document.getElementById("student-result-container").classList.add("hidden");
+            document.getElementById("student-login-card").classList.remove("hidden");
+        }
+
+        /**************************************************************
+         * 7. SINKRONISASI DATA HASIL (SERVER LAN & LOCALSTORAGE)
+         **************************************************************/
+        async function saveStudentResult(resultObj) {
+            // 1. Simpan ke LocalStorage
+            const localList = JSON.parse(localStorage.getItem("ANGRY_HOTS_RESULTS") || "[]");
+            localList.unshift(resultObj);
+            localStorage.setItem("ANGRY_HOTS_RESULTS", JSON.stringify(localList));
+
+            // 2. Kirim ke Server Laptop Guru (jika menggunakan server.js)
+            try {
+                await fetch("/api/results", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(resultObj)
+                });
+            } catch (e) { }
+        }
+
+        async function fetchResultsFromServer() {
+            let results = JSON.parse(localStorage.getItem("ANGRY_HOTS_RESULTS") || "[]");
+            try {
+                const res = await fetch("/api/results");
+                if (res.ok) {
+                    const serverResults = await res.json();
+                    // Gabungkan hasil server & lokal tanpa duplikat ID
+                    const map = new Map();
+                    [...serverResults, ...results].forEach(item => map.set(item.id, item));
+                    results = Array.from(map.values()).sort((a, b) => b.score - a.score);
+                }
+            } catch (e) { }
+
+            renderLeaderboard(results);
+        }
+
+        function renderLeaderboard(results) {
+            const tbody = document.getElementById("leaderboard-body");
+            if (!results || results.length === 0) {
+                tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align:center;color:#78350f;">
+              Belum ada siswa yang mengumpulkan. Silakan scan QR lewat HP atau klik "Siswa Buat Langsung di Layar IFP"!
+            </td>
+          </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = results.map((r, i) => `
+        <tr>
+          <td><span style="font-size:1.2rem;">#${i + 1}</span> ${r.avatar} <b>${r.name}</b></td>
+          <td><span class="badge" style="background:#fde047;font-size:1rem;">${r.score} Poin</span></td>
+          <td><span class="stars">${r.stars}</span></td>
+          <td>${r.time}</td>
+          <td>
+            <button class="btn-bird btn-blue" style="padding:6px 12px;font-size:0.8rem;" onclick='showStudentDetailModal(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+              🔍 Detail
+            </button>
+          </td>
+        </tr>
+      `).join("");
+        }
+
+        function showStudentDetailModal(r) {
+            switchMode("student");
+            document.getElementById("student-login-card").classList.add("hidden");
+            renderStudentResultView(r);
+        }
+
+        async function clearAllResults() {
+            if (!confirm("Yakin ingin mereset seluruh daftar nilai siswa di layar IFP?")) return;
+            localStorage.removeItem("ANGRY_HOTS_RESULTS");
+            try {
+                await fetch("/api/results", { method: "DELETE" });
+            } catch (e) { }
+            fetchResultsFromServer();
+        }
+
+        /**************************************************************
+         * 8. FITUR TAMBAH SOAL (JSON / HTML / PROMPT AI)
+         **************************************************************/
+        function openQuestionManager() {
+            document.getElementById("json-question-editor").value = JSON.stringify(questions, null, 2);
+            document.getElementById("modal-question-manager").classList.remove("hidden");
+        }
+
+        function closeQuestionManager() {
+            document.getElementById("modal-question-manager").classList.add("hidden");
+        }
+
+        function saveQuestionsFromEditor() {
+            try {
+                const raw = document.getElementById("json-question-editor").value.trim();
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed) || parsed.length === 0) {
+                    alert("Format JSON harus berupa Array soal yang valid!");
+                    return;
+                }
+                questions = parsed;
+                localStorage.setItem("ANGRY_HOTS_QUESTIONS", JSON.stringify(questions));
+                alert(`✅ Berhasil menyimpan ${questions.length} soal HOTS!`);
+                closeQuestionManager();
+            } catch (e) {
+                alert("❌ Format JSON tidak valid: " + e.message);
+            }
+        }
+
+        function resetDefaultQuestions() {
+            questions = DEFAULT_QUESTIONS;
+            localStorage.setItem("ANGRY_HOTS_QUESTIONS", JSON.stringify(questions));
+            document.getElementById("json-question-editor").value = JSON.stringify(questions, null, 2);
+            alert("✅ Bank soal dikembalikan ke 3 Soal HOTS Default!");
+        }
+
+        function exportQuestionsJSON() {
+            const blob = new Blob([JSON.stringify(questions, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "soal-angry-hots.json";
+            a.click();
+        }
+
+        function importQuestionsFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const content = e.target.result;
+                // Mendukung file .json murni maupun file .html yang memiliki tag <script id="soal-json">
+                let jsonStr = content;
+                if (file.name.endsWith(".html")) {
+                    const match = content.match(/\[[\s\S]*\]/);
+                    if (match) jsonStr = match[0];
+                }
+                document.getElementById("json-question-editor").value = jsonStr;
+                alert("📂 File berhasil dimuat ke editor! Klik 'Terapkan Soal' untuk menyimpan.");
+            };
+            reader.readAsText(file);
+        }
+
+        function copyAIPromptTemplate() {
+            const promptText = `Buatkan 3 soal HOTS baru (1 Pilihan Ganda, 1 Mencocokkan, 1 Essay) dalam format JSON Array murni untuk aplikasi Angry HOTS Academy saya.
+Gunakan struktur JSON persis seperti berikut:
+[
+  {
+    "id": "q1",
+    "type": "multiple_choice",
+    "badge": "SOAL 1 • PILIHAN GANDA (HOTS C4)",
+    "title": "Judul Soal",
+    "simulationType": "slingshot_parabola",
+    "story": "Cerita pengantar...",
+    "question": "Pertanyaan HOTS...",
+    "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+    "correctAnswer": 0,
+    "explanation": "Pembahasan lengkap..."
+  },
+  {
+    "id": "q2",
+    "type": "matching",
+    "badge": "SOAL 2 • MENCOCOKKAN (HOTS C5)",
+    "title": "Judul Soal",
+    "simulationType": "material_impact",
+    "story": "Cerita pengantar...",
+    "question": "Instruksi mencocokkan...",
+    "pairs": [
+      {"left": "Pernyataan 1", "right": "Pasangan 1"},
+      {"left": "Pernyataan 2", "right": "Pasangan 2"},
+      {"left": "Pernyataan 3", "right": "Pasangan 3"}
+    ],
+    "explanation": "Pembahasan..."
+  },
+  {
+    "id": "q3",
+    "type": "essay",
+    "badge": "SOAL 3 • ESSAY HOTS (C6)",
+    "title": "Judul Soal",
+    "simulationType": "wind_drop",
+    "story": "Cerita pengantar...",
+    "question": "Pertanyaan essay analisis...",
+    "rubricKeywords": ["kata1", "kata2", "kata3"],
+    "idealAnswer": "Kunci jawaban ideal...",
+    "explanation": "Pembahasan..."
+  }
+]`;
+            navigator.clipboard.writeText(promptText);
+            alert("📋 Prompt berhasil disalin! Tempelkan (Paste) ke Gemini/ChatGPT untuk membuat soal baru secara instan.");
+        }
+    </script>
+</body>
+
+</html>

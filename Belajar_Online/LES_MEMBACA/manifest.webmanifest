@@ -1,0 +1,18 @@
+{
+  "name": "Baca Ceria – Belajar Membaca untuk Anak",
+  "short_name": "Baca Ceria",
+  "description": "Belajar membaca untuk anak 3–6 tahun: kenal huruf, suku kata, kata, kalimat dan cerita bergambar dengan suara.",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff1c9",
+  "theme_color": "#ff5fa2",
+  "categories": ["education", "kids"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

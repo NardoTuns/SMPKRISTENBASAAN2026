@@ -353,13 +353,21 @@ updateBtn.addEventListener('click', () => {
 // --- 3. PWA SERVICE WORKER & INSTALL PROMPT ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swUrl = 'sw.js?v=' + new Date().getTime();
-        navigator.serviceWorker.register(swUrl)
-            .then(reg => {
-                console.log('SW Registered!', reg);
-                reg.update();
-            })
-            .catch(err => console.log('SW Registration Failed!', err));
+        ```javascript
+navigator.serviceWorker.register('./sw.js')
+  .then(async (reg) => {
+    console.log('Service Worker terdaftar');
+
+    // Periksa pembaruan saat halaman dibuka.
+    await reg.update();
+  })
+  .catch((err) => {
+    console.error(
+      'Pendaftaran Service Worker gagal:',
+      err
+    );
+  });
+```
     });
 }
 

@@ -1,5 +1,5 @@
 // Konfigurasi aplikasi. APP_VERSION disamakan otomatis dengan version.json oleh `node tools/build-sw.mjs`.
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 export const APP_NAME = 'Tatib KRISBA';
 export const APP_FULLNAME = 'Tata Tertib SMP Kristen Basaan';
 

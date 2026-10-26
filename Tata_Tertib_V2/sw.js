@@ -1,7 +1,7 @@
 // Service worker Tata Tertib: aplikasi tetap terbuka tanpa internet & pembaruan lewat tombol "Perbarui".
 // Baris CACHE dan ASSETS dibuat otomatis oleh `node tools/build-sw.mjs` — jalankan setiap kali mengubah file.
-const CACHE = 'tatib-1.0.0-d894ba5cfd';
-const ASSETS = ["./","css/app.css","icons/apple-touch-icon.png","icons/favicon.svg","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","index.html","js/api.js","js/app.js","js/auth.js","js/config.js","js/core/demo.js","js/core/perm.js","js/core/points.js","js/core/rules.js","js/core/sha256.js","js/core/stats.js","js/core/util.js","js/db.js","js/pages/akun.js","js/pages/aturan.js","js/pages/catat.js","js/pages/dashboard.js","js/pages/kelas.js","js/pages/kelola.js","js/pages/laporan.js","js/pages/login.js","js/pages/riwayat.js","js/pages/siswa.js","js/pages/tindak.js","js/pwa.js","js/store.js","js/sync.js","js/ui/charts.js","js/ui/dom.js","js/ui/nav.js","js/ui/print.js","js/ui/widgets.js","manifest.webmanifest","version.json"];
+const CACHE = 'tatib-1.1.0-2ba9566e0a';
+const ASSETS = ["./","DashboardSiswa.html","css/app.css","icons/apple-touch-icon.png","icons/favicon.svg","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","index.html","js/api.js","js/app.js","js/auth.js","js/config.js","js/core/demo.js","js/core/perm.js","js/core/points.js","js/core/rules.js","js/core/sha256.js","js/core/stats.js","js/core/util.js","js/db.js","js/pages/akun.js","js/pages/aturan.js","js/pages/catat.js","js/pages/dashboard.js","js/pages/kelas.js","js/pages/kelola.js","js/pages/laporan.js","js/pages/login.js","js/pages/riwayat.js","js/pages/siswa.js","js/pages/tindak.js","js/pwa.js","js/siswa.js","js/store.js","js/sync.js","js/ui/charts.js","js/ui/dom.js","js/ui/export.js","js/ui/nav.js","js/ui/print.js","js/ui/widgets.js","manifest-siswa.webmanifest","manifest.webmanifest","vendor/html2canvas.min.js","vendor/jspdf.umd.min.js","version.json"];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((a) => new Request(a, { cache: 'reload' })))));
@@ -34,7 +34,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (req.mode === 'navigate') {
-    e.respondWith((async () => (await caches.match('index.html')) || fetch(req))());
+    // Halaman dikenal (index.html, DashboardSiswa.html) dari cache; alamat lain ke jaringan, bila gagal ke index.html.
+    const page = rel === '' ? 'index.html' : rel;
+    e.respondWith((async () => (await caches.match(page, { ignoreSearch: true }))
+      || fetch(req).catch(async () => (await caches.match('index.html')) || Response.error()))());
     return;
   }
   if (!ASSET_SET.has(rel)) return;

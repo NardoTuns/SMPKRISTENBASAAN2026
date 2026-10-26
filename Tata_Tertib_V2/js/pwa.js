@@ -17,8 +17,14 @@ export async function registerSW() {
       const w = reg.installing;
       w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) setWaiting(w); });
     });
+    // Muat ulang hanya saat versi baru menggantikan versi lama — bukan saat kunjungan pertama (service worker baru aktif).
+    const hadController = !!navigator.serviceWorker.controller;
     let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading || !hadController) return;
+      reloading = true;
+      location.reload();
+    });
     setTimeout(() => checkUpdate(false), 4000);
   } catch (e) { console.warn('Service worker gagal:', e); }
 }
@@ -48,6 +54,33 @@ export async function checkUpdate(manual = true) {
 export function applyUpdate() {
   if (PWA.waiting) PWA.waiting.postMessage({ type: 'SKIP_WAITING' });
   else location.reload();
+}
+
+/**
+ * Tombol "Update": ambil tampilan/versi terbaru. Bila ada versi baru, dipasang & aplikasi dimuat ulang.
+ * Mengembalikan pesan bila tidak ada yang perlu dipasang.
+ */
+export async function updateApp() {
+  if (!navigator.onLine) return 'Tidak ada internet. Pembaruan diambil saat online.';
+  const msg = await checkUpdate(true);
+  if (PWA.waiting) { applyUpdate(); return 'Memasang versi baru…'; }
+  if (PWA.remoteVersion && PWA.remoteVersion !== APP_VERSION) {
+    // Tunggu versi baru selesai diunduh service worker (maks. ±20 detik); bila tidak muncul, muat ulang paksa.
+    for (let i = 0; i < 40 && !PWA.waiting; i++) await new Promise((r) => setTimeout(r, 500));
+    if (PWA.waiting) { applyUpdate(); return 'Memasang versi baru…'; }
+    await hardReload();
+    return 'Memuat ulang…';
+  }
+  return msg;
+}
+
+/** Hapus cache tampilan aplikasi lalu muat ulang dari server. Data di HP (IndexedDB) tidak tersentuh. */
+export async function hardReload() {
+  if (!navigator.onLine) return false;
+  try { for (const r of (await navigator.serviceWorker?.getRegistrations?.()) || []) await r.unregister(); } catch { /* abaikan */ }
+  try { for (const k of await caches.keys()) if (k.startsWith('tatib-')) await caches.delete(k); } catch { /* abaikan */ }
+  location.reload();
+  return true;
 }
 
 export async function install() {

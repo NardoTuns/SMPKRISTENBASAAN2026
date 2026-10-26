@@ -72,6 +72,7 @@ export function render(view, route) {
     users.length > 8 ? h('label', { class: 'fsel search block' }, icon('search'), h('input', { type: 'search', placeholder: 'Cari nama…', value: q, 'aria-label': 'Cari nama guru', oninput: debounce((e) => { q = e.target.value; draw(); }, 120) })) : null,
     listWrap,
     S.demo ? h('p', { class: 'muted small center', text: `Mode Demo — password semua akun: ${DEMO_PASSWORD}` }) : null));
+  box.append(h('a', { class: 'btn tonal block', href: 'DashboardSiswa.html' }, icon('users'), h('span', { text: 'Siswa / orang tua? Buka Halaman Siswa & Orang Tua' })));
   function draw() {
     const groups = ROLES.map((r) => ({ r, list: users.filter((x) => x.peran === r && (!q || matches(q, x.nama, x.username, x.kelasWali))).sort((a, b) => cmpNama(a.nama, b.nama)) })).filter((g) => g.list.length);
     listWrap.replaceChildren(...groups.map((g) => h('div', { class: 'user-group' }, h('p', { class: 'muted small group-label', text: g.r }),

@@ -115,7 +115,7 @@ function renderDetail(view, id) {
         sum.level ? h('p', { class: 'small level-action' }, h('strong', { text: 'Tindakan: ' }), sum.level.tindakan) : null)),
     h('div', { class: 'profile-actions' },
       u ? btn('Catat pelanggaran', () => go('catat', { siswa: s.id }), { kind: 'primary', ic: 'plus' }) : null,
-      btn('Cetak kartu', () => printKartu(s), { ic: 'printer' }),
+      btn('Kartu · PDF/WA', () => printKartu(s), { ic: 'report', title: 'Kartu kedisiplinan: unduh PDF/PNG, kirim WhatsApp, atau cetak' }),
       wa ? h('a', { class: 'btn tonal', href: wa, target: '_blank', rel: 'noopener' }, icon('wa'), h('span', { text: 'WhatsApp orang tua' })) : null,
       canSiswa(u) ? btn('Ubah data', () => openSiswaForm(s), { ic: 'edit', kind: 'text' }) : null)));
 

@@ -12,7 +12,7 @@ if (shots) mkdirSync(shots, { recursive: true });
 const ok = (m) => console.log('✔ ' + m);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const srv = createServer();
+const srv = createServer({ blankServer: true });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${srv.address().port}/`;
 const GAS = base + 'gas/exec';
@@ -84,18 +84,30 @@ async function login(h, nama, pw) {
   await sleep(300);
 }
 
-async function catatRecord(h, siswaIds, jenisKode, lokasi) {
+async function catatRecord(h, siswaIds, jenisKode, lokasi, opts = {}) {
+  // Langkah 1 terlewati karena siswa pertama sudah dipilih lewat ?siswa=…
   await h.go(`#/catat?siswa=${siswaIds[0]}&t=${Date.now()}`);
-  await h.p.waitFor('document.querySelector(".chosen-item")', 8000);
-  for (const id of siswaIds.slice(1)) {
-    const nama = await h.st(`D().siswaMap.get(${JSON.stringify(id)}).nama`);
-    await h.type('input[aria-label="Cari siswa"]', nama);
-    await sleep(300);
-    await h.click(nama, '.pick');
+  await h.p.waitFor('document.querySelector(".wiz-step.on") && document.querySelector(".wiz-step.on").textContent.includes("Pelanggaran")', 8000);
+  if (siswaIds.length > 1) {
+    await h.click('Siswa', '.wiz-step');
+    for (const id of siswaIds.slice(1)) {
+      const nama = await h.st(`D().siswaMap.get(${JSON.stringify(id)}).nama`);
+      await h.type('input[aria-label="Cari siswa"]', nama);
+      await sleep(300);
+      await h.click(nama, '.pick');
+    }
+    await h.click('Lanjut', '.form-footer button');
   }
-  await h.type('input[aria-label="Cari pelanggaran"]', '');
+  await h.p.waitFor('document.querySelectorAll(".pick.jenis").length > 10', 8000);
   await h.p.eval(`[...document.querySelectorAll('.pick.jenis')].find((b) => b.querySelector('.rule-no').textContent === ${JSON.stringify(jenisKode)}).click()`);
+  if (opts.poin != null) await h.type('.sel-card input[type=number]', String(opts.poin));
+  await h.click('Lanjut', '.form-footer button');
   await h.type('input[list=dl-lokasi]', lokasi);
+  if (opts.tindakan) await h.type('input[list=dl-tindakan]', opts.tindakan);
+  if (opts.pelapor) {
+    await h.click('Kronologi, saksi', '.more-btn');
+    await h.type('input[list=dl-siswa]', opts.pelapor);
+  }
   await sleep(150);
   await h.click('Simpan', '.form-footer button', true);
   if (siswaIds.length > 1) await h.click('Simpan', '.dialog button', true);
@@ -125,7 +137,7 @@ try {
   await A.p.waitFor('window.__tatib.S.session && window.__tatib.S.session.username === "ani"', 8000);
   ok('login: password salah ditolak, password benar diterima (diperiksa di HP)');
 
-  await catatRecord(A, ['s1'], '25', 'Ruang kelas');
+  await catatRecord(A, ['s1'], '25', 'Ruang kelas', { tindakan: 'HP disita sementara', pelapor: 'Citra Mandagi' });
   await A.shot('02-tercatat');
   await A.click('Selesai', '.dialog button', true);
   await A.noOverlay();
@@ -136,8 +148,17 @@ try {
   assert.equal(rows[0]['Nama Guru'], 'Ani Lumowa, S.Pd');
   assert.equal(rows[0]['Poin'], 20);
   assert.equal(rows[0]['Lokasi'], 'Ruang kelas');
+  assert.equal(rows[0]['Tindakan Langsung'], 'HP disita sementara');
+  assert.equal(rows[0]['Siswa Pelapor'], 'Citra Mandagi');
   assert.equal(await A.st('D().summaries.get("s1").level.kode'), 'LISAN');
-  ok('catat pelanggaran (HP saat jam pelajaran, 20 poin) → tersimpan & terkirim ke sheet; Budi masuk tahap Peringatan Lisan');
+  ok('catat 3 langkah (HP saat jam pelajaran, 20 poin, tindakan & pelapor) → tersimpan & terkirim; Budi masuk Peringatan Lisan');
+
+  await catatRecord(A, ['s4'], '2', 'Gerbang sekolah', { poin: 8 });
+  await A.click('Selesai', '.dialog button', true);
+  await A.noOverlay();
+  await A.synced();
+  assert.equal(sheet('Catatan Pelanggaran').find((r) => r['ID Siswa'] === 's4').Poin, 8);
+  ok('poin dapat disesuaikan saat mencatat (terlambat > 15 menit: bawaan 5 → 8 poin)');
 
   // ---- offline: catat 2 siswa sekaligus, muat ulang tanpa internet, lalu online
   await A.p.waitFor('navigator.serviceWorker.controller', 15000);
@@ -149,14 +170,14 @@ try {
   await A.p.goto(base + '?reload=1');
   await A.ready();
   assert.equal(await A.st('S.outbox.length'), 2);
-  assert.equal(await A.st('S.d.pelanggaran.length'), 3);
+  assert.equal(await A.st('S.d.pelanggaran.length'), 4);
   await A.p.waitFor('document.querySelector(".sync-chip").textContent.includes("Offline")', 5000);
   await A.shot('03-offline');
   ok('offline: 2 catatan (2 siswa × bolos) tersimpan di HP; aplikasi tetap terbuka setelah dimuat ulang tanpa internet');
   await A.offline(false);
   await A.p.eval('window.dispatchEvent(new Event("online"))');
   await A.synced();
-  assert.equal(sheet('Catatan Pelanggaran').length, 3);
+  assert.equal(sheet('Catatan Pelanggaran').length, 4);
   assert.equal(await A.st('D().summaries.get("s1").total'), 40);
   assert.equal(await A.st('D().summaries.get("s1").level.kode'), 'SP1');
   ok('kembali online → antrean terkirim otomatis; Budi 40 poin = SP 1, data tetap ada di HP');
@@ -187,25 +208,38 @@ try {
   await A.p.eval('window.print = () => { window.__printed = (window.__printed || 0) + 1; }');
   await A.go('#/siswa/s1');
   await A.click('Bermain smartphone', '.row-item.rec');
-  await A.click('Cetak BAP', '.sheet button');
+  await A.click('BAP', '.sheet button');
+  await A.p.waitFor('document.querySelector(".doc-preview")', 5000);
+  assert.match(await A.p.eval('[...document.querySelectorAll(".sheet")].pop().textContent'), /Ortu Santoso \(08123456780\)/, 'penerima WA = orang tua');
+  await A.shot('04-dokumen');
+  await A.click('Cetak', '.doc-actions button');
   await A.p.waitFor('window.__printed === 1', 5000);
   const bap = await A.p.eval('document.getElementById("print-root").textContent');
   assert.match(bap, /Berita Acara Pemeriksaan/i);
   assert.match(bap, /Budi Santoso/);
-  assert.match(bap, /Siswa Pelapor/);
+  assert.match(bap, /Citra Mandagi/);
+  await A.click('Unduh PDF', '.doc-actions button');
+  await A.p.waitFor('window.__lastExport && window.__lastExport.type === "application/pdf"', 30000);
+  assert.equal(await A.p.eval('window.__lastExport.blob.slice(0, 5).text()'), '%PDF-');
+  assert.match(await A.p.eval('window.__lastExport.name'), /^BAP-Budi-Santoso-/);
+  await A.p.eval('history.back()');
   await A.p.eval('history.back()');
   await A.noOverlay();
-  ok('BAP tercetak dengan identitas siswa & 4 kolom tanda tangan');
+  ok('BAP: lembar dokumen (penerima WA = orang tua), cetak & unduh PDF berhasil');
 
   // ---- HP B: wali kelas memproses tindak lanjut (login offline)
   const B = await phone(browserB);
   await connect(B);
-  assert.equal(await B.st('S.d.pelanggaran.filter((r) => !r.batal).length'), 2);
+  assert.equal(await B.st('S.d.pelanggaran.filter((r) => !r.batal).length'), 3);
+  assert.equal(await B.st('S.d.pelanggaran.find((r) => r.jenisKode === "25").pelapor'), undefined, 'tanpa login: nama pelapor tidak diunduh');
   await B.offline(true);
   await login(B, 'Yohana Wenas', 'wali1234');
   assert.equal(await B.st('S.session.username'), 'wali7a');
   await B.offline(false);
-  ok('HP B: data dari HP A terlihat; wali kelas login tanpa internet');
+  await B.p.eval('window.__tatib.syncNow({ full: true })');
+  await B.idle();
+  assert.equal(await B.st('S.d.pelanggaran.find((r) => r.jenisKode === "25").pelapor'), 'Citra Mandagi', 'setelah login: data lengkap');
+  ok('HP B: data dari HP A terlihat; nama pelapor hanya diunduh setelah login; wali kelas login tanpa internet');
   await B.go('#/tindak');
   await B.p.waitFor('document.querySelectorAll(".row-item").length >= 2', 8000);
   await B.shot('04-tindak');
@@ -270,8 +304,60 @@ try {
   await login(A, 'Ani Lumowa', 'baru5678');
   await A.p.eval('window.__tatib.syncNow()');
   await A.synced();
-  assert.equal(sheet('Catatan Pelanggaran').length, 4);
+  assert.equal(sheet('Catatan Pelanggaran').length, 5);
   ok('password diganti di server: catatan offline tertahan (tidak hilang) → setelah login ulang langsung terkirim');
+
+  // ---- laporan: unduh PNG & PDF
+  await A.go('#/laporan?jenis=siswa');
+  await A.click('Unduh PNG', '.export-bar button');
+  await A.p.waitFor('window.__lastExport && window.__lastExport.type === "image/png"', 30000);
+  assert.ok(await A.p.eval('window.__lastExport.size') > 20000);
+  await A.click('Unduh PDF', '.export-bar button');
+  await A.p.waitFor('window.__lastExport && window.__lastExport.type === "application/pdf" && window.__lastExport.name.startsWith("Rekap")', 30000);
+  ok('laporan: unduh PNG & PDF berhasil (tombol Kirim WA memakai berkas yang sama)');
+
+  // ---- Halaman Siswa & Orang Tua: tanpa nama di daftar, cek anak dengan NIS
+  await A.p.goto(base + 'DashboardSiswa.html');
+  await A.p.waitFor('window.__siswa && document.querySelector(".ds-hero")', 15000);
+  assert.match(await A.p.eval('document.getElementById("view").textContent'), /Siswa tanpa pelanggaran/);
+  await A.p.eval(`location.hash = '#kelas/7A'`);
+  await A.p.waitFor('document.querySelector(".ds-tiles")', 5000);
+  assert.equal((await A.p.eval('document.getElementById("view").textContent')).includes('Budi Santoso'), false, 'nama siswa tidak ditampilkan di rekap kelas');
+  await A.p.eval(`location.hash = '#anak'`);
+  await A.type('input[aria-label="NIS atau NISN"]', '2026001');
+  await A.p.eval('document.querySelector(".ds-search").requestSubmit()');
+  await A.p.waitFor('document.querySelector(".ds-kid")', 8000);
+  const kid = await A.p.eval('document.querySelector(".ds-kid").textContent');
+  assert.match(kid, /Budi Santoso/);
+  assert.match(kid, /40/);
+  assert.equal((await A.p.eval('document.getElementById("view").textContent')).includes('Citra Mandagi'), false, 'nama pelapor tidak tampil');
+  await A.click('Simpan sebagai', '.ds-kid button');
+  await A.shot('07-dashboard-siswa');
+  ok('DashboardSiswa: ringkasan sekolah & kelas tanpa nama siswa; orang tua cek anak dengan NIS (40 poin, SP 1)');
+
+  // ---- mode "dasbor khusus login": orang tua di HP lain tetap bisa cek anak lewat server (data lain anonim)
+  assert.equal(gas.post({ action: 'push', auth: admin, ops: [{ id: 'm', table: 'pengaturan', op: 'upsert', key: 'aksesDashboard', row: { kunci: 'aksesDashboard', nilai: 'login' } }] }).results[0].ok, true);
+  const browserC = await launchBrowser({ width: 412, height: 860 });
+  try {
+    const C = await phone(browserC);
+    await C.p.goto(base + 'DashboardSiswa.html');
+    await C.p.waitFor('window.__siswa', 15000);
+    await C.p.eval(`(async () => { const db = await import('/js/db.js'); await db.kvSet('serverUrl', ${JSON.stringify(GAS)}); })()`);
+    await C.p.goto(base + 'DashboardSiswa.html?c=2');
+    await C.p.waitFor('window.__siswa && window.__siswa.data().mode === "anon"', 20000);
+    assert.equal(await C.p.eval('window.__siswa.S.d.siswa.length'), 0, 'tanpa data bernama di HP');
+    await C.p.waitFor('document.querySelector(".ds-tiles")', 8000);
+    await C.p.eval(`location.hash = '#anak/2026002'`);
+    await C.p.waitFor('document.querySelector(".ds-kid")', 10000);
+    assert.match(await C.p.eval('document.querySelector(".ds-kid").textContent'), /Citra Mandagi/);
+    assert.deepEqual(C.p.errors, []);
+  } finally {
+    await browserC.close();
+  }
+  assert.equal(gas.post({ action: 'push', auth: admin, ops: [{ id: 'm2', table: 'pengaturan', op: 'upsert', key: 'aksesDashboard', row: { kunci: 'aksesDashboard', nilai: 'publik' } }] }).results[0].ok, true);
+  ok('akses dasbor "login": HP orang tua hanya menerima statistik anonim, cek NIS lewat server tetap berfungsi');
+  await A.p.goto(base + '?kembali=1');
+  await A.ready();
 
   // ---- wewenang: guru biasa tidak bisa membuka Kelola; server menolak walau dipaksa
   await A.go('#/kelola');
@@ -284,16 +370,13 @@ try {
   const swSrc = (await import('node:fs')).readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   srv.overrides.set('version.json', JSON.stringify({ version: '9.9.9', notes: ['uji'] }));
   srv.overrides.set('sw.js', swSrc.replace(/const CACHE = '[^']*';/, "const CACHE = 'tatib-9.9.9-uji';"));
-  await A.go('#/akun');
-  await A.click('Periksa pembaruan');
-  await A.p.waitFor('document.querySelector(".banner.info") && document.querySelector(".banner.info").textContent.includes("9.9.9")', 20000);
-  await A.shot('06-update');
   await A.p.eval('window.__beforeUpdate = true');
-  await A.click('Perbarui', '.banner button');
-  await A.p.waitFor('!window.__beforeUpdate && window.__tatib && window.__tatib.S.ready', 20000);
+  await A.shot('08-sebelum-update');
+  await A.click('Update', '.update-btn');
+  await A.p.waitFor('!window.__beforeUpdate && window.__tatib && window.__tatib.S.ready', 40000);
   assert.ok((await A.p.eval('caches.keys()')).includes('tatib-9.9.9-uji'));
   assert.equal(await A.st('S.session.username'), 'ani', 'tetap login setelah pembaruan');
-  ok('tombol Update: versi baru terdeteksi, dipasang, aplikasi dimuat ulang; sesi & data tetap');
+  ok('tombol Update di bilah atas: data disinkronkan, versi baru diunduh & dipasang, aplikasi dimuat ulang; sesi & data tetap');
 
   assert.deepEqual(A.p.errors, [], 'tidak ada error JS di HP A');
   assert.deepEqual(B.p.errors, [], 'tidak ada error JS di HP B');

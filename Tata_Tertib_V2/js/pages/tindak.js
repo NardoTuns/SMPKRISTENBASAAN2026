@@ -105,7 +105,7 @@ export function openTindak(t) {
         toast('Tindak lanjut tersimpan.');
         close();
       }, { kind: 'primary', ic: 'check' }) : null,
-      btn(t.level?.surat ? 'Cetak surat' : 'Cetak catatan pembinaan', () => letterDialog(t, f), { ic: 'printer' }),
+      btn(t.level?.surat ? 'Surat · PDF/WA' : 'Catatan pembinaan', () => letterDialog(t, f), { ic: 'report' }),
       wa ? h('a', { class: 'btn tonal', href: wa, target: '_blank', rel: 'noopener' }, icon('wa'), h('span', { text: 'WhatsApp orang tua' })) : null,
       btn('Lihat siswa', () => { close(); go('siswa', t.siswaId); }, { ic: 'user', kind: 'text' })));
   }, { title: 'Tindak lanjut' });
@@ -123,5 +123,5 @@ function letterDialog(t, f) {
     kind === 'SP3' ? h('div', { class: 'form-row' }, inp('mulai', 'date', 'Skorsing mulai'), inp('selesai', 'date', 'Skorsing selesai')) : null,
     kind === 'SP3' || kind === 'KELUAR' ? inp('sidang', 'date', 'Tanggal Sidang Dewan Guru') : null,
     !kind ? h('p', { class: 'muted small', text: 'Tahap ini tidak memerlukan surat resmi; dicetak lembar catatan pembinaan.' }) : null),
-  [{ label: 'Batal', value: null }, { label: 'Cetak', value: 'ok', kind: 'primary' }]).then((v) => { if (v === 'ok') printSurat(t, o); });
+  [{ label: 'Batal', value: null }, { label: 'Buat surat', value: 'ok', kind: 'primary' }]).then((v) => { if (v === 'ok') printSurat(t, o); });
 }

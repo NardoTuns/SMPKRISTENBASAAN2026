@@ -1,19 +1,20 @@
-// Dokumen cetak (A4): BAP, kartu kedisiplinan, surat tahap sanksi, laporan, dan tata tertib.
-// Dicetak lewat dialog cetak browser → bisa "Simpan sebagai PDF" di HP maupun laptop.
+// Dokumen A4: BAP, kartu kedisiplinan, surat tahap sanksi, laporan, ringkasan, dan tata tertib.
+// Setiap dokumen dibuka di lembar "Bagikan": unduh PDF/PNG, kirim ke WhatsApp, atau cetak.
 import { S, D, me, katNama } from '../store.js';
-import { esc, fmtNum, fmtTgl, hariOf, ymd, addDays } from '../core/util.js';
+import { esc, fmtNum, fmtTgl, hariOf, ymd, addDays, waNumber } from '../core/util.js';
+import { openDoc } from './export.js';
 
 const st = () => S.settings;
 
-export async function printDoc(title, html, { landscape = false } = {}) {
-  const root = document.getElementById('print-root');
-  root.innerHTML = `<style>@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 12mm 15mm; }</style>${html}`;
-  await Promise.all([...root.querySelectorAll('img')].map((img) => img.decode?.().catch(() => {})));
-  const old = document.title;
-  document.title = title;
-  const restore = () => { document.title = old; window.removeEventListener('afterprint', restore); };
-  window.addEventListener('afterprint', restore);
-  setTimeout(() => window.print(), 60);
+/** opts: {landscape, fileBase, waNumber, waTo, waText} — lihat openDoc di export.js. */
+export function printDoc(title, html, opts = {}) {
+  openDoc(title, html, { fileBase: title, ...opts });
+}
+
+/** Tujuan WhatsApp orang tua siswa (bila nomor tersedia). */
+function waOrtu(siswa, text) {
+  const n = waNumber(siswa?.hpOrtu);
+  return { waNumber: n, waTo: n ? `${siswa.ortu || 'Orang tua/wali'} (${siswa.hpOrtu})` : '', waText: text };
 }
 
 function kop() {
@@ -72,15 +73,19 @@ export function printBAP(r) {
     <p class="right">${tempatTanggal(r.tanggal)}</p>
     ${sign([{ role: 'Siswa Pelapor', name: r.pelapor }, { role: 'Saksi', name: r.saksi }, { role: 'Siswa Pelanggar', name: r.nama }, { role: 'Guru Berwenang', name: r.guruNama }])}
   </div>`;
-  printDoc(`BAP ${r.nama} ${r.tanggal}`, html);
+  printDoc(`BAP ${r.nama} ${r.tanggal}`, html, waOrtu(s, `Yth. Bapak/Ibu ${s.ortu || 'Orang Tua/Wali'}, terlampir Berita Acara Pemeriksaan pelanggaran tata tertib ananda ${r.nama} (kelas ${r.kelas}) tanggal ${fmtTgl(r.tanggal)}. — ${st().namaSekolah}`));
 }
 
 // ------------------------------------------------------------------ kartu kedisiplinan
 export function printKartu(siswa) {
-  const d = D();
-  const sum = d.summaries.get(siswa.id);
+  const sum = D().summaries.get(siswa.id);
+  printDoc(`Kartu Kedisiplinan ${siswa.nama}`, kartuHtml(siswa, sum), waOrtu(siswa, `Yth. Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}, terlampir kartu kendali kedisiplinan ananda ${siswa.nama} (kelas ${siswa.kelas}): akumulasi ${sum.total} poin${sum.level ? `, tahap ${sum.level.label}` : ''}. — ${st().namaSekolah}`));
+}
+
+/** Kartu kedisiplinan dari data siswa + ringkasan (summarize). Dipakai juga Halaman Siswa & Orang Tua. */
+export function kartuHtml(siswa, sum) {
   const wali = S.d.users.find((u) => u.peran === 'Wali Kelas' && String(u.kelasWali).toLowerCase().split(/[,;]\s*/).includes(String(siswa.kelas).toLowerCase()));
-  const html = `<div class="doc">${docHead('Kartu Kendali Kedisiplinan Siswa')}
+  return `<div class="doc">${docHead('Kartu Kendali Kedisiplinan Siswa')}
     ${identitas(siswa, [['Tahun ajaran', `${st().tahunAjaran} · Semester ${st().semester}`]])}
     <div class="summary-box"><div><span>Total akumulasi poin</span><b>${fmtNum(sum.total)}</b></div><div><span>Jumlah pelanggaran</span><b>${sum.count}</b></div>
       <div><span>Tahap saat ini</span><b>${sum.level ? esc(sum.level.label) : 'Aman (belum ada tindakan)'}</b></div>
@@ -90,7 +95,6 @@ export function printKartu(siswa) {
     <p class="right">${tempatTanggal()}</p>
     ${sign([{ top: 'Mengetahui,', role: 'Orang Tua/Wali', name: siswa.ortu }, { role: 'Wali Kelas', name: wali?.nama, nip: wali?.nip }, { role: 'Guru BK', name: st().guruBK, nip: st().nipBK }])}
   </div>`;
-  printDoc(`Kartu Kedisiplinan ${siswa.nama}`, html);
 }
 
 // ------------------------------------------------------------------ surat tahap sanksi
@@ -176,21 +180,45 @@ export function printSurat(item, o = {}) {
       <h3>Pembinaan yang dilakukan</h3><p><span class="dots">..................................................................................................................</span><br><span class="dots">..................................................................................................................</span></p>
       ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([{ role: 'Siswa', name: siswa.nama }, { role: 'Guru Pembina', name: me()?.nama }])}</div>`;
   }
-  printDoc(`${level?.label || 'Surat'} ${siswa.nama}`, html);
+  printDoc(`${level?.label || 'Surat'} ${siswa.nama}`, html, waOrtu(siswa, `Yth. Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}, terlampir surat dari ${s.namaSekolah} perihal ${level?.label || 'pembinaan'} untuk ananda ${siswa.nama} (kelas ${siswa.kelas}). Mohon dibaca dan ditindaklanjuti. Terima kasih.`));
 }
 const nextMin = (level) => { const n = D().levels.find((l) => l.min > (level?.min || 0)); return n ? n.min : 100; };
 
 // ------------------------------------------------------------------ laporan tabel
-export function printReport({ title, meta = [], cols, rows, numeric = [], landscape = false, note = '' }) {
-  const s = st();
-  const html = `<div class="doc">${kop()}<h1 class="doc-title">${esc(title)}</h1>
+const dicetak = () => `Dibuat ${fmtTgl(ymd())}${me() ? ` oleh ${esc(me().nama)}` : ''} dari aplikasi Tata Tertib ${esc(st().namaSekolah)}.`;
+const signPejabat = () => sign([{ role: 'Guru BK', name: st().guruBK, nip: st().nipBK }, { top: 'Mengetahui,', role: 'Kepala Sekolah', name: st().kepalaSekolah, nip: st().nipKepsek }]);
+
+/** HTML laporan (dipakai lembar Bagikan maupun tombol PDF/PNG/WA langsung di halaman Laporan). */
+export function reportHtml({ title, meta = [], cols, rows, numeric = [], note = '' }) {
+  return `<div class="doc">${kop()}<h1 class="doc-title">${esc(title)}</h1>
     <p class="meta">${meta.map(esc).join(' · ')}</p>
     <table class="tbl-print"><thead><tr><th>No</th>${cols.map((c, i) => `<th class="${numeric.includes(i) ? 'num' : ''}">${esc(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows.length ? rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map((v, j) => `<td class="${numeric.includes(j) ? 'num' : ''}">${esc(typeof v === 'number' ? fmtNum(v, 1) : v)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length + 1}"><em>Tidak ada data.</em></td></tr>`}</tbody></table>
     ${note ? `<p class="small">${esc(note)}</p>` : ''}
-    <p class="small">Dicetak ${fmtTgl(ymd())} oleh ${esc(me()?.nama || 'pengguna umum')} dari aplikasi Tata Tertib ${esc(s.namaSekolah)}.</p>
-    <p class="right">${tempatTanggal()}</p>${sign([{ role: 'Guru BK', name: s.guruBK, nip: s.nipBK }, { top: 'Mengetahui,', role: 'Kepala Sekolah', name: s.kepalaSekolah, nip: s.nipKepsek }])}</div>`;
-  printDoc(title, html, { landscape });
+    <p class="small">${dicetak()}</p>
+    <p class="right">${tempatTanggal()}</p>${signPejabat()}</div>`;
+}
+export const reportOpts = (rep) => ({ landscape: !!rep.landscape, fileBase: `${rep.title} ${ymd()}`, waText: `${rep.title} — ${[...(rep.meta || [])].join(' · ')} (${st().namaSekolah})` });
+export function printReport(rep) { printDoc(rep.title, reportHtml(rep), reportOpts(rep)); }
+
+/**
+ * Ringkasan bergaya dasbor: kotak angka + beberapa tabel berbatang.
+ * spec: {title, meta[], tiles:[[label, value, sub]], sections:[{title, cols, rows, bar: indexKolomAngka}]}
+ */
+export function summaryHtml({ title, meta = [], tiles = [], sections = [], note = '' }) {
+  const table = (sec) => {
+    const max = Math.max(1, ...sec.rows.map((r) => Number(r[sec.bar]) || 0));
+    return `<h3>${esc(sec.title)}</h3><table class="tbl-print"><thead><tr>${sec.cols.map((c, i) => `<th class="${i === sec.bar ? 'num' : ''}">${esc(c)}</th>`).join('')}${sec.bar != null ? '<th style="width:28%"></th>' : ''}</tr></thead><tbody>
+      ${sec.rows.length ? sec.rows.map((r) => `<tr class="dbar-row">${r.map((v, i) => `<td class="${i === sec.bar ? 'num' : ''}">${esc(typeof v === 'number' ? fmtNum(v, 1) : v)}</td>`).join('')}${sec.bar != null ? `<td><div class="dbar" style="width:${Math.round(((Number(r[sec.bar]) || 0) / max) * 100)}%"></div></td>` : ''}</tr>`).join('')
+        : `<tr><td colspan="${sec.cols.length + 1}"><em>Tidak ada data.</em></td></tr>`}</tbody></table>`;
+  };
+  return `<div class="doc">${kop()}<h1 class="doc-title">${esc(title)}</h1><p class="meta">${meta.map(esc).join(' · ')}</p>
+    ${tiles.length ? `<div class="dsum-grid">${tiles.map(([l, v, sub]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`).join('')}</div>` : ''}
+    ${sections.map(table).join('')}
+    ${note ? `<p class="small">${esc(note)}</p>` : ''}<p class="small">${dicetak()}</p></div>`;
+}
+export function printSummary(spec) {
+  printDoc(spec.title, summaryHtml(spec), { fileBase: `${spec.title} ${ymd()}`, waText: `${spec.title} — ${(spec.meta || []).join(' · ')} (${st().namaSekolah})` });
 }
 
 // ------------------------------------------------------------------ tata tertib
@@ -212,5 +240,5 @@ export function printAturan() {
     </tbody></table>
     <p class="small">Dokumen ini wajib ditandatangani oleh Orang Tua/Wali Murid sebagai bukti persetujuan terhadap seluruh aturan yang berlaku.</p>
     <p class="right">${tempatTanggal()}</p>${sign([{ role: 'Orang Tua/Wali Murid', materai: true }, { role: 'Kepala Sekolah', name: s.kepalaSekolah, nip: s.nipKepsek }])}</div>`;
-  printDoc('Tata Tertib ' + s.namaSekolah, html);
+  printDoc('Tata Tertib ' + s.namaSekolah, html, { waText: `Tata Tertib dan Peraturan ${s.namaSekolah} beserta daftar poin pelanggaran. Mohon dibaca bersama ananda. Terima kasih.` });
 }

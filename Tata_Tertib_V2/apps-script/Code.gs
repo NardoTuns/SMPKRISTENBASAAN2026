@@ -16,7 +16,7 @@
  * ============================================================================
  */
 
-var SERVER_VERSION = '1.0.0';
+var SERVER_VERSION = '1.1.0';
 var HASH_ITER = 200;
 var REV_OVERLAP_MS = 5 * 60 * 1000;
 var ROLES = ['Admin', 'Kepala Sekolah', 'Guru BK', 'Wali Kelas', 'Guru'];
@@ -142,7 +142,10 @@ var DEFAULT_SETTINGS = [
   ['aksesDashboard', 'publik', 'publik = dasbor terbuka untuk semua; login = dasbor hanya setelah login'],
   ['lokasi', 'Ruang kelas, Halaman sekolah, Kantin, Gerbang sekolah, Toilet, Lapangan, Laboratorium, Perpustakaan, Luar sekolah, Media sosial', 'Pilihan lokasi kejadian (pisahkan dengan koma)'],
   ['tindakanCepat', 'Teguran lisan, Membersihkan kelas/halaman, Barang disita sementara, Dipanggil ke ruang BK, Membuat surat pernyataan, Orang tua dihubungi', 'Pilihan tindakan langsung (pisahkan dengan koma)'],
-  ['logo', '', 'Logo sekolah (diunggah dari aplikasi)']];
+  ['logo', '', 'Logo sekolah (diunggah dari aplikasi)'],
+  ['dashboardSiswa', 'nis', 'Halaman Siswa & Orang Tua: nis = detail siswa dibuka dengan NIS; nama = daftar nama siswa ditampilkan'],
+  ['infoSiswa', '', 'Pengumuman/informasi untuk siswa & orang tua (tampil di Halaman Siswa & Orang Tua)'],
+  ['waSekolah', '', 'Nomor WhatsApp sekolah/BK yang dapat dihubungi orang tua']];
 
 // ----------------------------------------------------------------------------- pintu masuk
 function doGet(e) {
@@ -165,6 +168,7 @@ function doPost(e) {
     else if (a === 'users.save') out = apiUsersSave_(body);
     else if (a === 'users.delete') out = apiUsersDelete_(body);
     else if (a === 'password') out = apiChangePassword_(body);
+    else if (a === 'cekSiswa') out = apiCekSiswa_(body);
     else throw err_('BAD_REQUEST', 'Aksi tidak dikenal: ' + a);
     return json_(out);
   } catch (x) {
@@ -196,9 +200,50 @@ function apiPull_(body) {
       out[name + 'Count'] = rows.length;
       out[name] = since ? rows.filter(function (r) { return (Number(r._rev) || 0) > since - REV_OVERLAP_MS; }) : rows;
     });
+    // Tanpa login: identitas siswa pelapor, saksi, dan kronologi tidak dikirim (melindungi pelapor).
+    if (!auth) out.pelanggaran = out.pelanggaran.map(publicRecord_);
     out.full = !since;
+  } else {
+    out.anon = anonData_();
   }
   return out;
+}
+
+var PRIVATE_FIELDS = ['pelapor', 'saksi', 'kronologi', 'device'];
+function publicRecord_(r) {
+  var o = {};
+  Object.keys(r).forEach(function (k) { if (PRIVATE_FIELDS.indexOf(k) < 0) o[k] = r[k]; });
+  return o;
+}
+
+/** Statistik tanpa identitas (untuk Halaman Siswa & Orang Tua saat dasbor diatur "login"). ID diacak tiap permintaan. */
+function anonData_() {
+  var ids = {};
+  var siswa = objs_(readTable_(TABLES.siswa, true)).map(function (s) {
+    ids[s.id] = 'a' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+    return { id: ids[s.id], kelas: s.kelas, jk: s.jk, status: s.status || 'Aktif' };
+  });
+  var recs = objs_(readTable_(TABLES.pelanggaran, true)).filter(function (r) { return !r.batal && ids[r.siswaId]; }).map(function (r, i) {
+    return { id: 'r' + i, siswaId: ids[r.siswaId], tanggal: r.tanggal, jam: r.jam, kelas: r.kelas, jenisKode: r.jenisKode, uraian: r.uraian, kategori: r.kategori, tingkat: r.tingkat, poin: r.poin };
+  });
+  return { siswa: siswa.sort(function () { return Math.random() - 0.5; }), pelanggaran: recs };
+}
+
+/** Orang tua/siswa melihat riwayat satu siswa dengan NIS/NISN (tanpa login). Dibatasi 30 pencarian per menit. */
+function apiCekSiswa_(body) {
+  var key = String(body.nis || '').replace(/\s+/g, '');
+  if (key.length < 3) throw err_('VALIDATION', 'Masukkan NIS atau NISN siswa.');
+  var cache = CacheService.getScriptCache();
+  var slot = 'cek:' + Math.floor(Date.now() / 60000);
+  var n = Number(cache.get(slot) || 0) + 1;
+  cache.put(slot, String(n), 120);
+  if (n > 30) throw err_('RATE', 'Terlalu banyak pencarian. Coba lagi sebentar lagi.');
+  var s = objs_(readTable_(TABLES.siswa, true)).filter(function (x) { return String(x.nis).replace(/\s+/g, '') === key || String(x.nisn).replace(/\s+/g, '') === key; })[0];
+  if (!s) throw err_('NOT_FOUND', 'NIS/NISN tidak ditemukan. Periksa kembali atau hubungi wali kelas.');
+  var recs = objs_(readTable_(TABLES.pelanggaran, true)).filter(function (r) { return r.siswaId === s.id && !r.batal; }).map(publicRecord_);
+  var tl = objs_(readTable_(TABLES.tindak, true)).filter(function (t) { return t.siswaId === s.id; })
+    .map(function (t) { return { id: t.id, tahap: t.tahap, tahapLabel: t.tahapLabel, status: t.status, tanggalPelaksanaan: t.tanggalPelaksanaan }; });
+  return { ok: true, siswa: { id: s.id, nis: s.nis, nisn: s.nisn, nama: s.nama, kelas: s.kelas, jk: s.jk, status: s.status || 'Aktif' }, pelanggaran: recs, tindak: tl };
 }
 
 // ----------------------------------------------------------------------------- kirim perubahan
@@ -745,6 +790,15 @@ function setup() {
     var v = s[0] === 'tahunAjaran' ? (ganjil ? y + '/' + (y + 1) : (y - 1) + '/' + y) : s[0] === 'semester' ? (ganjil ? 'Ganjil' : 'Genap') : s[1];
     return { kunci: s[0], nilai: v, keterangan: s[2] };
   }), 'pengaturan');
+  // Pengaturan baru dari versi server yang lebih baru ditambahkan tanpa mengubah isian lama.
+  var pt = readTable_(TABLES.pengaturan);
+  var have = {};
+  pt.rows.forEach(function (r) { have[r.obj.kunci] = true; });
+  var miss = DEFAULT_SETTINGS.filter(function (s) { return !have[s[0]]; });
+  if (miss.length) {
+    flush_(pt, [], miss.map(function (s) { return { r: 0, arr: toArr_(TABLES.pengaturan, pt.idx, { kunci: s[0], nilai: s[1], keterangan: s[2], updatedAt: now, updatedBy: 'setup' }, null, pt.width) }; }));
+    msg.push('✓ ' + miss.length + ' pengaturan baru ditambahkan');
+  }
   seed(TABLES.kategori, DEFAULT_KATEGORI.map(function (k, i) { return { kode: k[0], nama: k[1], urutan: i + 1, aktif: true }; }), 'kategori');
   seed(TABLES.jenis, DEFAULT_JENIS.map(function (j) {
     return { kode: String(j[0]), kategori: j[1], uraian: j[2], poin: j[3], poinMaks: j[4], tingkat: j[5], zt: false, aktif: true, urutan: j[0] };

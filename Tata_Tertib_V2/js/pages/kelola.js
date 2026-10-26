@@ -50,7 +50,7 @@ function tabJenis(body) {
     sw('Tampilkan nonaktif', jnon, (v) => { jnon = v; draw(); }),
     btn('Tambah jenis', () => jenisForm(null), { kind: 'primary', ic: 'plus' }));
   const list = h('div');
-  body.append(h('p', { class: 'muted small', text: 'Mengubah poin hanya berlaku untuk catatan baru; catatan lama tetap memakai poin saat dicatat. Jenis yang sudah dipakai tidak bisa dihapus — nonaktifkan saja.' }), head, list);
+  body.append(h('p', { class: 'muted small', text: 'Poin di sini adalah poin bawaan (perkiraan); guru tetap bisa menambah/mengurangi saat mencatat. Mengubah poin hanya berlaku untuk catatan baru. Jenis yang sudah dipakai tidak bisa dihapus — nonaktifkan saja.' }), head, list);
   function draw() {
     const items = d.jenis.filter((j) => (jnon || j.aktif !== false) && (!jkat || j.kategori === jkat) && (!jq || matches(jq, j.kode, j.uraian)));
     list.replaceChildren(...d.kategori.filter((k) => items.some((j) => j.kategori === k.kode)).map((k) => h('section', { class: 'card flush' },
@@ -395,6 +395,13 @@ function tabPengaturan(body) {
       h('div', { class: 'form-row' }, inp('batasKoreksiJam', { type: 'number', min: 0 }), inp('batasSidang', { type: 'number', min: 0 })),
       fld(SETTING_INFO.aksesDashboard, select([{ value: 'publik', label: 'Publik — dasbor & riwayat terbuka untuk semua pengguna aplikasi' }, { value: 'login', label: 'Login — data siswa hanya untuk guru yang login' }], f.aksesDashboard, (v) => set('aksesDashboard', v))),
       area('lokasi'), area('tindakanCepat')),
+    h('section', { class: 'card stack' }, h('h3', { text: 'Halaman Siswa & Orang Tua' }),
+      h('p', { class: 'muted small' }, 'Alamat halaman: ', h('a', { href: 'DashboardSiswa.html', target: '_blank', text: 'DashboardSiswa.html' }), ' (tanpa login; bagikan ke grup orang tua).'),
+      fld('Cara melihat data per siswa', select([
+        { value: 'nis', label: 'Dengan NIS/NISN — nama siswa tidak ditampilkan dalam daftar (disarankan)' },
+        { value: 'nama', label: 'Daftar nama — semua nama & poin siswa terlihat oleh siapa saja' },
+      ], f.dashboardSiswa || 'nis', (v) => set('dashboardSiswa', v))),
+      area('infoSiswa'), inp('waSekolah', { type: 'tel', placeholder: 'mis. 081234567890' })),
     h('div', { class: 'form-footer static' }, h('span', { class: 'grow muted small', text: 'Perubahan disimpan ke sheet "Pengaturan" dan berlaku di semua HP setelah sinkron.' }),
       btn('Simpan pengaturan', async () => {
         if (!changed.size) return toast('Tidak ada perubahan.');

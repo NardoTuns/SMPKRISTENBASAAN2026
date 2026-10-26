@@ -7,7 +7,7 @@ import { S, D, me, bump, resetData, katNama } from '../store.js';
 import { logout, applyNewPassword } from '../auth.js';
 import { callAuthed, discardFailed, retryFailed, syncNow } from '../sync.js';
 import { ping } from '../api.js';
-import { PWA, applyUpdate, checkUpdate, install, isIOS, getTheme, setTheme } from '../pwa.js';
+import { PWA, applyUpdate, checkUpdate, hardReload, install, isIOS, getTheme, setTheme } from '../pwa.js';
 import { APP_VERSION, DEFAULT_SCRIPT_URL } from '../config.js';
 import { fmtNum, relTime } from '../core/util.js';
 import { makeDemo } from '../core/demo.js';
@@ -108,6 +108,10 @@ export function render(view) {
     PWA.waiting ? h('div', { class: 'notice info' }, icon('download'), h('div', { class: 'grow' }, h('strong', { text: 'Versi baru siap dipasang' })), btn('Perbarui sekarang', () => applyUpdate(), { kind: 'primary', small: true })) : null,
     h('div', { class: 'row gap-sm wrap' },
       btn(PWA.checking ? 'Memeriksa…' : 'Periksa pembaruan', async () => toast(await checkUpdate(true)), { ic: 'sync', disabled: PWA.checking }),
+      btn('Muat ulang paksa', async () => {
+        if (!navigator.onLine) return toast('Perlu internet untuk mengunduh ulang tampilan aplikasi.');
+        if (await confirmDialog('Muat ulang paksa?', 'Tampilan aplikasi diunduh ulang dari server (gunakan bila tampilan terasa belum berubah setelah pembaruan). Data di HP tetap aman.', 'Muat ulang')) hardReload();
+      }, { ic: 'download', kind: 'text' }),
       PWA.installEvt ? btn('Pasang aplikasi', () => install(), { ic: 'install', kind: 'primary' }) : null,
       !PWA.installEvt && !PWA.installed && isIOS() ? btn('Cara pasang di iPhone', () => dialog('Pasang di iPhone/iPad', 'Buka aplikasi ini di Safari → ketuk tombol Bagikan (kotak dengan panah ke atas) → pilih "Tambah ke Layar Utama" → Tambah.'), { ic: 'install' }) : null),
     h('label', { class: 'field' }, h('span', { class: 'lbl', text: 'Tema tampilan' }), select([{ value: 'auto', label: 'Otomatis (ikuti HP)' }, { value: 'light', label: 'Terang' }, { value: 'dark', label: 'Gelap' }], theme, (v) => setTheme(v))),

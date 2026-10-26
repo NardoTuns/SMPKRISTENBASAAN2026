@@ -3,6 +3,7 @@ import { h, icon, btn } from '../ui/dom.js';
 import { barList, chartCard, columnChart, heatGrid, stackBar } from '../ui/charts.js';
 import { emptyState, filterBar, levelBadge, pageHead, recordRow, statTile, deltaChip, studentRow, TINGKAT_WARNA } from '../ui/widgets.js';
 import { go } from '../ui/nav.js';
+import { printSummary } from '../ui/print.js';
 import { S, D, hidden, me } from '../store.js';
 import { countBy, filterRecords, heat, periodRange, totals, trend } from '../core/stats.js';
 import { TINGKAT } from '../core/rules.js';
@@ -16,10 +17,11 @@ let F = { periode: localStorage.getItem('dash.periode') || '30h', kelas: '', kat
 export function render(view) {
   const d = D();
   const s = S.settings;
-  view.append(pageHead('Dasbor Kedisiplinan', `${s.namaSekolah} · TA ${s.tahunAjaran} · Semester ${s.semester}`,
-    S.sync.lastOk || S.demo ? h('span', { class: 'muted small', text: S.demo ? 'Mode Demo' : `Data per ${relTime(S.sync.lastOk)}` }) : null));
-
   const blocker = setupNotice();
+  view.append(pageHead('Dasbor Kedisiplinan', `${s.namaSekolah} · TA ${s.tahunAjaran} · Semester ${s.semester}${S.demo ? ' · Mode Demo' : S.sync.lastOk ? ` · data per ${relTime(S.sync.lastOk)}` : ''}`,
+    blocker ? null : btn('Ringkasan · PDF/WA', () => printSummary(ringkasan()), { ic: 'report', kind: 'tonal', title: 'Unduh ringkasan dasbor (PDF/PNG) atau kirim ke WhatsApp' }),
+    h('a', { class: 'btn text', href: 'DashboardSiswa.html' }, icon('users'), h('span', { text: 'Halaman Siswa & Orang Tua' }))));
+
   if (blocker) { view.append(blocker); return; }
 
   view.append(filterBar(F, (nf) => { F = nf; try { localStorage.setItem('dash.periode', F.periode); } catch { /* mode privat */ } rerender(view); }));
@@ -122,6 +124,32 @@ export function render(view) {
   const byGuru = countBy(recs, (r) => r.guruNama || r.guru).slice(0, 6);
   grid.append(chartCard({ cls: 'span-6', title: 'Pencatat teraktif', sub: pr.label, chart: barList(byGuru.map((g) => ({ label: g.key, value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'catatan' }),
     table: { cols: ['Guru', 'Catatan', 'Siswa', 'Poin'], rows: byGuru.map((g) => [g.key, g.n, g.nSiswa, g.poin]) } }));
+}
+
+/** Data ringkasan dasbor (mengikuti penyaring yang sedang aktif) untuk dokumen PDF/PNG/WA. */
+function ringkasan() {
+  const d = D();
+  const pr = periodRange(F.periode, ymd(), F);
+  const recs = filterRecords(S.d.pelanggaran, { kelas: F.kelas, kategori: F.kategori, tingkat: F.tingkat, from: pr.from, to: pr.to });
+  const t = totals(recs);
+  const pool = d.aktif.filter((x) => !F.kelas || x.kelas === F.kelas);
+  const lvCount = (kode) => pool.filter((x) => (d.summaries.get(x.id)?.level?.kode || '') === kode).length;
+  const byKelas = countBy(recs, (r) => r.kelas);
+  return {
+    title: 'Ringkasan Kedisiplinan Siswa',
+    meta: [`Periode: ${pr.label}`, F.kelas ? `Kelas ${F.kelas}` : 'Semua kelas', F.kategori ? `Kategori ${F.kategori}` : '', F.tingkat ? `Pelanggaran ${F.tingkat}` : '', `TA ${S.settings.tahunAjaran}`].filter(Boolean),
+    tiles: [['Pelanggaran', fmtNum(t.n)], ['Total poin', fmtNum(t.poin)], ['Siswa terlibat', fmtNum(t.siswa), `dari ${pool.length} siswa aktif`], ['Pelanggaran berat', fmtNum(t.berat)]],
+    sections: [
+      { title: 'Status siswa (akumulasi seluruh masa sekolah)', cols: ['Tahap', 'Rentang poin', 'Jumlah siswa'], bar: 2,
+        rows: [['Aman', `0–${(d.levels[0]?.min || 10) - 1}`, lvCount('')], ...d.levels.map((l, i) => [l.label, d.levels[i + 1] ? `${l.min}–${d.levels[i + 1].min - 1}` : `≥ ${l.min}`, lvCount(l.kode)])] },
+      { title: 'Pelanggaran per kelas', cols: ['Kelas', 'Siswa melanggar', 'Total poin', 'Pelanggaran'], bar: 3,
+        rows: d.kelasList.filter((k) => !F.kelas || k === F.kelas).map((k) => { const g = byKelas.find((x) => x.key === k); return [k, g?.nSiswa || 0, g?.poin || 0, g?.n || 0]; }) },
+      { title: 'Pelanggaran per kategori', cols: ['Kategori', 'Pelanggaran'], bar: 1,
+        rows: d.kategori.map((k) => [`${k.kode}. ${k.nama}`, recs.filter((r) => r.kategori === k.kode).length]) },
+      { title: 'Pelanggaran paling sering', cols: ['Bentuk pelanggaran', 'Siswa', 'Kali'], bar: 2,
+        rows: countBy(recs, (r) => r.jenisKode).slice(0, 10).map((g) => [`${g.key}. ${d.jenisMap.get(String(g.key))?.uraian || ''}`, g.nSiswa, g.n]) },
+    ],
+  };
 }
 
 function rerender(view) {

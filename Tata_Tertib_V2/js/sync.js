@@ -144,6 +144,8 @@ async function pull(full) {
   S.meta.lastPull = Date.now();
   S.sync.authError = res.authError || (S.sync.authError.startsWith('Perubahan dari akun') ? S.sync.authError : '');
   if (res.me && S.session) { Object.assign(S.session, { nama: res.me.nama, peran: res.me.peran, kelasWali: res.me.kelasWali }); await db.kvSet('session', S.session); }
+  S.anon = res.anon || null; // statistik tanpa identitas (hanya dikirim bila dasbor diatur "login")
+  await db.kvSet('anon', S.anon);
   if (!res.restricted) {
     await replaceFromServer('siswa', res.siswa || []);
     let needFull = false;

@@ -10,12 +10,13 @@ import { debounce, matches } from '../core/util.js';
 export const meta = { title: 'Tata Tertib', live: true };
 let q = '';
 
-export function render(view) {
+/** opts.publik: dipakai Halaman Siswa & Orang Tua (tanpa tombol kelola). */
+export function render(view, route, opts = {}) {
   const d = D();
   const s = S.settings;
   view.append(pageHead('Tata Tertib & Peraturan Sekolah', s.namaSekolah,
-    btn('Cetak', () => printAturan(), { ic: 'printer', kind: 'text' }),
-    canRules(me()) ? btn('Kelola aturan', () => go('kelola', 'jenis'), { ic: 'edit', kind: 'tonal' }) : null));
+    btn(opts.publik ? 'Unduh / bagikan' : 'PDF / WA / Cetak', () => printAturan(), { ic: 'report', kind: opts.publik ? 'tonal' : 'text' }),
+    !opts.publik && canRules(me()) ? btn('Kelola aturan', () => go('kelola', 'jenis'), { ic: 'edit', kind: 'tonal' }) : null));
 
   if (!d.jenis.length) { view.append(emptyState('book', 'Aturan belum diunduh', 'Sambungkan ke internet untuk mengunduh tata tertib dari server.')); return; }
 

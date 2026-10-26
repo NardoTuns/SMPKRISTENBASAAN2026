@@ -20,7 +20,7 @@ export function render(view, route) {
   const d = D();
   const from30 = periodRange('30h').from;
   view.append(pageHead('Kelas', `${d.kelasList.length} kelas · ${fmtNum(d.aktif.length)} siswa aktif`,
-    btn('Cetak rekap', () => printRekap(), { ic: 'printer', kind: 'text' })));
+    btn('Rekap · PDF/WA', () => printRekap(), { ic: 'report', kind: 'text' })));
   if (!d.kelasList.length) { view.append(emptyState('school', 'Belum ada kelas', 'Kelas muncul otomatis dari data siswa.')); return; }
   const tiers = [{ label: 'Aman', color: 'var(--st-ok)' }, ...d.levels.map((l) => ({ label: l.label, color: `var(--st-${l.warna || 'warn'})` }))];
   view.append(h('div', { class: 'legend card-legend', 'aria-label': 'Arti warna batang' }, h('span', { class: 'muted', text: 'Sebaran siswa per tahap:' }),

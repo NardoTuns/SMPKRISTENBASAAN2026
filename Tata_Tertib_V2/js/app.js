@@ -6,7 +6,7 @@ import { hideTip } from './ui/charts.js';
 import * as db from './db.js';
 import { S, D, me, on, loadAll } from './store.js';
 import { schedule, startAuto, syncNow } from './sync.js';
-import { PWA, applyTheme, applyUpdate, install, registerSW } from './pwa.js';
+import { PWA, applyTheme, applyUpdate, install, registerSW, updateApp } from './pwa.js';
 import { canAdmin, canRules, canSiswa } from './core/perm.js';
 import { APP_VERSION } from './config.js';
 import { hm } from './core/util.js';
@@ -36,7 +36,7 @@ const NAV = [
   { page: 'akun', label: 'Akun & Aplikasi', ic: 'user' },
 ];
 
-let view, sideNav, bottomNav, syncChip, userBtn, banners, brandSub;
+let view, sideNav, bottomNav, syncChip, userBtn, updateBtn, banners, brandSub;
 let currentPage = null;
 
 function buildShell() {
@@ -44,12 +44,14 @@ function buildShell() {
   app.replaceChildren();
   syncChip = h('button', { class: 'sync-chip', type: 'button', onclick: () => go('akun') });
   userBtn = h('button', { class: 'user-btn', type: 'button' });
+  updateBtn = h('button', { class: 'update-btn', type: 'button', title: 'Update: ambil data & tampilan versi terbaru', 'aria-label': 'Update aplikasi dan data', onclick: () => runUpdate() },
+    icon('download'), h('span', { class: 'update-text', text: 'Update' }));
   brandSub = h('span', { class: 'brand-sub' });
   const top = h('header', { class: 'topbar' },
     h('a', { class: 'brand', href: '#/', 'aria-label': 'Beranda' },
       h('span', { class: 'brand-mark' }, h('img', { src: 'icons/favicon.svg', alt: '' })),
       h('span', { class: 'brand-text' }, h('span', { class: 'brand-title', text: 'Tata Tertib' }), brandSub)),
-    h('span', { class: 'grow' }), syncChip, userBtn);
+    h('span', { class: 'grow' }), syncChip, updateBtn, userBtn);
   sideNav = h('nav', { class: 'sidenav', 'aria-label': 'Menu utama' });
   bottomNav = h('nav', { class: 'bottomnav', 'aria-label': 'Menu bawah' });
   banners = h('div', { class: 'banners' });
@@ -67,6 +69,7 @@ function drawChrome() {
     u ? h('a', { class: 'btn primary block side-cta', href: '#/catat' }, icon('plus'), h('span', { text: 'Catat Pelanggaran' })) : h('a', { class: 'btn tonal block side-cta', href: '#/login' }, icon('login'), h('span', { text: 'Masuk Guru' })),
     ...NAV.filter((n) => !n.show || n.show(u)).map((n) => h('a', { href: '#/' + n.page, class: 'side-link ' + active(n.page), 'aria-current': active(n.page) ? 'page' : null }, icon(n.ic), h('span', { text: n.label }),
       n.page === 'tindak' ? badgeCount(D().tindak.filter((t) => t.berlaku && t.status === 'Belum').length) : null)),
+    h('a', { href: 'DashboardSiswa.html', class: 'side-link ds-link' }, icon('users'), h('span', { text: 'Halaman Siswa & Ortu' })),
     h('div', { class: 'side-foot muted small', text: `Versi ${APP_VERSION}` }));
   const bn = (p, label, ic) => h('a', { href: '#/' + p, class: 'bn ' + active(p), 'aria-current': active(p) ? 'page' : null }, icon(ic), h('span', { text: label }));
   bottomNav.replaceChildren(
@@ -94,6 +97,7 @@ function moreMenu() {
       u ? item('tindak', 'Tindak Lanjut', 'checklist', `${D().tindak.filter((t) => t.berlaku && t.status === 'Belum').length} belum dilaksanakan`) : null,
       canRules(u) || canSiswa(u) || canAdmin(u) ? item('kelola', 'Kelola Data', 'settings', 'Aturan, siswa, pengguna, pengaturan') : null,
       item('akun', 'Akun & Aplikasi', 'user', 'Sinkron, pembaruan, tema'),
+      h('a', { class: 'menu-item', href: 'DashboardSiswa.html' }, icon('users'), h('span', { class: 'grow' }, h('span', { class: 'block', text: 'Halaman Siswa & Orang Tua' }), h('span', { class: 'muted small', text: 'Tanpa login — bagikan ke orang tua' })), icon('right')),
       u ? null : item('login', 'Masuk Guru', 'login', 'Untuk mencatat pelanggaran')));
   }, { title: 'Menu' });
 }
@@ -116,8 +120,26 @@ function drawSync() {
   syncChip.replaceChildren(icon(ic, cls === 'run' ? 'spin' : ''), h('span', { class: 'sync-text', text }));
 }
 
+let updating = false;
+async function runUpdate() {
+  if (updating) return;
+  updating = true;
+  updateBtn.classList.add('busy');
+  updateBtn.querySelector('svg').classList.add('spin');
+  try {
+    const dataOk = S.demo || !S.serverUrl ? true : await syncNow();
+    const msg = await updateApp();
+    if (msg) toast(`${msg}${S.demo || !S.serverUrl ? '' : dataOk ? ' · data terbaru sudah diambil' : ' · data belum bisa diambil'}`);
+  } finally {
+    updating = false;
+    updateBtn.classList.remove('busy');
+    updateBtn.querySelector('svg')?.classList.remove('spin');
+  }
+}
+
 function drawBanners() {
   if (!banners) return;
+  updateBtn?.classList.toggle('has-update', !!PWA.waiting);
   const list = [];
   if (PWA.waiting) list.push(h('div', { class: 'banner info' }, icon('download'), h('span', { class: 'grow', text: `Versi baru${PWA.remoteVersion ? ' ' + PWA.remoteVersion : ''} tersedia.` }), h('button', { class: 'btn small primary', type: 'button', onclick: applyUpdate, text: 'Perbarui' })));
   let dismissed = false;
@@ -136,6 +158,7 @@ function renderRoute({ keepScroll = false } = {}) {
   const page = ROUTES[route.page] || dashboard;
   const changed = page !== currentPage;
   currentPage = page;
+  document.body.dataset.page = route.page || 'beranda';
   const y = window.scrollY;
   hideTip();
   view.replaceChildren();
@@ -181,7 +204,11 @@ async function boot() {
   buildShell();
   window.addEventListener('hashchange', () => renderRoute());
   on('data', liveRefresh);
-  on('session', () => renderRoute({ keepScroll: true }));
+  on('session', () => {
+    renderRoute({ keepScroll: true });
+    // Setelah login, tarik ulang data lengkap (tanpa login, kolom pelapor/saksi/kronologi tidak dikirim server).
+    if (S.session && !S.demo && S.serverUrl) syncNow({ full: true });
+  });
   on('sync', drawSync);
   on('pwa', drawBanners);
   on('write', () => schedule(1200));

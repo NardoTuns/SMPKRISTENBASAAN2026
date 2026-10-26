@@ -3,6 +3,7 @@
 // Juga menyediakan Code.gs tiruan di /gas/exec (data hanya di memori) untuk uji tanpa Google.
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { makeEnv } from './gas-mock.mjs';
@@ -14,9 +15,14 @@ const TYPES = {
   '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8',
 };
 
-/** overrides: Map<path, string> untuk menyimulasikan rilis baru tanpa mengubah file. */
-export function createServer({ gas, overrides = new Map(), log = false } = {}) {
+/**
+ * overrides: Map<path, string> untuk menyimulasikan rilis baru tanpa mengubah file.
+ * blankServer: sajikan js/config.js dengan DEFAULT_SCRIPT_URL kosong — dipakai uji otomatis agar tidak
+ * pernah menghubungi server Google sekolah yang asli.
+ */
+export function createServer({ gas, overrides = new Map(), log = false, blankServer = false } = {}) {
   if (!gas) { gas = makeEnv({}, { realTime: true }); gas.setup(); }
+  if (blankServer) overrides.set('js/config.js', readFileSync(join(ROOT, 'js/config.js'), 'utf8').replace(/DEFAULT_SCRIPT_URL = '[^']*'/, "DEFAULT_SCRIPT_URL = ''"));
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/gas/exec') {

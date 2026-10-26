@@ -243,6 +243,59 @@ test('akses dasbor "login": tamu hanya menerima aturan & daftar pengguna', () =>
   assert.equal(env.sheet('Pengaturan').objects().find((r) => r.Kunci === 'aksesDashboard').Keterangan.length > 5, true);
 });
 
+test('tanpa login: pelapor, saksi, kronologi tidak dikirim; dengan login lengkap', () => {
+  const { env, admin } = fresh();
+  ok(push(env, admin, [{ table: 'siswa', row: { id: 's1', nis: '2026001', nama: 'Budi', kelas: '7A' } },
+    { table: 'pelanggaran', row: rec({ pelapor: 'Citra', saksi: 'Pak Guru', kronologi: 'Kejadian di kelas', lokasi: 'Ruang kelas' }) }]));
+  const pub = env.post({ action: 'pull' }).pelanggaran[0];
+  assert.equal(pub.pelapor, undefined);
+  assert.equal(pub.saksi, undefined);
+  assert.equal(pub.kronologi, undefined);
+  assert.equal(pub.lokasi, 'Ruang kelas');
+  const priv = env.post({ action: 'pull', auth: admin }).pelanggaran[0];
+  assert.equal(priv.pelapor, 'Citra');
+  assert.equal(priv.kronologi, 'Kejadian di kelas');
+});
+
+test('cek siswa dengan NIS/NISN (halaman orang tua) & data anonim saat dasbor khusus login', () => {
+  const { env, admin } = fresh();
+  ok(push(env, admin, [
+    { table: 'siswa', row: { id: 's1', nis: '2026001', nisn: '0091234567', nama: 'Budi', kelas: '7A' } },
+    { table: 'siswa', row: { id: 's2', nis: '2026002', nama: 'Citra', kelas: '7A' } },
+    { table: 'pelanggaran', row: rec({ pelapor: 'Citra' }) },
+    { table: 'pelanggaran', row: rec({ id: 'p2', batal: true, alasanBatal: 'salah' }) },
+  ]));
+  let r = ok(env.post({ action: 'cekSiswa', nis: '2026001' }));
+  assert.equal(r.siswa.nama, 'Budi');
+  assert.equal(r.pelanggaran.length, 1, 'catatan batal tidak ikut');
+  assert.equal(r.pelanggaran[0].pelapor, undefined);
+  assert.equal(ok(env.post({ action: 'cekSiswa', nis: '0091 234 567' })).siswa.id, 's1', 'NISN (spasi diabaikan)');
+  assert.equal(env.post({ action: 'cekSiswa', nis: '999999' }).code, 'NOT_FOUND');
+  assert.equal(env.post({ action: 'cekSiswa', nis: '1' }).code, 'VALIDATION');
+
+  ok(push(env, admin, [{ table: 'pengaturan', row: { kunci: 'aksesDashboard', nilai: 'login' } }]));
+  const g = env.post({ action: 'pull' });
+  assert.equal(g.restricted, true);
+  assert.equal(g.anon.siswa.length, 2);
+  assert.equal(g.anon.pelanggaran.length, 1);
+  assert.equal(JSON.stringify(g.anon).includes('Budi'), false, 'tanpa nama');
+  assert.equal(JSON.stringify(g.anon).includes('2026001'), false, 'tanpa NIS');
+  assert.ok(g.anon.siswa.some((s) => s.id === g.anon.pelanggaran[0].siswaId), 'tetap bisa dihitung per siswa');
+  assert.equal(env.post({ action: 'pull', auth: admin }).anon, undefined);
+  assert.equal(g.settings.dashboardSiswa, 'nis');
+});
+
+test('setup ulang menambah pengaturan baru tanpa mengubah isian lama', () => {
+  const { env, admin } = fresh();
+  ok(push(env, admin, [{ table: 'pengaturan', row: { kunci: 'kota', nilai: 'Ratatotok' } }]));
+  const sh = env.sheet('Pengaturan');
+  sh.rows = sh.rows.filter((r) => r[0] !== 'waSekolah');
+  env.setup();
+  const rows = sh.objects();
+  assert.ok(rows.some((r) => r.Kunci === 'waSekolah'));
+  assert.equal(rows.find((r) => r.Kunci === 'kota').Nilai, 'Ratatotok');
+});
+
 test('impor massal > 15 baris memakai satu penulisan blok', () => {
   const { env, admin } = fresh();
   const ops = [];

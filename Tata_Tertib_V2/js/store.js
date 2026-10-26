@@ -18,6 +18,7 @@ export const S = {
   settings: { ...DEFAULT_SETTINGS },
   meta: { salt: '', iter: HASH_ITER, rev: 0, lastPull: 0, restricted: false, server: '' },
   outbox: [],
+  anon: null,
   sync: { running: false, lastOk: 0, msg: '', error: '', authError: '' },
   online: typeof navigator !== 'undefined' ? navigator.onLine : true,
   deviceId: '',
@@ -42,6 +43,7 @@ export async function loadAll() {
   S.settings = { ...DEFAULT_SETTINGS, ...(await db.kvGet('settings', {})) };
   S.meta = { ...S.meta, ...(await db.kvGet('meta', {})) };
   S.session = await db.kvGet('session', null);
+  S.anon = await db.kvGet('anon', null);
   S.demo = !!(await db.kvGet('demo', false));
   S.serverUrl = (await db.kvGet('serverUrl', '')) || DEFAULT_SCRIPT_URL;
   S.sync.lastOk = await db.kvGet('lastOk', 0);
@@ -205,6 +207,7 @@ export async function resetData({ demo = null } = {}) {
   S.meta = { salt: '', iter: HASH_ITER, rev: 0, lastPull: 0, restricted: false, server: '' };
   S.settings = { ...DEFAULT_SETTINGS };
   S.session = null;
+  S.anon = null;
   S.sync = { running: false, lastOk: 0, msg: '', error: '', authError: '' };
   await db.kvSet('deviceId', S.deviceId);
   if (S.serverUrl && S.serverUrl !== DEFAULT_SCRIPT_URL) await db.kvSet('serverUrl', S.serverUrl);

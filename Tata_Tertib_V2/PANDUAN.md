@@ -23,6 +23,15 @@ Aplikasi **Buku Kedisiplinan Siswa digital**. Guru mencatat pelanggaran dari HP,
 
 > Setiap kali `Code.gs` diubah: **Terapkan → Kelola deployment → ikon pensil → Versi: Versi baru → Terapkan**. URL tetap sama.
 
+### Memperbarui server dari v1.0.0 ke v1.1.0 (wajib bila server sudah terpasang)
+
+Versi 1.1.0 menambah: cek siswa dengan NIS untuk Halaman Siswa & Orang Tua, statistik anonim, dan perlindungan nama siswa pelapor (nama pelapor, saksi, dan kronologi tidak lagi dikirim ke HP yang belum login).
+
+1. Buka spreadsheet → **Ekstensi → Apps Script** → ganti seluruh isi `Code.gs` dengan file `apps-script/Code.gs` yang baru → **Simpan**.
+2. Pilih fungsi **`setup`** → **Jalankan** (hanya menambah pengaturan baru; data lama tidak berubah).
+3. **Terapkan → Kelola deployment → ikon pensil → Versi: Versi baru → Terapkan.** URL tetap sama, `js/config.js` tidak perlu diubah.
+4. Cek: buka `URL…/exec?action=ping` di browser → harus tertulis `"server":"1.1.0"`.
+
 ## 2. Menghubungkan aplikasi ke server
 
 Buka `js/config.js` dan isi URL tadi:
@@ -78,11 +87,36 @@ Setelah dibuka sekali saat online, aplikasi bisa dibuka tanpa internet. Login gu
 
 ## 6. Cara kerja sehari-hari
 
-- **Catat pelanggaran** (tombol hijau **+**): pilih satu atau beberapa siswa → pilih bentuk pelanggaran (bisa lebih dari satu) → isi detail kejadian (lokasi, kronologi, saksi, pelapor, tindakan langsung) → periksa **dampak poin** → **Simpan**. Setelah itu bisa langsung **Cetak BAP** atau **kabari orang tua via WhatsApp**.
+- **Catat pelanggaran** (tombol hijau **+**) dalam 3 langkah:
+  1. **Siswa** — cari nama/NIS atau pilih kelas; boleh lebih dari satu siswa. Daftar "Terakhir Anda catat" mempercepat pencatatan.
+  2. **Pelanggaran** — cari atau pilih kategori; boleh lebih dari satu. **Poin bisa disesuaikan** dengan tombol − / + (poin di tata tertib hanya perkiraan); tombol *Kembalikan* mengembalikan ke poin bawaan.
+  3. **Detail & Simpan** — tanggal/jam terisi otomatis; **lokasi** dan **tindakan langsung** diketik atau dipilih dari daftar saran yang muncul di kotak ketik; kronologi, saksi, dan siswa pelapor bersifat opsional. Periksa **dampak poin**, lalu **Simpan**.
+  Setelah tersimpan bisa langsung membuat **BAP (PDF / WA / cetak)** atau **kabari orang tua via WhatsApp**. Saat mencatat di HP, menu bawah disembunyikan agar layar lega.
+- **Unduh PDF / PNG & kirim WhatsApp**: setiap dokumen (BAP, kartu kedisiplinan, surat SP, rekap kelas, ringkasan dasbor, tata tertib) dibuka di lembar dengan pratinjau dan tombol **Unduh PDF**, **Unduh PNG**, **WA (PDF)**, **WA (PNG)**, dan **Cetak**. Di HP, tombol WA membuka menu berbagi → pilih WhatsApp → pilih kontak (nomor orang tua ditampilkan sebagai penerima yang disarankan). Di komputer, file diunduh lalu WhatsApp Web terbuka untuk dilampiri. Halaman **Laporan** punya tombol langsung: Unduh PDF, Unduh PNG, Kirim WA, Cetak, CSV.
+- **Tombol Update** (kanan atas): sekali tekan → data terbaru diambil dari server dan, bila ada, versi aplikasi terbaru langsung dipasang.
 - **Salah input?** Buka catatan → **Ubah** atau **Batalkan** (wajib alasan). Sesuai tata tertib, poin yang sah tidak bisa dikurangi; pembatalan hanya untuk koreksi, dan catatan tetap tersimpan sebagai riwayat. Lewat batas jam koreksi, hanya Guru BK/Kepala Sekolah/Admin yang bisa mengubah.
 - **Tindak Lanjut**: setiap siswa yang mencapai suatu tahap otomatis muncul di menu Tindak Lanjut. Wali Kelas/Guru BK menandai status, nomor surat (dibuat otomatis), dan mencetak surat: **SP 1 + Surat Komitmen**, **SP 2 + Panggilan Orang Tua**, **SP 3 + Skorsing**, **Surat Perjanjian bermaterai**, **Surat Pengembalian kepada Orang Tua**.
 - **Dasbor, Siswa, Kelas, Riwayat, Laporan, Tata Tertib** dapat dibuka siapa saja yang memiliki alamat aplikasi. Laporan bisa **dicetak/disimpan PDF** atau **diunduh CSV** (dibuka di Excel).
 - **Status sinkron** ada di kanan atas: *Tersinkron*, *N tertunda*, *Offline*, atau *Perlu dicek*. Ketuk untuk melihat detail di **Akun & Aplikasi**.
+
+## 6a. Halaman Siswa & Orang Tua (`DashboardSiswa.html`)
+
+Alamat: `https://NAMA-AKUN.github.io/tatib-krisba/DashboardSiswa.html` — **tanpa login**, bisa dipasang di HP sebagai aplikasi "Info Siswa", dan tetap bisa dibuka tanpa internet setelah dibuka sekali. Bagikan alamat ini ke grup WhatsApp orang tua. Tautannya juga ada di menu aplikasi guru dan di halaman Masuk.
+
+| Menu | Isi |
+|---|---|
+| **Beranda** | % siswa tanpa pelanggaran, pelanggaran bulan ini vs bulan lalu, rata-rata poin, kelas paling disiplin, grafik jumlah pelanggaran, status siswa per tahap, pelanggaran paling sering, per kategori, peringkat kelas disiplin, pengumuman, kartu "Anak saya". |
+| **Anak** | Orang tua memasukkan **NIS/NISN** anak → total poin, tahap pembinaan & pesan yang ramah, meter poin, grafik perjalanan poin, riwayat pelanggaran, status tindak lanjut sekolah, tips untuk orang tua, tombol **Simpan sebagai "Anak saya"**, **Unduh / bagikan** kartu (PDF/PNG), **Hubungi sekolah** (WhatsApp). |
+| **Kelas** | Rekap tiap kelas: jumlah siswa (L/P), % tanpa pelanggaran, grafik, status per tahap, pelanggaran paling sering, per kategori. |
+| **Tata Tertib** | Tahap sanksi, catatan penting, SOP, daftar pelanggaran & poin (bisa dicari), unduh/bagikan PDF. |
+| **Info** | Pengumuman, kontak sekolah, cara membaca poin, pasang aplikasi, tombol Update. |
+
+Pengaturan (Kelola → Pengaturan → *Halaman Siswa & Orang Tua*):
+- **Cara melihat data per siswa** — *Dengan NIS/NISN* (bawaan, disarankan): nama siswa tidak pernah ditampilkan dalam daftar; detail anak hanya terbuka dengan NIS/NISN. *Daftar nama*: semua nama & poin terlihat oleh siapa saja.
+- **Pengumuman** untuk siswa & orang tua, dan **nomor WhatsApp sekolah/BK**.
+- Bila **Akses dasbor = Login**, HP orang tua hanya menerima statistik tanpa nama; pencarian NIS tetap berfungsi (lewat server, perlu internet; hasilnya tersimpan di HP itu).
+
+> Catatan privasi: mode *Dengan NIS* mencegah orang melihat-lihat data anak lain, tetapi selama **Akses dasbor = Publik**, data siswa tetap diunduh ke HP pengunjung (agar halaman berjalan offline). Untuk perlindungan penuh, atur **Akses dasbor = Login**.
 
 ## 7. Spreadsheet
 
@@ -113,6 +147,7 @@ Di HP pengguna akan muncul tulisan **"Versi baru tersedia — Perbarui"** (atau 
 - Password **tidak pernah** dikirim ke HP. HP hanya menyimpan *hash* (SHA-256, 200 putaran) untuk login offline; setiap perubahan data diperiksa lagi oleh server (token login + hak peran). Gunakan password yang tidak mudah ditebak (bukan tanggal lahir/1234).
 - Bila password seorang guru diganti, HP lama otomatis diminta login ulang; catatan yang belum terkirim **tidak hilang**.
 - Dasbor bawaan bersifat **publik** (sesuai permintaan). Bila sekolah ingin data siswa hanya terlihat oleh guru: **Kelola → Pengaturan → Akses dasbor → Login**.
+- Nama **siswa pelapor**, **saksi**, dan **kronologi** hanya dikirim ke HP guru yang login (server v1.1.0), untuk melindungi siswa yang melapor.
 - Jangan membagikan spreadsheet atau URL Apps Script ke siswa.
 
 ## 10. Catatan penafsiran aturan (mohon dicek sekolah)
@@ -129,13 +164,13 @@ Aturan bawaan diambil dari *TATA TERTIB SMP KRISTEN BASAAN 2026.pdf*. Ada bebera
 ## 11. Untuk pengembang
 
 ```
-npm test                 # 22 uji unit (logika poin, statistik, SHA-256, Code.gs lewat tiruan Apps Script)
-node tools/e2e.mjs       # 15 uji end-to-end di Chrome headless (offline, sinkron, 2 HP, update)
+npm test                 # 25 uji unit (logika poin, statistik, SHA-256, Code.gs lewat tiruan Apps Script)
+node tools/e2e.mjs       # 19 uji end-to-end di Chrome headless (offline, sinkron, 3 HP, PDF/PNG, halaman orang tua, update)
 node tools/serve.mjs     # coba di komputer: http://localhost:8080 (+ server tiruan di /gas/exec)
 node tools/make-icons.mjs  # buat ulang ikon
 ```
 
-Kode tanpa build step (ES modules). Logika murni di `js/core/`, penyimpanan & sinkron di `js/store.js`, `js/sync.js`, `js/db.js`, halaman di `js/pages/`, komponen di `js/ui/`.
+Kode tanpa build step (ES modules). Logika murni di `js/core/`, penyimpanan & sinkron di `js/store.js`, `js/sync.js`, `js/db.js`, halaman guru di `js/pages/`, halaman siswa & orang tua di `js/siswa.js`, komponen di `js/ui/` (ekspor PDF/PNG/WA di `js/ui/export.js`, memakai `vendor/html2canvas.min.js` 1.4.1 & `vendor/jspdf.umd.min.js` 2.5.1, lisensi MIT). Uji otomatis selalu memakai server tiruan (URL server asli di `js/config.js` dikosongkan saat pengujian).
 
 ## 12. Pemecahan masalah
 
@@ -147,3 +182,6 @@ Kode tanpa build step (ES modules). Logika murni di `js/core/`, penyimpanan & si
 | Jam di sheet selisih 1 jam | Zona waktu spreadsheet belum Makassar (langkah 1.2). |
 | Logo tidak muncul di surat | Unggah ulang di Kelola → Pengaturan (maks. ±35 KB setelah diperkecil otomatis). |
 | Ingin mencoba tanpa server | Di dasbor pilih **Coba Mode Demo** (data rekaan, password `demo123`). Keluar lewat Akun & Aplikasi. |
+| Tampilan belum berubah setelah file baru diunggah | Pastikan `node tools/build-sw.mjs` sudah dijalankan & nomor `version.json` dinaikkan, lalu tekan **Update**. Bila tetap, **Akun & Aplikasi → Muat ulang paksa** (data di HP aman). |
+| Orang tua: "Server sekolah belum diperbarui" saat cek NIS | Perbarui `Code.gs` ke v1.1.0 (lihat bagian 1). |
+| Tombol WA tidak menampilkan WhatsApp | Di komputer, file diunduh dulu lalu WhatsApp Web dibuka — lampirkan file secara manual. Di HP, pastikan WhatsApp terpasang. |

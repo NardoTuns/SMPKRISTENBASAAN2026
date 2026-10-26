@@ -122,6 +122,9 @@ export const DEFAULT_SETTINGS = {
   lokasi: 'Ruang kelas, Halaman sekolah, Kantin, Gerbang sekolah, Toilet, Lapangan, Laboratorium, Perpustakaan, Luar sekolah, Media sosial',
   tindakanCepat: 'Teguran lisan, Membersihkan kelas/halaman, Barang disita sementara, Dipanggil ke ruang BK, Membuat surat pernyataan, Orang tua dihubungi',
   logo: '',
+  dashboardSiswa: 'nis',
+  infoSiswa: '',
+  waSekolah: '',
 };
 
 export const SETTING_INFO = {
@@ -145,6 +148,9 @@ export const SETTING_INFO = {
   lokasi: 'Pilihan lokasi kejadian (pisahkan dengan koma)',
   tindakanCepat: 'Pilihan tindakan langsung (pisahkan dengan koma)',
   logo: 'Logo sekolah (diunggah dari aplikasi)',
+  dashboardSiswa: 'Halaman Siswa & Orang Tua: nis = detail siswa dibuka dengan NIS; nama = daftar nama siswa ditampilkan',
+  infoSiswa: 'Pengumuman/informasi untuk siswa & orang tua (tampil di Halaman Siswa & Orang Tua)',
+  waSekolah: 'Nomor WhatsApp sekolah/BK yang dapat dihubungi orang tua',
 };
 
 export const tahunAjaranOf = (d = new Date()) => {

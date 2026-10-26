@@ -3,7 +3,8 @@ import { h, icon, btn, downloadText } from '../ui/dom.js';
 import { dataTable } from '../ui/charts.js';
 import { emptyState, filterBar, pageHead } from '../ui/widgets.js';
 import { go, replaceQuery } from '../ui/nav.js';
-import { printReport } from '../ui/print.js';
+import { reportHtml, reportOpts } from '../ui/print.js';
+import { runExport, waExport } from '../ui/export.js';
 import { S, D, hidden, katNama } from '../store.js';
 import { countBy, filterRecords, periodRange, totals } from '../core/stats.js';
 import { cmpKelas, cmpNama, fmtBulan, fmtTgl, toCSV, ymd } from '../core/util.js';
@@ -39,11 +40,16 @@ export function render(view, route) {
   view.append(filterBar(f, (nf) => update(nf), { fields }));
 
   const rep = build(f);
+  const doc = () => [rep.title, reportHtml(rep), reportOpts(rep)];
   view.append(h('section', { class: 'card' },
     h('div', { class: 'card-head' },
-      h('div', { class: 'grow' }, h('h3', { text: rep.title }), h('p', { class: 'muted small', text: rep.meta.join(' · ') })),
-      btn('Cetak / PDF', () => printReport(rep), { kind: 'primary', ic: 'printer' }),
-      btn('CSV', () => downloadText(toCSV([rep.cols, ...rep.rows]), `${rep.title.toLowerCase().replace(/[^\w]+/g, '-')}-${ymd()}.csv`), { ic: 'download' })),
+      h('div', { class: 'grow' }, h('h3', { text: rep.title }), h('p', { class: 'muted small', text: rep.meta.join(' · ') }))),
+    h('div', { class: 'export-bar', role: 'group', 'aria-label': 'Unduh atau bagikan laporan' },
+      btn('Unduh PDF', () => runExport('pdf', ...doc()), { kind: 'primary', ic: 'download' }),
+      btn('Unduh PNG', () => runExport('png', ...doc()), { ic: 'download' }),
+      btn('Kirim WA', () => waExport(...doc()), { kind: 'wa', ic: 'wa' }),
+      btn('Cetak', () => runExport('print', ...doc()), { ic: 'printer' }),
+      btn('CSV (Excel)', () => downloadText(toCSV([rep.cols, ...rep.rows]), `${rep.title.toLowerCase().replace(/[^\w]+/g, '-')}-${ymd()}.csv`), { ic: 'table', kind: 'text' })),
     rep.summary ? h('div', { class: 'report-summary' }, ...rep.summary.map(([k, v]) => h('div', null, h('span', { class: 'muted small', text: k }), h('strong', { text: v })))) : null,
     dataTable(rep.cols, rep.rows, { numeric: rep.numeric })));
 }

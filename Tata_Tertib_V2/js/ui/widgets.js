@@ -137,14 +137,19 @@ export function openRecord(r) {
       h('div', { class: 'kv-list' },
         kv('Siswa', `${r.nama} · Kelas ${r.kelas}${r.nis ? ' · NIS ' + r.nis : ''}`),
         kv('Waktu', `${fmtTgl(r.tanggal, { hari: true })}${r.jam ? ', ' + r.jam + ' ' + S.settings.zonaWaktu : ''}`),
-        kv('Lokasi', r.lokasi), kv('Kronologi', r.kronologi), kv('Saksi', r.saksi), kv('Siswa pelapor', r.pelapor),
+        kv('Poin', (() => {
+          const j = d.jenisMap.get(String(r.jenisKode));
+          const def = j ? (j.zt ? 100 : Number(j.poin)) : null;
+          return `${r.poin} poin${def != null && def !== Number(r.poin) ? ` (poin aturan: ${def}${j.poinMaks ? '–' + j.poinMaks : ''}; disesuaikan guru)` : ''}`;
+        })()),
+        kv('Lokasi', r.lokasi), u ? kv('Kronologi', r.kronologi) : null, u ? kv('Saksi', r.saksi) : null, u ? kv('Siswa pelapor', r.pelapor) : null,
         kv('Tindakan langsung', r.tindakanLangsung),
         kv('Akumulasi setelah ini', after && !r.batal ? `${fmtNum(after.after)} poin` : null),
         kv('Dicatat oleh', `${r.guruNama || r.guru || '-'}${r.createdAt ? ' · ' + r.createdAt : ''}`),
         r.updatedBy && r.updatedAt && r.updatedAt !== r.createdAt ? kv('Terakhir diubah', `${r.updatedBy} · ${r.updatedAt}`) : null),
       h('div', { class: 'sheet-actions' },
         btn('Lihat siswa', () => { close(); go('siswa', r.siswaId); }, { ic: 'user' }),
-        btn('Cetak BAP', () => printBAP(r), { ic: 'printer' }),
+        u && btn('BAP · PDF/WA', () => printBAP(r), { ic: 'report', title: 'Berita Acara Pemeriksaan: unduh PDF/PNG, kirim WhatsApp, atau cetak' }),
         u && siswa && waLink(siswa, '') && !r.batal ? h('a', { class: 'btn tonal', href: waLink(siswa, waRecordText(r, siswa, sum)), target: '_blank', rel: 'noopener' }, icon('wa'), h('span', { text: 'Kabari orang tua' })) : null,
         canEdit && !r.batal ? btn('Ubah', () => { close(); go('catat', 'ubah', r.id); }, { ic: 'edit' }) : null,
         canEdit && !r.batal ? btn('Batalkan', () => cancelRecord(r, close), { ic: 'undo', kind: 'danger-tonal' }) : null,

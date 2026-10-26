@@ -72,7 +72,7 @@
         </div>
         <div>
           <h1 class="text-lg font-bold tracking-tight">ADMIN DKN & CETAK RAPORT — SMP KRISTEN BASAAN</h1>
-          <p class="text-xs text-slate-400">Mendukung Format Pembelajaran Mendalam, Manajemen Kehadiran CSV/Excel & Konfigurasi Wali Kelas</p>
+          <p class="text-xs text-slate-400">Format Pembelajaran Mendalam, Kehadiran CSV/Excel & Pengaturan Wali Kelas</p>
         </div>
       </div>
 
@@ -88,11 +88,15 @@
           <option value="Genap">Semester Genap</option>
         </select>
 
-        <button onclick="syncAllToCloud()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Sync ke Server
+        <button onclick="pullFromCloudAdmin()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Muat Server (getALL)
         </button>
 
-        <a href="guru.html" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5">
+        <button onclick="syncAllToCloud()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Server
+        </button>
+
+        <a href="guru.html" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
           <i class="fa-solid fa-chalkboard-user"></i> Buka Guru.html
         </a>
       </div>
@@ -111,10 +115,10 @@
           <i class="fa-solid fa-sliders"></i> 3. Atur Pilihan Wali Kelas (Kokurikuler, OSIS, Ibadah)
         </button>
         <button onclick="switchAdminTab('dkn')" id="admTab-dkn" class="nav-pill px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition">
-          <i class="fa-solid fa-table"></i> 4. Rekap DKN & Rumus Nilai
+          <i class="fa-solid fa-table"></i> 4. Rekap DKN & Peringkat
         </button>
         <button onclick="switchAdminTab('master')" id="admTab-master" class="nav-pill px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition">
-          <i class="fa-solid fa-database"></i> 5. Data Master & Pengaturan Sekolah
+          <i class="fa-solid fa-database"></i> 5. Data Master & Koneksi Server
         </button>
       </div>
     </div>
@@ -169,7 +173,7 @@
             <select id="selectSiswaRaport" onchange="renderSingleStudentRaport()" class="w-full px-3 py-2 font-semibold bg-white border border-slate-300 rounded-lg text-slate-800">
               <!-- Diisi via JS -->
             </select>
-            <p class="text-[11px] text-slate-500 mt-1">Pilih 1 siswa atau klik tombol Cetak Satu Kelas.</p>
+            <p class="text-[11px] text-slate-500 mt-1">Pilih 1 siswa atau klik tombol Tampilkan Satu Kelas.</p>
           </div>
 
           <!-- Opsi Sumber Nilai Pembelajaran Mendalam -->
@@ -191,10 +195,10 @@
               <span>Tampilkan baris "Hadir" di Tabel Kehadiran</span>
             </label>
             <div class="flex items-center gap-2 pt-1">
-              <span class="text-slate-600">Label Kehadiran:</span>
+              <span class="text-slate-600">Penomoran Kehadiran:</span>
               <select id="selectLabelKehadiran" onchange="onChangeReportConfig()" class="px-2 py-1 border border-slate-300 rounded bg-white font-semibold">
-                <option value="E">E. KEHADIRAN</option>
-                <option value="D">D. KEHADIRAN</option>
+                <option value="D">D. KEHADIRAN (C. Kokurikuler, D. Ekskul, D. Kehadiran)</option>
+                <option value="E">E. KEHADIRAN (C. Kokurikuler, D. Ekskul, E. Kehadiran)</option>
               </select>
             </div>
           </div>
@@ -320,7 +324,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 class="text-lg font-bold text-slate-800">Daftar Kumpulan Nilai (DKN) & Kehadiran Semester</h2>
-            <p class="text-xs text-slate-500">Rekapitulasi nilai seluruh mata pelajaran, rata-rata, peringkat, serta kehadiran dan kokurikuler.</p>
+            <p class="text-xs text-slate-500">Rekapitulasi nilai seluruh mata pelajaran, jumlah, rata-rata, serta kehadiran dan kokurikuler.</p>
           </div>
           <button onclick="exportDKNToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2">
             <i class="fa-solid fa-download"></i> Export DKN ke Excel (CSV)
@@ -449,12 +453,16 @@
   </main>
 
   <script>
+    const DEFAULT_GAS_URL = ''; // Opsional: isi URL Web App Code.gs Anda di sini
     const STORAGE_KEY = 'DKN_SMP_KRISTEN_BASAAN_2026_DB';
     const SCRIPT_URL_KEY = 'DKN_SMP_KRISTEN_BASAAN_SCRIPT_URL';
 
+    function getActiveScriptUrl() {
+      return localStorage.getItem(SCRIPT_URL_KEY) || DEFAULT_GAS_URL || '';
+    }
+
     let db = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!db) {
-      // Inisialisasi default bila Admin dibuka lebih dulu sebelum guru.html
       db = {
         pengaturan: {
           sekolah: {
@@ -467,7 +475,7 @@
             semesterDefault: 'Ganjil',
             tanggalRaport: 'Basaan, 18 Desember 2026',
             formatRaport: 'PEMBELAJARAN_MENDALAM',
-            penomoranKehadiran: 'E',
+            penomoranKehadiran: 'D',
             waliKelasMap: {
               'VII': { nama: 'Wali Kelas VII, S.Pd', nip: '-' },
               'VIII': { nama: 'Wali Kelas VIII, S.Pd', nip: '-' },
@@ -534,7 +542,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       const sek = db.pengaturan.sekolah || {};
       document.getElementById('selectFormatRaport').value = sek.formatRaport || 'PEMBELAJARAN_MENDALAM';
-      document.getElementById('selectLabelKehadiran').value = sek.penomoranKehadiran || 'E';
+      document.getElementById('selectLabelKehadiran').value = sek.penomoranKehadiran || 'D';
       loadMasterFormValues();
       refreshAdminViews();
     });
@@ -611,7 +619,7 @@
       const format = document.getElementById('selectFormatRaport').value;
       const modeRumus = document.getElementById('selectRumusNilai').value;
       const showHadir = document.getElementById('chkShowHadirRow').checked;
-      const labelKehadiran = document.getElementById('selectLabelKehadiran').value || 'E';
+      const labelKehadiran = document.getElementById('selectLabelKehadiran').value || 'D';
       const semester = document.getElementById('adminGlobalSemester').value;
       const kelas = siswa.KELAS;
 
@@ -619,7 +627,6 @@
       const walasRec = db.walas.find(w => String(w.NISN) === String(siswa.NISN) && String(w.SEMESTER) === String(semester)) || {};
       const opsiDefault = db.pengaturan.opsiWaliKelas || {};
 
-      // Data Kokurikuler, OSIS, Ibadah
       const kokuNilai = walasRec.KOKURIKULER_NILAI || opsiDefault.kokurikuler?.[0]?.nilai || 'Baik (B)';
       const kokuDesk = walasRec.KOKURIKULER_DESK || opsiDefault.kokurikuler?.[0]?.deskripsi || 'Peserta didik terlibat aktif dan kolaboratif dalam kegiatan proyek kokurikuler.';
       const osisNilai = walasRec.OSIS_NILAI || opsiDefault.osis?.[0]?.nilai || 'Baik (B)';
@@ -627,7 +634,6 @@
       const ibadahNilai = walasRec.IBADAH_NILAI || opsiDefault.ibadah?.[0]?.nilai || 'Baik (B)';
       const ibadahDesk = walasRec.IBADAH_DESK || opsiDefault.ibadah?.[0]?.deskripsi || 'Rajin dan tertib mengikuti kegiatan ibadah sekolah serta menunjukkan sikap spiritual yang baik.';
 
-      // Data Ekstrakurikuler
       let ekskulList = [{ nama: 'Pramuka', predikat: 'Baik', ket: 'Aktif mengikuti kegiatan latihan pramuka.' }];
       try {
         if (walasRec.EKSKUL_JSON) {
@@ -636,10 +642,9 @@
         }
       } catch (e) {}
 
-      // Data Wali Kelas Nama
       const infoWalas = (sek.waliKelasMap && sek.waliKelasMap[kelas]) || { nama: `Wali Kelas ${kelas}, S.Pd`, nip: '-' };
 
-      // TABEL B: FORMAT PEMBELAJARAN MENDALAM (1 NILAI TUNGGAL) VS FORMAT K13 (PENGETAHUAN & KETERAMPILAN)
+      // TABEL B: FORMAT PEMBELAJARAN MENDALAM (1 NILAI TUNGGAL) VS FORMAT K13
       let sectionB_HTML = '';
       if (format === 'PEMBELAJARAN_MENDALAM') {
         const rowsMapel = sortedMapel.map((m, idx) => {
@@ -672,7 +677,6 @@
           </table>
         `;
       } else {
-        // FORMAT STANDAR K13 (PENGETAHUAN DAN KETERAMPILAN)
         const rowsMapelK13 = sortedMapel.map((m, idx) => {
           const rec = db.nilai.find(r => String(r.NISN) === String(siswa.NISN) && String(r.KODE_MAPEL) === String(m.KODE) && String(r.SEMESTER) === String(semester));
           const sc = getComputedMapelScore(rec, modeRumus);
@@ -716,7 +720,7 @@
         `;
       }
 
-      // TABEL C. KOKURIKULER (TERMASUK PENJELASAN NILAI KOKURIKULER, OSIS, DAN IBADAH)
+      // TABEL C. KOKURIKULER
       const sectionC_Kokurikuler = `
         <div style="font-weight:bold; font-size:11pt; margin: 12px 0 5px 0;">C. KOKURIKULER</div>
         <table class="raport-table">
@@ -725,7 +729,7 @@
               <th style="width:36px;">No</th>
               <th style="width:170px;">Kegiatan / Aspek Pembinaan</th>
               <th style="width:120px;">Nilai / Predikat</th>
-              <th>Penjelasan Nilai Kokurikuler & Karakter</th>
+              <th>Penjelasan Nilai Kokurikuler</th>
             </tr>
           </thead>
           <tbody>
@@ -776,7 +780,7 @@
         </table>
       `;
 
-      // TABEL KEHADIRAN (D. KEHADIRAN ATAU E. KEHADIRAN)
+      // TABEL KEHADIRAN
       const hadirRowHTML = showHadir ? `
         <tr>
           <td>Hadir</td>
@@ -818,7 +822,6 @@
 
       return `
         <div class="raport-sheet">
-          <!-- KOP & IDENTITAS SISWA -->
           <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px;">
             <div style="font-size:14pt; font-weight:bold; text-transform:uppercase;">LAPORAN HASIL BELAJAR PESERTA DIDIK (RAPORT)</div>
             <div style="font-size:13pt; font-weight:bold; text-transform:uppercase;">${sek.nama || 'SMP KRISTEN BASAAN'}</div>
@@ -852,7 +855,6 @@
             </tr>
           </table>
 
-          <!-- A. SIKAP -->
           <div style="font-weight:bold; font-size:11pt; margin: 6px 0 4px 0;">A. SIKAP</div>
           <table class="raport-table">
             <tr>
@@ -860,19 +862,11 @@
             </tr>
           </table>
 
-          <!-- B. PENILAIAN -->
           ${sectionB_HTML}
-
-          <!-- C. KOKURIKULER -->
           ${sectionC_Kokurikuler}
-
-          <!-- D. EKSTRAKURIKULER -->
           ${sectionD_Ekskul}
-
-          <!-- KEHADIRAN -->
           ${sectionE_Kehadiran}
 
-          <!-- CATATAN WALI KELAS -->
           <div style="font-weight:bold; font-size:11pt; margin: 10px 0 4px 0;">CATATAN WALI KELAS</div>
           <table class="raport-table">
             <tr>
@@ -880,7 +874,6 @@
             </tr>
           </table>
 
-          <!-- TANDA TANGAN -->
           <table style="width:100%; font-size:10.5pt; margin-top:18px; text-align:center;">
             <tr>
               <td style="width:33%;">Mengetahui,<br>Orang Tua / Wali Peserta Didik<br><br><br><br>_______________________</td>
@@ -1055,7 +1048,6 @@
         if (lines.length < 2) return;
 
         const delim = lines[0].includes(';') ? ';' : ',';
-        const semester = document.getElementById('adminGlobalSemester').value;
         let count = 0;
 
         for (let i = 1; i < lines.length; i++) {
@@ -1264,7 +1256,7 @@
       document.getElementById('setWalasVII').value = sek.waliKelasMap?.['VII']?.nama || '';
       document.getElementById('setWalasVIII').value = sek.waliKelasMap?.['VIII']?.nama || '';
       document.getElementById('setWalasIX').value = sek.waliKelasMap?.['IX']?.nama || '';
-      document.getElementById('setScriptUrl').value = localStorage.getItem(SCRIPT_URL_KEY) || '';
+      document.getElementById('setScriptUrl').value = getActiveScriptUrl();
     }
 
     function saveSchoolMasterSettings() {
@@ -1353,8 +1345,39 @@
       reader.readAsText(file);
     }
 
+    async function pullFromCloudAdmin() {
+      const url = getActiveScriptUrl();
+      if (!url) {
+        toastAdmin('Isi URL Google Apps Script di tab Data Master terlebih dahulu.');
+        return;
+      }
+      try {
+        toastAdmin('Memuat data dari Google Sheets (getALL)...');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'getALL' })
+        });
+        const json = await res.json();
+        if (json && (json.status === 'success' || json.status === 'ok' || json.ok)) {
+          const d = json.data || json;
+          if (Array.isArray(d.siswa) && d.siswa.length) db.siswa = d.siswa;
+          if (Array.isArray(d.mapel) && d.mapel.length) db.mapel = d.mapel;
+          if (Array.isArray(d.nilai)) db.nilai = d.nilai;
+          if (Array.isArray(d.walas)) db.walas = d.walas;
+          if (d.pengaturan && Object.keys(d.pengaturan).length) db.pengaturan = { ...db.pengaturan, ...d.pengaturan };
+          saveDB();
+          loadMasterFormValues();
+          refreshAdminViews();
+          toastAdmin('Berhasil memuat seluruh data dari Google Sheets!');
+        }
+      } catch (e) {
+        toastAdmin('Gagal mengambil data dari server.');
+      }
+    }
+
     async function syncAllToCloud() {
-      const url = localStorage.getItem(SCRIPT_URL_KEY);
+      const url = getActiveScriptUrl();
       if (!url) {
         toastAdmin('Data tersimpan di browser. Isi URL Google Apps Script di tab Data Master untuk sinkronisasi ke Cloud.');
         return;
@@ -1363,7 +1386,6 @@
         toastAdmin('Mengirim seluruh data ke Google Sheets...');
         await fetch(url, {
           method: 'POST',
-          mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'saveFullSync', payload: db })
         });

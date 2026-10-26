@@ -1,191 +1,1322 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Input Nilai Guru</title>
-  <meta name="description" content="Aplikasi input nilai dan deskripsi raport untuk guru SMP Kristen 65 Basaan.">
-  <meta name="theme-color" content="#4f46e5">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Guru & Wali Kelas - DKN Semester SMP Kristen Basaan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+    .mapel-item.active {
+      background-color: #1e40af;
+      color: #ffffff;
+      border-color: #1e3a8a;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+    }
+    .mapel-item.active .badge-count {
+      background-color: #ffffff;
+      color: #1e40af;
+    }
+    .tab-btn.active {
+      border-bottom: 3px solid #2563eb;
+      color: #1d4ed8;
+      font-weight: 700;
+      background-color: #eff6ff;
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
 </head>
-<body>
-  <header class="app-bar">
-    <button class="btn btn-icon hidden" id="btn-back" aria-label="Kembali">
-      <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-    </button>
-    <span class="net-dot" id="net-dot" title="Status koneksi"></span>
-    <div class="title">
-      <b id="bar-title">Input Nilai</b>
-      <span id="bar-sub">-</span>
-    </div>
-    <button class="btn btn-icon" id="btn-sync" aria-label="Sinkronkan" title="Sinkronkan dengan spreadsheet">
-      <svg id="sync-icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.6m14.8 2A8 8 0 004.6 9m0 0H9m11 11v-5h-.6m0 0a8 8 0 01-15.4-2m15.4 2H15"/></svg>
-      <span class="count-badge hidden" id="pending-badge">0</span>
-    </button>
-  </header>
-  <div class="offline-banner hidden" id="offline-banner">Mode offline - nilai tetap tersimpan di HP dan bisa dikirim saat online.</div>
+<body class="min-h-screen flex flex-col text-slate-800">
 
-  <main class="page">
-    <!-- ================= VIEW: NILAI ================= -->
-    <section class="view active" id="view-nilai">
-      <!-- Langkah pilih -->
-      <div id="nilai-pick">
-        <div class="section-title">1. Pilih Mata Pelajaran</div>
-        <div class="picker-grid" id="pick-mapel"></div>
-        <div id="pick-kelas-wrap" class="hidden">
-          <div class="section-title">2. Pilih Kelas</div>
-          <div class="picker-grid" id="pick-kelas"></div>
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-chalkboard-user"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight" id="headerSchoolName">SMP KRISTEN BASAAN</h1>
+          <p class="text-xs text-blue-200" id="headerSubtitle">Portal Input Nilai, Deskripsi & Wali Kelas — Semester Ganjil 2026/2027</p>
         </div>
       </div>
 
-      <!-- Langkah input -->
-      <div id="nilai-input" class="hidden">
-        <div class="ctx-head">
-          <div class="info">
-            <b id="ctx-mapel">-</b>
-            <span id="ctx-kelas">-</span>
-          </div>
-          <button class="btn btn-sm btn-soft" id="btn-bulk">Isi Massal</button>
-        </div>
-
-        <div class="stats-row">
-          <div class="stat"><b id="st-isi">0/0</b><span>Terisi</span></div>
-          <div class="stat"><b id="st-avg">-</b><span>Rata-rata</span></div>
-          <div class="stat"><b id="st-bawah">0</b><span>&lt; KKM</span></div>
-          <div class="stat"><b id="st-pending">0</b><span>Blm sinkron</span></div>
-        </div>
-        <div class="progress" style="margin-bottom:12px;"><i id="st-bar" style="width:0%"></i></div>
-
-        <div class="tools">
-          <input class="input" type="search" id="search-siswa" placeholder="Cari nama siswa...">
-          <select class="select" id="filter-siswa">
-            <option value="all">Semua</option>
-            <option value="empty">Belum diisi</option>
-            <option value="nodesk">Deskripsi kosong</option>
-            <option value="below">Di bawah KKM</option>
-            <option value="dirty">Belum sinkron</option>
+      <!-- Filter Kelas & Semester Global -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/20">
+          <label class="text-xs text-blue-200 mr-2 font-medium">Kelas:</label>
+          <select id="globalKelas" onchange="onFilterChange()" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer">
+            <option value="VII" class="text-slate-800">Kelas VII</option>
+            <option value="VIII" class="text-slate-800">Kelas VIII</option>
+            <option value="IX" class="text-slate-800">Kelas IX</option>
           </select>
         </div>
 
-        <div id="student-list"></div>
+        <div class="flex items-center bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/20">
+          <label class="text-xs text-blue-200 mr-2 font-medium">Semester:</label>
+          <select id="globalSemester" onchange="onFilterChange()" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer">
+            <option value="Ganjil" class="text-slate-800">Ganjil</option>
+            <option value="Genap" class="text-slate-800">Genap</option>
+          </select>
+        </div>
+
+        <button onclick="syncFromCloud()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-rotate"></i> Sinkron Data
+        </button>
+
+        <button onclick="openConnectionModal()" class="bg-white/15 hover:bg-white/25 text-white text-xs px-2.5 py-2 rounded-lg transition" title="Pengaturan URL Server">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+
+        <a href="Admin.html" class="bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-user-shield"></i> Ke Admin
+        </a>
       </div>
-    </section>
+    </div>
 
-    <!-- ================= VIEW: DESKRIPSI ================= -->
-    <section class="view" id="view-deskripsi">
-      <div class="section-title">Bank Deskripsi per Mata Pelajaran</div>
-      <div class="chips" id="desk-mapel-chips"></div>
-      <div class="tools">
-        <input class="input" type="search" id="desk-search" placeholder="Cari deskripsi...">
-        <select class="select" id="desk-tingkat">
-          <option value="all">Semua tingkat</option>
-          <option value="7">Kelas 7</option>
-          <option value="8">Kelas 8</option>
-          <option value="9">Kelas 9</option>
-        </select>
+    <!-- NAVIGATION TABS -->
+    <div class="bg-white text-slate-600 border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto">
+        <button onclick="switchMainTab('nilai')" id="tabBtn-nilai" class="tab-btn active px-5 py-3 text-sm flex items-center gap-2 whitespace-nowrap transition">
+          <i class="fa-solid fa-calculator"></i> 1. Input Nilai Mata Pelajaran
+        </button>
+        <button onclick="switchMainTab('deskripsi')" id="tabBtn-deskripsi" class="tab-btn px-5 py-3 text-sm flex items-center gap-2 whitespace-nowrap transition">
+          <i class="fa-solid fa-file-pen"></i> 2. Input Deskripsi Capaian (List Mapel)
+        </button>
+        <button onclick="switchMainTab('walas')" id="tabBtn-walas" class="tab-btn px-5 py-3 text-sm flex items-center gap-2 whitespace-nowrap transition">
+          <i class="fa-solid fa-users-gear"></i> 3. WALI KELAS (Kehadiran, Kokurikuler, OSIS & Ibadah)
+        </button>
       </div>
-      <button class="btn btn-primary btn-block" id="btn-add-desk" style="margin-bottom:12px;">
-        <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-        Tambah Deskripsi
-      </button>
-      <div id="desk-list"></div>
-    </section>
+    </div>
+  </header>
 
-    <!-- ================= VIEW: REKAP ================= -->
-    <section class="view" id="view-rekap">
-      <div class="section-title">Rekap Nilai yang Saya Input</div>
-      <div class="tools">
-        <button class="btn btn-sm" id="btn-export-mine">Export Excel Semua</button>
-        <button class="btn btn-sm" id="btn-share-rekap">Bagikan ke WA</button>
-      </div>
-      <div id="rekap-list"></div>
-    </section>
+  <!-- STATUS BANNER -->
+  <div id="toastBanner" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm border border-slate-700">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-lg" id="toastIcon"></i>
+    <span id="toastText">Berhasil disimpan!</span>
+  </div>
 
-    <!-- ================= VIEW: DATA ================= -->
-    <section class="view" id="view-data">
-      <div class="section-title">Data di HP Ini</div>
-      <div class="card" style="margin-bottom:12px;" id="data-info"></div>
-      <button class="btn btn-primary btn-block" id="btn-sync-now" style="margin-bottom:10px;">Sinkronkan Sekarang</button>
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1">
 
-      <div class="section-title" style="margin-top:16px;">Cadangan</div>
-      <div class="card" style="margin-bottom:12px;">
-        <p class="muted" style="margin-bottom:10px;">Simpan file cadangan nilai untuk dipindahkan ke HP lain atau berjaga-jaga.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-sm" id="btn-backup">Unduh Cadangan</button>
-          <label class="btn btn-sm" for="file-restore">Pulihkan dari File</label>
-          <input type="file" id="file-restore" accept=".json,application/json" class="hidden">
+    <!-- ========================================================== -->
+    <!-- TAB 1 & TAB 2: INPUT NILAI & INPUT DESKRIPSI (DENGAN LIST MAPEL) -->
+    <!-- ========================================================== -->
+    <div id="sectionMapelWorkspace" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- SIDEBAR: PILIHAN LIST MATA PELAJARAN (MENGGANTIKAN SLIDER) -->
+      <aside class="lg:col-span-4 xl:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 h-fit lg:sticky lg:top-32">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-list-check text-blue-600"></i> Pilih Mata Pelajaran
+            </h2>
+            <p class="text-xs text-slate-500">Klik mata pelajaran di bawah ini</p>
+          </div>
+          <span id="mapelTotalBadge" class="text-xs bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-full">0 Mapel</span>
+        </div>
+
+        <!-- Kotak Pencarian Mapel -->
+        <div class="relative mb-3">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          <input type="text" id="searchMapelInput" oninput="renderMapelSelectionList()" placeholder="Cari mata pelajaran..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <!-- Daftar Pilihan Mata Pelajaran (List Vertikal Mudah Dipilih) -->
+        <div id="mapelListContainer" class="space-y-1.5 max-h-[460px] overflow-y-auto custom-scroll pr-1">
+          <!-- Diisi via JavaScript -->
+        </div>
+      </aside>
+
+      <!-- AREA KERJA UTAMA (NILAI ATAU DESKRIPSI) -->
+      <section class="lg:col-span-8 xl:col-span-9 space-y-4">
+
+        <!-- Info Mapel Aktif -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="activeMapelKode" class="text-xs font-bold uppercase px-2.5 py-0.5 rounded bg-blue-100 text-blue-800">MAPEL</span>
+              <span id="activeFormatBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-purple-100 text-purple-800">Format Pembelajaran Mendalam</span>
+            </div>
+            <h2 id="activeMapelTitle" class="text-xl font-bold text-slate-800 mt-1">Pilih Mata Pelajaran</h2>
+            <p id="activeMapelMeta" class="text-xs text-slate-500">KKM / KKTP: 75 | Kelas VII — Semester Ganjil</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Tombol Bantu untuk Mode Nilai -->
+            <div id="toolbarNilaiActions" class="flex flex-wrap items-center gap-2">
+              <button onclick="autoCalculateNilaiAkhir()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg transition" title="Hitung Nilai Akhir dari rata-rata P dan K jika diisi">
+                <i class="fa-solid fa-wand-magic-sparkles text-blue-600 mr-1"></i> Hitung Rata-rata P&K
+              </button>
+            </div>
+
+            <!-- Tombol Bantu untuk Mode Deskripsi -->
+            <div id="toolbarDeskripsiActions" class="hidden flex-wrap items-center gap-2">
+              <button onclick="openAutoDeskripsiModal()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-3 py-2 rounded-lg border border-indigo-200 transition">
+                <i class="fa-solid fa-robot mr-1"></i> Generate Deskripsi Otomatis
+              </button>
+            </div>
+
+            <button onclick="saveCurrentMapelData()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan Data Mapel Ini
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 1: TABEL INPUT NILAI -->
+        <div id="subViewNilai" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <div class="text-xs text-slate-600">
+              <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i>
+              Pada <strong>Format Pembelajaran Mendalam</strong>, fokus utama adalah kolom <strong>Nilai Akhir (1 Nilai Tunggal)</strong>. Kolom P & K tetap disediakan jika ingin menyimpan rincian K13.
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="bulkScoreInput" min="0" max="100" placeholder="Nilai (0-100)" class="w-28 px-2.5 py-1 text-xs border border-slate-300 rounded-lg" />
+              <button onclick="applyBulkScore()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-2.5 py-1 rounded-lg">Isi Massal Nilai Akhir</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 text-xs uppercase border-b border-slate-200">
+                  <th class="py-3 px-3 w-10 text-center">No</th>
+                  <th class="py-3 px-3">NISN / NIS</th>
+                  <th class="py-3 px-3">Nama Siswa</th>
+                  <th class="py-3 px-3 w-36 text-center bg-blue-50 text-blue-900 font-bold">Nilai Akhir<br><span class="text-[10px] font-normal">(Pembelajaran Mendalam)</span></th>
+                  <th class="py-3 px-3 w-28 text-center">Nilai P<br><span class="text-[10px] font-normal text-slate-500">(Opsional K13)</span></th>
+                  <th class="py-3 px-3 w-28 text-center">Nilai K<br><span class="text-[10px] font-normal text-slate-500">(Opsional K13)</span></th>
+                  <th class="py-3 px-3 w-24 text-center">Predikat</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyInputNilai" class="divide-y divide-slate-200 text-sm">
+                <!-- Diisi via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 2: TABEL INPUT DESKRIPSI (DENGAN PILIHAN LIST MAPEL DI KIRI & ATAS) -->
+        <div id="subViewDeskripsi" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <!-- Bar Pilihan Cepat Mapel (Quick Jump Dropdown untuk Layar Kecil) -->
+          <div class="p-4 bg-blue-50/60 border-b border-blue-100 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+              <label class="text-xs font-bold text-blue-900 whitespace-nowrap"><i class="fa-solid fa-book-open mr-1"></i> Ganti Mapel Cepat:</label>
+              <select id="quickSelectMapelDeskripsi" onchange="selectMapel(this.value)" class="w-full max-w-md px-3 py-1.5 text-xs font-semibold bg-white border border-blue-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Diisi via JS -->
+              </select>
+            </div>
+            <div class="text-xs text-slate-600">
+              Ketik capaian kompetensi secara langsung atau klik <strong>Generate Deskripsi Otomatis</strong>.
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 text-xs uppercase border-b border-slate-200">
+                  <th class="py-3 px-3 w-10 text-center">No</th>
+                  <th class="py-3 px-3 w-48">Nama Siswa</th>
+                  <th class="py-3 px-2 w-20 text-center">Nilai Akhir</th>
+                  <th class="py-3 px-3 bg-blue-50/70 text-blue-900">Deskripsi Capaian Kompetensi (Format Pembelajaran Mendalam)</th>
+                  <th class="py-3 px-3 w-64">Deskripsi Pengetahuan & Keterampilan (Opsional K13)</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyInputDeskripsi" class="divide-y divide-slate-200 text-sm">
+                <!-- Diisi via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- TAB 3: BAGIAN WALI KELAS (KEHADIRAN, KOKURIKULER, OSIS, IBADAH) -->
+    <!-- ========================================================== -->
+    <div id="sectionWaliKelas" class="hidden space-y-6">
+
+      <!-- Header & Action Bar Wali Kelas -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+            <i class="fa-solid fa-user-tie mr-1"></i> Panel Wali Kelas
+          </span>
+          <h2 class="text-xl font-bold text-slate-800 mt-1">Input Kehadiran, Kokurikuler, OSIS & Ibadah</h2>
+          <p class="text-xs text-slate-500">Pilihan predikat & deskripsi Kokurikuler, OSIS, dan Ibadah terhubung dengan pengaturan Admin.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Download Template Kehadiran -->
+          <button onclick="downloadTemplateKehadiran()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-excel text-emerald-600"></i> Download Template Kehadiran
+          </button>
+
+          <!-- Import CSV Kehadiran -->
+          <label class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-file-csv text-amber-600"></i> Import CSV Kehadiran
+            <input type="file" id="csvUploadWalas" accept=".csv,.txt" onchange="handleImportCSVKehadiran(event)" class="hidden" />
+          </label>
+
+          <!-- Simpan Semua Data Wali Kelas -->
+          <button onclick="saveAllWaliKelasData()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Data Wali Kelas
+          </button>
         </div>
       </div>
 
-      <div class="section-title" style="margin-top:16px;">Hapus Data</div>
-      <div class="card menu-list" style="padding:4px 14px;">
-        <button id="btn-del-ctx"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.9 12.1A2 2 0 0116.1 21H7.9a2 2 0 01-2-1.9L5 7m5 4v6m4-6v6M4 7h16M9 7V4h6v3"/></svg>Hapus nilai mapel &amp; kelas tertentu</button>
-        <button id="btn-del-synced"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Hapus nilai yang sudah tersinkron</button>
-        <button id="btn-del-all" class="danger"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Hapus SEMUA nilai di HP</button>
-        <button id="btn-reset" class="danger"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Hapus semua data aplikasi &amp; keluar</button>
-      </div>
+      <!-- Panel Pengisian Cepat / Massal (Bulk Fill Wali Kelas) -->
+      <div class="bg-indigo-50/70 rounded-2xl border border-indigo-200 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+            <i class="fa-solid fa-bolt text-indigo-600"></i> Pengisian Cepat Satu Kelas (Bulk Set Default):
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 text-xs">
+              <span>Default Hadir:</span>
+              <input type="number" id="bulkHadirVal" value="95" min="0" class="w-14 font-bold text-center border-b border-indigo-300 focus:outline-none" />
+              <button onclick="applyBulkAttendanceDefault()" class="text-indigo-700 font-bold hover:underline ml-1">Terapkan</button>
+            </div>
 
-      <div class="section-title" style="margin-top:16px;">Riwayat Sinkron</div>
-      <div id="sync-history"></div>
-    </section>
+            <select id="bulkKokurikulerSelect" class="text-xs bg-white px-2.5 py-1.5 rounded-lg border border-indigo-200"></select>
+            <button onclick="applyBulkWalasOption('KOKURIKULER')" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg">Set Semua Kokurikuler</button>
 
-    <!-- ================= VIEW: AKUN ================= -->
-    <section class="view" id="view-akun">
-      <div class="section-title">Akun &amp; Pengaturan</div>
-      <div class="card" style="margin-bottom:12px;">
-        <div class="field">
-          <label for="akun-nama">Nama Guru (tercatat di setiap nilai)</label>
-          <input class="input" id="akun-nama">
+            <select id="bulkOsisSelect" class="text-xs bg-white px-2.5 py-1.5 rounded-lg border border-indigo-200"></select>
+            <button onclick="applyBulkWalasOption('OSIS')" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg">Set Semua OSIS</button>
+
+            <select id="bulkIbadahSelect" class="text-xs bg-white px-2.5 py-1.5 rounded-lg border border-indigo-200"></select>
+            <button onclick="applyBulkWalasOption('IBADAH')" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg">Set Semua Ibadah</button>
+          </div>
         </div>
-        <button class="btn btn-sm btn-soft" id="btn-save-nama">Simpan Nama</button>
       </div>
-      <div class="card" style="margin-bottom:12px;padding:4px 16px;">
-        <label class="switch">Kirim otomatis saat online <input type="checkbox" id="pref-autosync"></label>
-        <label class="switch">Tampilkan pratinjau kalimat deskripsi <input type="checkbox" id="pref-preview"></label>
-        <label class="switch">Mode gelap <input type="checkbox" id="pref-dark"></label>
+
+      <!-- Tabel Utama Wali Kelas -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left border-collapse min-w-[1250px]">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 text-xs uppercase border-b border-slate-200">
+                <th class="py-3 px-3 w-10 text-center">No</th>
+                <th class="py-3 px-3 w-48">Siswa (NISN / Nama)</th>
+                <th class="py-3 px-2 w-64 text-center bg-emerald-50 text-emerald-900 border-x border-emerald-200">
+                  Kehadiran (Hari)<br>
+                  <span class="text-[10px] font-normal">Hadir | Sakit | Izin | Tidak Hadir</span>
+                </th>
+                <th class="py-3 px-3 w-64 bg-blue-50/60 text-blue-900">Nilai & Deskripsi Kokurikuler</th>
+                <th class="py-3 px-3 w-64 bg-purple-50/60 text-purple-900">Nilai & Deskripsi OSIS</th>
+                <th class="py-3 px-3 w-64 bg-amber-50/60 text-amber-900">Nilai & Deskripsi Ibadah</th>
+                <th class="py-3 px-3 w-56">Ekstrakurikuler & Catatan</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyWaliKelas" class="divide-y divide-slate-200 text-xs">
+              <!-- Diisi via JavaScript -->
+            </tbody>
+          </table>
+        </div>
       </div>
-      <button class="btn btn-block hidden" id="btn-install" style="margin-bottom:10px;">Pasang Aplikasi di HP</button>
-      <button class="btn btn-danger btn-block" id="btn-logout">Keluar</button>
-      <p class="muted" style="text-align:center;margin-top:16px;" id="about"></p>
-    </section>
+    </div>
+
   </main>
 
-  <!-- Bar bawah saat input -->
-  <div class="bottom-bar hidden" id="input-bar">
-    <button class="btn" id="btn-close-input">Ganti Kelas</button>
-    <button class="btn btn-success" id="btn-save">
-      <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-      Simpan
-    </button>
+  <!-- MODAL GENERATOR DESKRIPSI OTOMATIS -->
+  <div id="modalAutoDeskripsi" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-robot text-indigo-600"></i> Generator Deskripsi Capaian Otomatis
+        </h3>
+        <button onclick="closeAutoDeskripsiModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3 text-xs text-slate-600">
+        <p>Masukkan kata kunci Tujuan Pembelajaran (TP) atau materi pokok mata pelajaran ini. Sistem akan menyusun kalimat deskripsi capaian secara otomatis berdasarkan rentang Nilai Akhir tiap siswa.</p>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Materi / Kompetensi Utama (Unggul):</label>
+          <input type="text" id="tpMateriUtama" placeholder="Contoh: memahami konsep aljabar, persamaan linear, dan pemecahan masalah kontekstual" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Materi yang Perlu Penguatan (Jika nilai di bawah 80):</label>
+          <input type="text" id="tpMateriBimbingan" placeholder="Contoh: penerapan rumus pada soal cerita kompleks" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button onclick="closeAutoDeskripsiModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg">Batal</button>
+        <button onclick="runAutoGenerateDeskripsi()" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">Generate untuk Semua Siswa</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Tab bar -->
-  <nav class="tabbar" id="tabbar">
-    <button class="active" data-view="nilai"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 112.8 2.8L11.8 15H9v-2.8l8.6-8.6z"/></svg>Nilai</button>
-    <button data-view="deskripsi"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Deskripsi</button>
-    <button data-view="rekap"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Rekap</button>
-    <button data-view="data"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.2 3.6 4 8 4s8-1.8 8-4V7M4 7c0 2.2 3.6 4 8 4s8-1.8 8-4M4 7c0-2.2 3.6-4 8-4s8 1.8 8 4m0 5c0 2.2-3.6 4-8 4s-8-1.8-8-4"/></svg>Data</button>
-    <button data-view="akun"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>Akun</button>
-  </nav>
-
-  <!-- Bottom sheet serbaguna -->
-  <div class="sheet-backdrop" id="sheet-backdrop">
-    <div class="sheet" id="sheet"></div>
+  <!-- MODAL PENGATURAN KONEKSI SERVER -->
+  <div id="modalConnection" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-link text-blue-600 mr-1.5"></i> Koneksi Google Apps Script Web App</h3>
+        <button onclick="closeConnectionModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-2 text-xs text-slate-600">
+        <label class="font-bold text-slate-700 block">URL Web App (`Code.gs`):</label>
+        <input type="url" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono" />
+        <p class="text-[11px] text-slate-500">Data selalu tersimpan di memori browser (`localStorage`) secara instan dan akan disinkronkan ke Google Sheets apabila URL Web App diisi.</p>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button onclick="closeConnectionModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg">Tutup</button>
+        <button onclick="saveConnectionUrl()" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Simpan URL</button>
+      </div>
+    </div>
   </div>
 
-  <div class="loading-overlay" id="loading"><div class="spinner"></div><div id="loading-text">Memproses...</div></div>
-  <div class="toast-container" id="toast-container"></div>
+  <script>
+    /**************************************************************
+     * SHARED STORAGE KEY & DEFAULT INITIAL DATA
+     **************************************************************/
+    const STORAGE_KEY = 'DKN_SMP_KRISTEN_BASAAN_2026_DB';
+    const SCRIPT_URL_KEY = 'DKN_SMP_KRISTEN_BASAAN_SCRIPT_URL';
 
-  <script src="js/config.js"></script>
-  <script src="js/seed.js"></script>
-  <script src="js/core.js"></script>
-  <script src="assets/vendor/xlsx-style.bundle.js" defer></script>
-  <script src="js/guru.js"></script>
+    const DEFAULT_DB = {
+      pengaturan: {
+        sekolah: {
+          nama: 'SMP KRISTEN BASAAN',
+          npsn: '40100123',
+          alamat: 'Basaan, Kec. Ratatotok, Kab. Minahasa Tenggara',
+          kepsek: 'Nama Kepala Sekolah, S.Pd',
+          nipKepsek: '19750101 200012 1 001',
+          tahunAjaran: '2026/2027',
+          semesterDefault: 'Ganjil',
+          tanggalRaport: '18 Desember 2026',
+          formatRaport: 'PEMBELAJARAN_MENDALAM', // 'PEMBELAJARAN_MENDALAM' atau 'K13'
+          penomoranKehadiran: 'E', // 'E' atau 'D'
+          waliKelasMap: {
+            'VII': { nama: 'Wali Kelas VII, S.Pd', nip: '-' },
+            'VIII': { nama: 'Wali Kelas VIII, S.Pd', nip: '-' },
+            'IX': { nama: 'Wali Kelas IX, S.Pd', nip: '-' }
+          }
+        },
+        opsiWaliKelas: {
+          kokurikuler: [
+            { nilai: 'Sangat Baik (SB)', deskripsi: 'Peserta didik menunjukkan keterlibatan sangat aktif, kolaboratif, dan bernalar kritis dalam proyek kokurikuler Pembelajaran Mendalam.' },
+            { nilai: 'Baik (B)', deskripsi: 'Peserta didik terlibat aktif dan mampu menyelesaikan tugas kolaborasi dalam kegiatan kokurikuler dengan baik.' },
+            { nilai: 'Cukup (C)', deskripsi: 'Peserta didik cukup berpartisipasi dalam kegiatan kokurikuler namun masih perlu meningkatkan inisiatif kerja sama.' },
+            { nilai: 'Perlu Bimbingan (PB)', deskripsi: 'Peserta didik memerlukan pendampingan lebih lanjut agar dapat berpartisipasi aktif dalam kegiatan kokurikuler.' }
+          ],
+          osis: [
+            { nilai: 'Sangat Baik (SB)', deskripsi: 'Sangat aktif berorganisasi, menunjukkan jiwa kepemimpinan, tanggung jawab, dan keteladanan dalam kegiatan OSIS.' },
+            { nilai: 'Baik (B)', deskripsi: 'Berpartisipasi aktif dan disiplin dalam mendukung setiap program serta kegiatan kesiswaan/OSIS di sekolah.' },
+            { nilai: 'Cukup (C)', deskripsi: 'Cukup berpartisipasi dalam kegiatan kesiswaan/OSIS, perlu meningkatkan keaktifan.' },
+            { nilai: 'Perlu Bimbingan (PB)', deskripsi: 'Perlu dorongan dan pembinaan untuk terlibat aktif dalam kegiatan organisasi siswa (OSIS).' }
+          ],
+          ibadah: [
+            { nilai: 'Sangat Baik (SB)', deskripsi: 'Sangat rajin, khusyuk, dan menjadi teladan dalam mengikuti ibadah sekolah serta menerapkan nilai-nilai Kristiani.' },
+            { nilai: 'Baik (B)', deskripsi: 'Rajin dan tertib mengikuti kegiatan ibadah sekolah serta menunjukkan sikap spiritual yang baik.' },
+            { nilai: 'Cukup (C)', deskripsi: 'Cukup tertib dalam mengikuti kegiatan ibadah sekolah namun masih perlu meningkatkan kedisiplinan.' },
+            { nilai: 'Perlu Bimbingan (PB)', deskripsi: 'Memerlukan bimbingan dan perhatian khusus dalam hal kedisiplinan mengikuti ibadah sekolah.' }
+          ]
+        }
+      },
+      mapel: [
+        { KODE: 'PAK', NAMA_MAPEL: 'Pendidikan Agama Kristen dan Budi Pekerti', KELOMPOK: 'Umum', URUTAN: 1, KKM: 75 },
+        { KODE: 'PKN', NAMA_MAPEL: 'Pendidikan Pancasila', KELOMPOK: 'Umum', URUTAN: 2, KKM: 75 },
+        { KODE: 'BIN', NAMA_MAPEL: 'Bahasa Indonesia', KELOMPOK: 'Umum', URUTAN: 3, KKM: 75 },
+        { KODE: 'MTK', NAMA_MAPEL: 'Matematika', KELOMPOK: 'Umum', URUTAN: 4, KKM: 72 },
+        { KODE: 'IPA', NAMA_MAPEL: 'Ilmu Pengetahuan Alam (IPA)', KELOMPOK: 'Umum', URUTAN: 5, KKM: 73 },
+        { KODE: 'IPS', NAMA_MAPEL: 'Ilmu Pengetahuan Sosial (IPS)', KELOMPOK: 'Umum', URUTAN: 6, KKM: 75 },
+        { KODE: 'BIG', NAMA_MAPEL: 'Bahasa Inggris', KELOMPOK: 'Umum', URUTAN: 7, KKM: 73 },
+        { KODE: 'PJOK', NAMA_MAPEL: 'Pendidikan Jasmani, Olahraga, dan Kesehatan', KELOMPOK: 'Umum', URUTAN: 8, KKM: 75 },
+        { KODE: 'INF', NAMA_MAPEL: 'Informatika', KELOMPOK: 'Umum', URUTAN: 9, KKM: 75 },
+        { KODE: 'SBD', NAMA_MAPEL: 'Seni Budaya dan Prakarya', KELOMPOK: 'Umum', URUTAN: 10, KKM: 75 },
+        { KODE: 'MULOK', NAMA_MAPEL: 'Muatan Lokal', KELOMPOK: 'Muatan Lokal', URUTAN: 11, KKM: 75 }
+      ],
+      siswa: [
+        { NO: 1, NISN: '0112345001', NIS: '26001', NAMA: 'CHRISTIAN IMANUEL TUNAS', KELAS: 'VII', JK: 'L' },
+        { NO: 2, NISN: '0112345002', NIS: '26002', NAMA: 'GLORIA ANGELICA MANOPPO', KELAS: 'VII', JK: 'P' },
+        { NO: 3, NISN: '0112345003', NIS: '26003', NAMA: 'JONATHAN REYNALDO KAWENGIAN', KELAS: 'VII', JK: 'L' },
+        { NO: 4, NISN: '0112345004', NIS: '26004', NAMA: 'KEZIA AURELIA LUMINTANG', KELAS: 'VII', JK: 'P' },
+        { NO: 5, NISN: '0102345005', NIS: '25001', NAMA: 'RAFAEL GIDEON SUMOLANG', KELAS: 'VIII', JK: 'L' },
+        { NO: 6, NISN: '0102345006', NIS: '25002', NAMA: 'MICHELLE GRACIA TAMPI', KELAS: 'VIII', JK: 'P' },
+        { NO: 7, NISN: '0092345007', NIS: '24001', NAMA: 'SAMUEL ALEXANDER RUNTU', KELAS: 'IX', JK: 'L' },
+        { NO: 8, NISN: '0092345008', NIS: '24002', NAMA: 'PRICILIA NATASYA POLII', KELAS: 'IX', JK: 'P' }
+      ],
+      nilai: [],
+      walas: []
+    };
+
+    let db = loadLocalDB();
+    let currentTab = 'nilai'; // 'nilai' | 'deskripsi' | 'walas'
+    let activeMapelKode = (db.mapel && db.mapel[0]) ? db.mapel[0].KODE : 'PAK';
+
+    function loadLocalDB() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_DB));
+          return JSON.parse(JSON.stringify(DEFAULT_DB));
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed.pengaturan) parsed.pengaturan = DEFAULT_DB.pengaturan;
+        if (!parsed.pengaturan.opsiWaliKelas) parsed.pengaturan.opsiWaliKelas = DEFAULT_DB.pengaturan.opsiWaliKelas;
+        if (!Array.isArray(parsed.mapel) || parsed.mapel.length === 0) parsed.mapel = DEFAULT_DB.mapel;
+        if (!Array.isArray(parsed.siswa)) parsed.siswa = DEFAULT_DB.siswa;
+        if (!Array.isArray(parsed.nilai)) parsed.nilai = [];
+        if (!Array.isArray(parsed.walas)) parsed.walas = [];
+        return parsed;
+      } catch (e) {
+        return JSON.parse(JSON.stringify(DEFAULT_DB));
+      }
+    }
+
+    function saveLocalDB() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function showToast(msg, isError = false) {
+      const banner = document.getElementById('toastBanner');
+      const icon = document.getElementById('toastIcon');
+      const text = document.getElementById('toastText');
+      text.textContent = msg;
+      icon.className = isError ? 'fa-solid fa-circle-exclamation text-rose-400 text-lg' : 'fa-solid fa-circle-check text-emerald-400 text-lg';
+      banner.classList.remove('hidden');
+      setTimeout(() => banner.classList.add('hidden'), 3200);
+    }
+
+    /**************************************************************
+     * INITIALIZATION & NAVIGATION
+     **************************************************************/
+    window.addEventListener('DOMContentLoaded', () => {
+      populateKelasDropdown();
+      renderAll();
+    });
+
+    function populateKelasDropdown() {
+      const select = document.getElementById('globalKelas');
+      const classes = Array.from(new Set(['VII', 'VIII', 'IX', ...db.siswa.map(s => s.KELAS)])).filter(Boolean);
+      const currentVal = select.value || 'VII';
+      select.innerHTML = classes.map(k => `<option value="${k}" class="text-slate-800">Kelas ${k}</option>`).join('');
+      if (classes.includes(currentVal)) select.value = currentVal;
+    }
+
+    function onFilterChange() {
+      renderAll();
+    }
+
+    function switchMainTab(tabName) {
+      currentTab = tabName;
+      ['nilai', 'deskripsi', 'walas'].forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (t === tabName) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+
+      const secMapel = document.getElementById('sectionMapelWorkspace');
+      const secWalas = document.getElementById('sectionWaliKelas');
+      const subNilai = document.getElementById('subViewNilai');
+      const subDesk = document.getElementById('subViewDeskripsi');
+      const tbNilai = document.getElementById('toolbarNilaiActions');
+      const tbDesk = document.getElementById('toolbarDeskripsiActions');
+
+      if (tabName === 'walas') {
+        secMapel.classList.add('hidden');
+        secWalas.classList.remove('hidden');
+        renderWaliKelasTable();
+      } else {
+        secMapel.classList.remove('hidden');
+        secWalas.classList.add('hidden');
+        if (tabName === 'nilai') {
+          subNilai.classList.remove('hidden');
+          subDesk.classList.add('hidden');
+          tbNilai.classList.remove('hidden');
+          tbDesk.classList.add('hidden');
+        } else {
+          subNilai.classList.add('hidden');
+          subDesk.classList.remove('hidden');
+          tbNilai.classList.add('hidden');
+          tbDesk.classList.remove('hidden');
+          tbDesk.classList.add('flex');
+        }
+        renderMapelSelectionList();
+        renderMapelWorkspace();
+      }
+    }
+
+    function renderAll() {
+      const sek = db.pengaturan.sekolah || {};
+      document.getElementById('headerSchoolName').textContent = sek.nama || 'SMP KRISTEN BASAAN';
+      const kelas = document.getElementById('globalKelas').value;
+      const sem = document.getElementById('globalSemester').value;
+      document.getElementById('headerSubtitle').textContent = `Portal Input Nilai, Deskripsi & Wali Kelas — Kelas ${kelas} | Semester ${sem} ${sek.tahunAjaran || '2026/2027'}`;
+
+      renderMapelSelectionList();
+      if (currentTab === 'walas') {
+        renderWaliKelasTable();
+      } else {
+        renderMapelWorkspace();
+      }
+    }
+
+    /**************************************************************
+     * DAFTAR PILIHAN MATA PELAJARAN (LIST INTERAKTIF - NON SLIDER)
+     **************************************************************/
+    function renderMapelSelectionList() {
+      const container = document.getElementById('mapelListContainer');
+      const quickSelect = document.getElementById('quickSelectMapelDeskripsi');
+      const query = (document.getElementById('searchMapelInput').value || '').toLowerCase().trim();
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+      const totalSiswa = siswaKelas.length;
+
+      const sortedMapel = [...db.mapel].sort((a, b) => (Number(a.URUTAN) || 0) - (Number(b.URUTAN) || 0));
+      document.getElementById('mapelTotalBadge').textContent = `${sortedMapel.length} Mapel`;
+
+      // Populate Quick Select Dropdown
+      quickSelect.innerHTML = sortedMapel.map(m =>
+        `<option value="${m.KODE}" ${m.KODE === activeMapelKode ? 'selected' : ''}>[${m.KODE}] ${m.NAMA_MAPEL}</option>`
+      ).join('');
+
+      const filtered = sortedMapel.filter(m =>
+        m.NAMA_MAPEL.toLowerCase().includes(query) || m.KODE.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Mata pelajaran tidak ditemukan.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(m => {
+        const isActive = m.KODE === activeMapelKode;
+        let filledCount = 0;
+
+        siswaKelas.forEach(s => {
+          const rec = getNilaiRecord(s.NISN, m.KODE, semester);
+          if (currentTab === 'deskripsi') {
+            if (rec && rec.DESKRIPSI && String(rec.DESKRIPSI).trim().length > 3) filledCount++;
+          } else {
+            if (rec && Number(rec.NILAI_AKHIR) > 0) filledCount++;
+          }
+        });
+
+        const isComplete = totalSiswa > 0 && filledCount === totalSiswa;
+
+        return `
+          <button type="button" onclick="selectMapel('${m.KODE}')"
+            class="mapel-item ${isActive ? 'active' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'} w-full text-left px-3.5 py-2.5 rounded-xl border transition flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${isActive ? 'bg-blue-950 text-blue-200' : 'bg-slate-200 text-slate-700'}">${m.KODE}</span>
+                <span class="text-xs font-bold truncate">${m.NAMA_MAPEL}</span>
+              </div>
+              <p class="text-[11px] ${isActive ? 'text-blue-100' : 'text-slate-400'} mt-0.5">
+                KKM: ${m.KKM || 75} • ${currentTab === 'deskripsi' ? 'Deskripsi' : 'Nilai'} Terisi: ${filledCount}/${totalSiswa}
+              </p>
+            </div>
+            <span class="badge-count text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isComplete ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">
+              ${filledCount}/${totalSiswa}
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectMapel(kode) {
+      activeMapelKode = kode;
+      renderMapelSelectionList();
+      renderMapelWorkspace();
+    }
+
+    function getNilaiRecord(nisn, kodeMapel, semester) {
+      return db.nilai.find(r =>
+        String(r.NISN) === String(nisn) &&
+        String(r.KODE_MAPEL) === String(kodeMapel) &&
+        String(r.SEMESTER) === String(semester)
+      );
+    }
+
+    function upsertNilaiRecord(rec) {
+      const idx = db.nilai.findIndex(r =>
+        String(r.NISN) === String(rec.NISN) &&
+        String(r.KODE_MAPEL) === String(rec.KODE_MAPEL) &&
+        String(r.SEMESTER) === String(rec.SEMESTER)
+      );
+      if (idx >= 0) {
+        db.nilai[idx] = { ...db.nilai[idx], ...rec };
+      } else {
+        db.nilai.push(rec);
+      }
+    }
+
+    function getPredikat(score) {
+      const n = Number(score) || 0;
+      if (n >= 90) return 'A';
+      if (n >= 80) return 'B';
+      if (n >= 70) return 'C';
+      if (n > 0) return 'D';
+      return '-';
+    }
+
+    /**************************************************************
+     * RENDER TABEL INPUT NILAI & INPUT DESKRIPSI
+     **************************************************************/
+    function renderMapelWorkspace() {
+      const mapelObj = db.mapel.find(m => m.KODE === activeMapelKode) || db.mapel[0];
+      if (!mapelObj) return;
+      activeMapelKode = mapelObj.KODE;
+
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const format = (db.pengaturan.sekolah && db.pengaturan.sekolah.formatRaport) || 'PEMBELAJARAN_MENDALAM';
+
+      document.getElementById('activeMapelKode').textContent = mapelObj.KODE;
+      document.getElementById('activeMapelTitle').textContent = mapelObj.NAMA_MAPEL;
+      document.getElementById('activeMapelMeta').textContent = `KKM / KKTP: ${mapelObj.KKM || 75} | Kelas ${kelas} — Semester ${semester}`;
+      document.getElementById('activeFormatBadge').textContent = format === 'PEMBELAJARAN_MENDALAM'
+        ? 'Format Pembelajaran Mendalam (1 Nilai)'
+        : 'Format Standar K13 (P & K)';
+
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      // Render Tabel Nilai
+      const tbodyNilai = document.getElementById('tbodyInputNilai');
+      if (siswaKelas.length === 0) {
+        tbodyNilai.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada data siswa di Kelas ${kelas}.</td></tr>`;
+      } else {
+        tbodyNilai.innerHTML = siswaKelas.map((s, idx) => {
+          const rec = getNilaiRecord(s.NISN, activeMapelKode, semester) || {};
+          const na = rec.NILAI_AKHIR !== undefined ? rec.NILAI_AKHIR : '';
+          const np = rec.NILAI_P !== undefined ? rec.NILAI_P : '';
+          const nk = rec.NILAI_K !== undefined ? rec.NILAI_K : '';
+          const pred = getPredikat(na);
+
+          return `
+            <tr class="hover:bg-slate-50 transition" data-nisn="${s.NISN}">
+              <td class="py-2.5 px-3 text-center font-medium text-slate-500">${idx + 1}</td>
+              <td class="py-2.5 px-3 font-mono text-xs text-slate-600">${s.NISN}<br><span class="text-[10px] text-slate-400">NIS: ${s.NIS || '-'}</span></td>
+              <td class="py-2.5 px-3 font-semibold text-slate-800">${s.NAMA}</td>
+              <td class="py-2.5 px-3 bg-blue-50/40 text-center">
+                <input type="number" min="0" max="100" value="${na}"
+                  oninput="onScoreInputChange('${s.NISN}', 'NILAI_AKHIR', this.value)"
+                  class="w-24 px-2.5 py-1.5 text-center font-bold text-blue-950 bg-white border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <input type="number" min="0" max="100" value="${np}"
+                  oninput="onScoreInputChange('${s.NISN}', 'NILAI_P', this.value)"
+                  class="w-20 px-2 py-1 text-center bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <input type="number" min="0" max="100" value="${nk}"
+                  oninput="onScoreInputChange('${s.NISN}', 'NILAI_K', this.value)"
+                  class="w-20 px-2 py-1 text-center bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <span id="predBadge_${s.NISN}" class="inline-block w-8 py-0.5 rounded font-bold text-xs ${pred === 'A' ? 'bg-emerald-100 text-emerald-800' : pred === 'B' ? 'bg-blue-100 text-blue-800' : pred === 'C' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${pred}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Render Tabel Deskripsi
+      const tbodyDesk = document.getElementById('tbodyInputDeskripsi');
+      if (siswaKelas.length === 0) {
+        tbodyDesk.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Belum ada data siswa di Kelas ${kelas}.</td></tr>`;
+      } else {
+        tbodyDesk.innerHTML = siswaKelas.map((s, idx) => {
+          const rec = getNilaiRecord(s.NISN, activeMapelKode, semester) || {};
+          const na = rec.NILAI_AKHIR || 0;
+          const deskUtama = rec.DESKRIPSI || '';
+          const deskP = rec.DESKRIPSI_P || '';
+          const deskK = rec.DESKRIPSI_K || '';
+
+          return `
+            <tr class="hover:bg-slate-50 align-top" data-nisn="${s.NISN}">
+              <td class="py-3 px-3 text-center font-medium text-slate-500">${idx + 1}</td>
+              <td class="py-3 px-3">
+                <div class="font-bold text-slate-800">${s.NAMA}</div>
+                <div class="text-xs text-slate-400 font-mono">${s.NISN}</div>
+              </td>
+              <td class="py-3 px-2 text-center">
+                <span class="inline-block px-2.5 py-1 rounded-lg font-extrabold text-sm bg-blue-100 text-blue-900">${na || '-'}</span>
+              </td>
+              <td class="py-3 px-3 bg-blue-50/30">
+                <textarea rows="3"
+                  oninput="onScoreInputChange('${s.NISN}', 'DESKRIPSI', this.value)"
+                  placeholder="Tuliskan deskripsi capaian kompetensi Pembelajaran Mendalam untuk ${s.NAMA}..."
+                  class="w-full p-2.5 text-xs bg-white border border-blue-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">${deskUtama}</textarea>
+              </td>
+              <td class="py-3 px-3 space-y-1.5">
+                <input type="text" value="${deskP}"
+                  oninput="onScoreInputChange('${s.NISN}', 'DESKRIPSI_P', this.value)"
+                  placeholder="Deskripsi Pengetahuan (Opsional K13)"
+                  class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg" />
+                <input type="text" value="${deskK}"
+                  oninput="onScoreInputChange('${s.NISN}', 'DESKRIPSI_K', this.value)"
+                  placeholder="Deskripsi Keterampilan (Opsional K13)"
+                  class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg" />
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function onScoreInputChange(nisn, field, value) {
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const existing = getNilaiRecord(nisn, activeMapelKode, semester) || {
+        NISN: nisn,
+        KODE_MAPEL: activeMapelKode,
+        KELAS: kelas,
+        SEMESTER: semester,
+        NILAI_AKHIR: 0,
+        NILAI_P: 0,
+        NILAI_K: 0,
+        DESKRIPSI: '',
+        DESKRIPSI_P: '',
+        DESKRIPSI_K: ''
+      };
+
+      if (['NILAI_AKHIR', 'NILAI_P', 'NILAI_K'].includes(field)) {
+        existing[field] = value === '' ? '' : Math.min(100, Math.max(0, Number(value)));
+        if (field === 'NILAI_AKHIR') {
+          const badge = document.getElementById(`predBadge_${nisn}`);
+          if (badge) badge.textContent = getPredikat(existing.NILAI_AKHIR);
+        }
+      } else {
+        existing[field] = value;
+      }
+
+      upsertNilaiRecord(existing);
+      saveLocalDB();
+    }
+
+    function applyBulkScore() {
+      const val = document.getElementById('bulkScoreInput').value;
+      if (val === '') return;
+      const num = Math.min(100, Math.max(0, Number(val)));
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      siswaKelas.forEach(s => {
+        onScoreInputChange(s.NISN, 'NILAI_AKHIR', num);
+      });
+      renderMapelSelectionList();
+      renderMapelWorkspace();
+      showToast(`Nilai Akhir ${num} diterapkan ke seluruh siswa Kelas ${kelas}.`);
+    }
+
+    function autoCalculateNilaiAkhir() {
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      siswaKelas.forEach(s => {
+        const rec = getNilaiRecord(s.NISN, activeMapelKode, semester);
+        if (rec && (Number(rec.NILAI_P) > 0 || Number(rec.NILAI_K) > 0)) {
+          const p = Number(rec.NILAI_P) || Number(rec.NILAI_K) || 0;
+          const k = Number(rec.NILAI_K) || Number(rec.NILAI_P) || 0;
+          rec.NILAI_AKHIR = Math.round((p + k) / 2);
+          upsertNilaiRecord(rec);
+        }
+      });
+      saveLocalDB();
+      renderMapelSelectionList();
+      renderMapelWorkspace();
+      showToast('Nilai Akhir berhasil dihitung dari rata-rata P & K!');
+    }
+
+    function openAutoDeskripsiModal() {
+      const mapelObj = db.mapel.find(m => m.KODE === activeMapelKode);
+      document.getElementById('tpMateriUtama').value = mapelObj ? `memahami konsep inti dan menerapkan kompetensi ${mapelObj.NAMA_MAPEL} secara mendalam` : '';
+      document.getElementById('tpMateriBimbingan').value = mapelObj ? `pendalaman analisis latihan kontekstual pada ${mapelObj.NAMA_MAPEL}` : '';
+      document.getElementById('modalAutoDeskripsi').classList.remove('hidden');
+    }
+
+    function closeAutoDeskripsiModal() {
+      document.getElementById('modalAutoDeskripsi').classList.add('hidden');
+    }
+
+    function runAutoGenerateDeskripsi() {
+      const materiUtama = document.getElementById('tpMateriUtama').value.trim() || 'menguasai kompetensi dasar dan tujuan pembelajaran';
+      const materiBimbingan = document.getElementById('tpMateriBimbingan').value.trim() || 'pendalaman materi lebih lanjut';
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      siswaKelas.forEach(s => {
+        const rec = getNilaiRecord(s.NISN, activeMapelKode, semester) || {
+          NISN: s.NISN,
+          KODE_MAPEL: activeMapelKode,
+          KELAS: kelas,
+          SEMESTER: semester,
+          NILAI_AKHIR: 80
+        };
+        const nilai = Number(rec.NILAI_AKHIR) || 0;
+        let desc = '';
+        if (nilai >= 90) {
+          desc = `Menunjukkan penguasaan yang sangat baik dan mendalam dalam ${materiUtama}, serta mampu menerapkannya secara mandiri dan kritis.`;
+        } else if (nilai >= 80) {
+          desc = `Menunjukkan penguasaan yang baik dalam ${materiUtama}, namun perlu pengayaan pada ${materiBimbingan}.`;
+        } else if (nilai >= 72) {
+          desc = `Menunjukkan penguasaan yang cukup dalam ${materiUtama}, perlu bimbingan lebih lanjut dalam ${materiBimbingan}.`;
+        } else {
+          desc = `Memerlukan bimbingan intensif dalam ${materiUtama} serta pendampingan khusus pada ${materiBimbingan}.`;
+        }
+        rec.DESKRIPSI = desc;
+        rec.DESKRIPSI_P = desc;
+        upsertNilaiRecord(rec);
+      });
+
+      saveLocalDB();
+      closeAutoDeskripsiModal();
+      renderMapelSelectionList();
+      renderMapelWorkspace();
+      showToast('Deskripsi capaian kompetensi berhasil digenerate otomatis!');
+    }
+
+    async function saveCurrentMapelData() {
+      saveLocalDB();
+      renderMapelSelectionList();
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const records = db.nilai.filter(r =>
+        String(r.KODE_MAPEL) === String(activeMapelKode) &&
+        String(r.KELAS) === String(kelas) &&
+        String(r.SEMESTER) === String(semester)
+      );
+      await pushToCloud('saveNilaiMapel', { records });
+      showToast(`Data ${activeMapelKode} Kelas ${kelas} berhasil disimpan!`);
+    }
+
+    /**************************************************************
+     * BAGIAN WALI KELAS (KEHADIRAN, KOKURIKULER, OSIS, IBADAH)
+     **************************************************************/
+    function getWalasRecord(nisn, semester) {
+      return db.walas.find(w => String(w.NISN) === String(nisn) && String(w.SEMESTER) === String(semester));
+    }
+
+    function upsertWalasRecord(rec) {
+      const idx = db.walas.findIndex(w => String(w.NISN) === String(rec.NISN) && String(w.SEMESTER) === String(rec.SEMESTER));
+      if (idx >= 0) {
+        db.walas[idx] = { ...db.walas[idx], ...rec };
+      } else {
+        db.walas.push(rec);
+      }
+    }
+
+    function renderWaliKelasTable() {
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+      const opsi = (db.pengaturan && db.pengaturan.opsiWaliKelas) || DEFAULT_DB.pengaturan.opsiWaliKelas;
+
+      // Populate Bulk Dropdowns
+      document.getElementById('bulkKokurikulerSelect').innerHTML = opsi.kokurikuler.map((o, i) => `<option value="${i}">${o.nilai}</option>`).join('');
+      document.getElementById('bulkOsisSelect').innerHTML = opsi.osis.map((o, i) => `<option value="${i}">${o.nilai}</option>`).join('');
+      document.getElementById('bulkIbadahSelect').innerHTML = opsi.ibadah.map((o, i) => `<option value="${i}">${o.nilai}</option>`).join('');
+
+      const tbody = document.getElementById('tbodyWaliKelas');
+      if (siswaKelas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada siswa di Kelas ${kelas}.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = siswaKelas.map((s, idx) => {
+        const w = getWalasRecord(s.NISN, semester) || {
+          NISN: s.NISN,
+          KELAS: kelas,
+          SEMESTER: semester,
+          HADIR: 0,
+          SAKIT: 0,
+          IZIN: 0,
+          TIDAK_HADIR: 0,
+          KOKURIKULER_NILAI: opsi.kokurikuler[0]?.nilai || 'Baik (B)',
+          KOKURIKULER_DESK: opsi.kokurikuler[0]?.deskripsi || '',
+          OSIS_NILAI: opsi.osis[0]?.nilai || 'Baik (B)',
+          OSIS_DESK: opsi.osis[0]?.deskripsi || '',
+          IBADAH_NILAI: opsi.ibadah[0]?.nilai || 'Baik (B)',
+          IBADAH_DESK: opsi.ibadah[0]?.deskripsi || '',
+          EKSKUL_JSON: '[{"nama":"Pramuka","predikat":"Baik","ket":"Aktif mengikuti latihan rutin"}]',
+          CATATAN_WALAS: 'Pertahankan semangat belajar dan terus tingkatkan prestasi.'
+        };
+
+        // Pastikan tersimpan minimal defaultnya
+        upsertWalasRecord(w);
+
+        let ekskulText = 'Pramuka: Baik';
+        try {
+          const parsedEkskul = typeof w.EKSKUL_JSON === 'string' ? JSON.parse(w.EKSKUL_JSON) : w.EKSKUL_JSON;
+          if (Array.isArray(parsedEkskul) && parsedEkskul[0]) {
+            ekskulText = `${parsedEkskul[0].nama || 'Pramuka'} (${parsedEkskul[0].predikat || 'Baik'})`;
+          }
+        } catch (e) {}
+
+        return `
+          <tr class="hover:bg-slate-50 align-top">
+            <td class="py-3 px-3 text-center font-bold text-slate-500">${idx + 1}</td>
+            <td class="py-3 px-3">
+              <div class="font-bold text-slate-800 text-sm">${s.NAMA}</div>
+              <div class="text-[11px] text-slate-400 font-mono">NISN: ${s.NISN} | NIS: ${s.NIS || '-'}</div>
+            </td>
+
+            <!-- INPUT KEHADIRAN (HADIR, SAKIT, IZIN, TIDAK HADIR) -->
+            <td class="py-3 px-2 bg-emerald-50/40 border-x border-emerald-100">
+              <div class="grid grid-cols-4 gap-1.5 text-center">
+                <div>
+                  <label class="text-[10px] font-bold text-emerald-800 block">Hadir</label>
+                  <input type="number" min="0" value="${w.HADIR ?? 0}"
+                    oninput="updateWalasField('${s.NISN}', 'HADIR', this.value)"
+                    class="w-full px-1 py-1.5 text-center font-bold bg-white border border-emerald-300 rounded-lg" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-amber-700 block">Sakit</label>
+                  <input type="number" min="0" value="${w.SAKIT ?? 0}"
+                    oninput="updateWalasField('${s.NISN}', 'SAKIT', this.value)"
+                    class="w-full px-1 py-1.5 text-center font-bold bg-white border border-amber-300 rounded-lg" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-blue-700 block">Izin</label>
+                  <input type="number" min="0" value="${w.IZIN ?? 0}"
+                    oninput="updateWalasField('${s.NISN}', 'IZIN', this.value)"
+                    class="w-full px-1 py-1.5 text-center font-bold bg-white border border-blue-300 rounded-lg" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-rose-700 block">Alpa</label>
+                  <input type="number" min="0" value="${w.TIDAK_HADIR ?? 0}"
+                    oninput="updateWalasField('${s.NISN}', 'TIDAK_HADIR', this.value)"
+                    class="w-full px-1 py-1.5 text-center font-bold bg-white border border-rose-300 rounded-lg" />
+                </div>
+              </div>
+            </td>
+
+            <!-- KOKURIKULER -->
+            <td class="py-3 px-3 bg-blue-50/30 space-y-1.5">
+              <select onchange="onSelectWalasOption('${s.NISN}', 'KOKURIKULER', this.value)"
+                class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-blue-300 rounded-lg text-blue-950">
+                ${opsi.kokurikuler.map(o => `<option value="${o.nilai}" ${w.KOKURIKULER_NILAI === o.nilai ? 'selected' : ''}>${o.nilai}</option>`).join('')}
+              </select>
+              <textarea rows="2"
+                id="desk_KOKURIKULER_${s.NISN}"
+                oninput="updateWalasField('${s.NISN}', 'KOKURIKULER_DESK', this.value)"
+                class="w-full p-1.5 text-[11px] bg-white border border-slate-200 rounded-lg">${w.KOKURIKULER_DESK || ''}</textarea>
+            </td>
+
+            <!-- OSIS -->
+            <td class="py-3 px-3 bg-purple-50/30 space-y-1.5">
+              <select onchange="onSelectWalasOption('${s.NISN}', 'OSIS', this.value)"
+                class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-purple-300 rounded-lg text-purple-950">
+                ${opsi.osis.map(o => `<option value="${o.nilai}" ${w.OSIS_NILAI === o.nilai ? 'selected' : ''}>${o.nilai}</option>`).join('')}
+              </select>
+              <textarea rows="2"
+                id="desk_OSIS_${s.NISN}"
+                oninput="updateWalasField('${s.NISN}', 'OSIS_DESK', this.value)"
+                class="w-full p-1.5 text-[11px] bg-white border border-slate-200 rounded-lg">${w.OSIS_DESK || ''}</textarea>
+            </td>
+
+            <!-- IBADAH -->
+            <td class="py-3 px-3 bg-amber-50/30 space-y-1.5">
+              <select onchange="onSelectWalasOption('${s.NISN}', 'IBADAH', this.value)"
+                class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-amber-300 rounded-lg text-amber-950">
+                ${opsi.ibadah.map(o => `<option value="${o.nilai}" ${w.IBADAH_NILAI === o.nilai ? 'selected' : ''}>${o.nilai}</option>`).join('')}
+              </select>
+              <textarea rows="2"
+                id="desk_IBADAH_${s.NISN}"
+                oninput="updateWalasField('${s.NISN}', 'IBADAH_DESK', this.value)"
+                class="w-full p-1.5 text-[11px] bg-white border border-slate-200 rounded-lg">${w.IBADAH_DESK || ''}</textarea>
+            </td>
+
+            <!-- EKSKUL & CATATAN WALAS -->
+            <td class="py-3 px-3 space-y-1.5">
+              <input type="text" value="${ekskulText}"
+                onchange="updateEkskulSimple('${s.NISN}', this.value)"
+                placeholder="Nama Ekskul (Predikat)"
+                class="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg" title="Format: Pramuka (Baik)" />
+              <textarea rows="2"
+                oninput="updateWalasField('${s.NISN}', 'CATATAN_WALAS', this.value)"
+                placeholder="Catatan Wali Kelas..."
+                class="w-full p-1.5 text-[11px] border border-slate-200 rounded-lg">${w.CATATAN_WALAS || ''}</textarea>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      saveLocalDB();
+    }
+
+    function updateWalasField(nisn, field, value) {
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const rec = getWalasRecord(nisn, semester) || { NISN: nisn, KELAS: kelas, SEMESTER: semester };
+      if (['HADIR', 'SAKIT', 'IZIN', 'TIDAK_HADIR'].includes(field)) {
+        rec[field] = Math.max(0, Number(value) || 0);
+      } else {
+        rec[field] = value;
+      }
+      upsertWalasRecord(rec);
+      saveLocalDB();
+    }
+
+    function onSelectWalasOption(nisn, category, selectedNilai) {
+      const opsi = (db.pengaturan && db.pengaturan.opsiWaliKelas) || DEFAULT_DB.pengaturan.opsiWaliKelas;
+      const keyMap = { KOKURIKULER: 'kokurikuler', OSIS: 'osis', IBADAH: 'ibadah' };
+      const list = opsi[keyMap[category]] || [];
+      const found = list.find(o => o.nilai === selectedNilai);
+
+      updateWalasField(nisn, `${category}_NILAI`, selectedNilai);
+      if (found) {
+        updateWalasField(nisn, `${category}_DESK`, found.deskripsi);
+        const textarea = document.getElementById(`desk_${category}_${nisn}`);
+        if (textarea) textarea.value = found.deskripsi;
+      }
+    }
+
+    function updateEkskulSimple(nisn, rawText) {
+      // Contoh input: "Pramuka (Sangat Baik)"
+      const match = rawText.match(/^([^(]+)(?:\(([^)]+)\))?/);
+      const nama = match && match[1] ? match[1].trim() : rawText;
+      const predikat = match && match[2] ? match[2].trim() : 'Baik';
+      const arr = [{ nama, predikat, ket: `Aktif mengikuti kegiatan ekstrakurikuler ${nama} dengan predikat ${predikat}.` }];
+      updateWalasField(nisn, 'EKSKUL_JSON', JSON.stringify(arr));
+    }
+
+    function applyBulkAttendanceDefault() {
+      const hadirDefault = Math.max(0, Number(document.getElementById('bulkHadirVal').value) || 0);
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      siswaKelas.forEach(s => {
+        const rec = getWalasRecord(s.NISN, semester) || { NISN: s.NISN, KELAS: kelas, SEMESTER: semester };
+        rec.HADIR = hadirDefault;
+        rec.SAKIT = rec.SAKIT || 0;
+        rec.IZIN = rec.IZIN || 0;
+        rec.TIDAK_HADIR = rec.TIDAK_HADIR || 0;
+        upsertWalasRecord(rec);
+      });
+      saveLocalDB();
+      renderWaliKelasTable();
+      showToast(`Kehadiran default (${hadirDefault} hari) diterapkan ke Kelas ${kelas}.`);
+    }
+
+    function applyBulkWalasOption(category) {
+      const opsi = (db.pengaturan && db.pengaturan.opsiWaliKelas) || DEFAULT_DB.pengaturan.opsiWaliKelas;
+      const selectIdMap = { KOKURIKULER: 'bulkKokurikulerSelect', OSIS: 'bulkOsisSelect', IBADAH: 'bulkIbadahSelect' };
+      const keyMap = { KOKURIKULER: 'kokurikuler', OSIS: 'osis', IBADAH: 'ibadah' };
+
+      const idx = Number(document.getElementById(selectIdMap[category]).value) || 0;
+      const chosen = opsi[keyMap[category]][idx];
+      if (!chosen) return;
+
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      siswaKelas.forEach(s => {
+        updateWalasField(s.NISN, `${category}_NILAI`, chosen.nilai);
+        updateWalasField(s.NISN, `${category}_DESK`, chosen.deskripsi);
+      });
+      renderWaliKelasTable();
+      showToast(`Pilihan ${category} (${chosen.nilai}) diterapkan ke seluruh siswa Kelas ${kelas}.`);
+    }
+
+    /**************************************************************
+     * DOWNLOAD TEMPLATE & IMPORT CSV KEHADIRAN
+     * Kolom: NO;NISN;NIS;NAMA;KELAS;HADIR;SAKIT;IZIN;TIDAK HADIR
+     **************************************************************/
+    function downloadTemplateKehadiran() {
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const siswaKelas = db.siswa.filter(s => String(s.KELAS) === String(kelas));
+
+      const headers = ['NO', 'NISN', 'NIS', 'NAMA', 'KELAS', 'HADIR', 'SAKIT', 'IZIN', 'TIDAK HADIR'];
+      const rows = [headers.join(';')];
+
+      siswaKelas.forEach((s, idx) => {
+        const w = getWalasRecord(s.NISN, semester) || {};
+        const line = [
+          idx + 1,
+          s.NISN || '',
+          s.NIS || '',
+          `"${String(s.NAMA || '').replace(/"/g, '""')}"`,
+          s.KELAS || kelas,
+          w.HADIR ?? 0,
+          w.SAKIT ?? 0,
+          w.IZIN ?? 0,
+          w.TIDAK_HADIR ?? 0
+        ];
+        rows.push(line.join(';'));
+      });
+
+      const csvContent = '\uFEFF' + rows.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Template_Kehadiran_Kelas_${kelas}_${semester}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Template Kehadiran (CSV Excel) berhasil diunduh!');
+    }
+
+    function handleImportCSVKehadiran(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          showToast('File CSV kosong atau format tidak sesuai!', true);
+          return;
+        }
+
+        const delimiter = lines[0].includes(';') ? ';' : ',';
+        const semester = document.getElementById('globalSemester').value;
+        let importedCount = 0;
+        const batchForCloud = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseCSVRow(lines[i], delimiter);
+          if (cols.length < 9) continue;
+
+          const nisn = String(cols[1] || '').trim();
+          const nis = String(cols[2] || '').trim();
+          const nama = String(cols[3] || '').replace(/^"|"$/g, '').trim();
+          const kelas = String(cols[4] || document.getElementById('globalKelas').value).trim();
+          const hadir = Math.max(0, Number(cols[5]) || 0);
+          const sakit = Math.max(0, Number(cols[6]) || 0);
+          const izin = Math.max(0, Number(cols[7]) || 0);
+          const tidakHadir = Math.max(0, Number(cols[8]) || 0);
+
+          if (!nisn) continue;
+
+          // Jika siswa belum ada di master siswa, tambahkan otomatis
+          if (!db.siswa.some(s => String(s.NISN) === nisn)) {
+            db.siswa.push({
+              NO: db.siswa.length + 1,
+              NISN: nisn,
+              NIS: nis,
+              NAMA: nama,
+              KELAS: kelas,
+              JK: 'L'
+            });
+          }
+
+          const rec = getWalasRecord(nisn, semester) || { NISN: nisn, KELAS: kelas, SEMESTER: semester };
+          rec.KELAS = kelas;
+          rec.HADIR = hadir;
+          rec.SAKIT = sakit;
+          rec.IZIN = izin;
+          rec.TIDAK_HADIR = tidakHadir;
+          upsertWalasRecord(rec);
+          batchForCloud.push(rec);
+          importedCount++;
+        }
+
+        saveLocalDB();
+        renderWaliKelasTable();
+        event.target.value = '';
+
+        await pushToCloud('saveAttendanceBatch', { semester, records: batchForCloud });
+        showToast(`${importedCount} data kehadiran siswa berhasil diimpor!`);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSVRow(line, delimiter) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === delimiter && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      result.push(current);
+      return result;
+    }
+
+    async function saveAllWaliKelasData() {
+      saveLocalDB();
+      const kelas = document.getElementById('globalKelas').value;
+      const semester = document.getElementById('globalSemester').value;
+      const records = db.walas.filter(w => String(w.KELAS) === String(kelas) && String(w.SEMESTER) === String(semester));
+      await pushToCloud('saveWaliKelasData', { records });
+      showToast(`Seluruh data Wali Kelas (${kelas}) berhasil disimpan!`);
+    }
+
+    /**************************************************************
+     * CLOUD SYNC (GOOGLE APPS SCRIPT)
+     **************************************************************/
+    function openConnectionModal() {
+      document.getElementById('inputScriptUrl').value = localStorage.getItem(SCRIPT_URL_KEY) || '';
+      document.getElementById('modalConnection').classList.remove('hidden');
+    }
+
+    function closeConnectionModal() {
+      document.getElementById('modalConnection').classList.add('hidden');
+    }
+
+    function saveConnectionUrl() {
+      const url = document.getElementById('inputScriptUrl').value.trim();
+      localStorage.setItem(SCRIPT_URL_KEY, url);
+      closeConnectionModal();
+      showToast('URL Server Google Apps Script disimpan!');
+    }
+
+    async function pushToCloud(action, payload) {
+      const url = localStorage.getItem(SCRIPT_URL_KEY);
+      if (!url) return;
+      try {
+        await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, payload })
+        });
+      } catch (e) {
+        console.warn('Offline / gagal kirim ke GAS, tersimpan di localStorage:', e);
+      }
+    }
+
+    async function syncFromCloud() {
+      const url = localStorage.getItem(SCRIPT_URL_KEY);
+      if (!url) {
+        db = loadLocalDB();
+        renderAll();
+        showToast('Data disegarkan dari penyimpanan lokal!');
+        return;
+      }
+      try {
+        showToast('Menyinkronkan data dari server Google Sheets...');
+        const res = await fetch(`${url}?action=getAllData`);
+        const json = await res.json();
+        if (json && json.status === 'ok' && json.data) {
+          if (json.data.siswa && json.data.siswa.length) db.siswa = json.data.siswa;
+          if (json.data.mapel && json.data.mapel.length) db.mapel = json.data.mapel;
+          if (json.data.nilai) db.nilai = json.data.nilai;
+          if (json.data.walas) db.walas = json.data.walas;
+          if (json.data.pengaturan && Object.keys(json.data.pengaturan).length) {
+            db.pengaturan = { ...db.pengaturan, ...json.data.pengaturan };
+          }
+          saveLocalDB();
+          populateKelasDropdown();
+          renderAll();
+          showToast('Sinkronisasi dari Google Sheets selesai!');
+        }
+      } catch (e) {
+        showToast('Menggunakan data lokal (server belum terhubung).');
+      }
+    }
+  </script>
 </body>
 </html>

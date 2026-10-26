@@ -1,14 +1,12 @@
-// Halaman Siswa & Orang Tua (DashboardSiswa.html): tanpa login, sederhana, bisa offline.
-// Menu: Beranda (ringkasan sekolah) · Anak (cek perkembangan per siswa dengan NIS) · Kelas · Tata Tertib · Info.
-// Privasi: secara bawaan nama siswa tidak ditampilkan dalam daftar; detail siswa dibuka dengan NIS/NISN
-// (Admin dapat mengubahnya di Kelola → Pengaturan → Halaman Siswa & Orang Tua).
+// Halaman Siswa & Orang Tua (DashboardSiswa.html): tanpa login, ceria, bisa offline.
+// Menu: Beranda (ringkasan sekolah & Top 10) · Anak (cari Nama / NIS / NISN) · Kelas · Tata Tertib · Info.
 import { h, icon, btn, toast, dialog } from './ui/dom.js';
 import { barList, chartCard, columnChart, cumChart, pointsMeter, stackBar, hideTip } from './ui/charts.js';
 import { avatar, emptyState, levelBadge, tingkatBadge, statTile, deltaChip, TINGKAT_WARNA } from './ui/widgets.js';
 import { openDoc } from './ui/export.js';
 import { kartuHtml } from './ui/print.js';
 import * as aturan from './pages/aturan.js';
-import { S, D, on, loadAll, hidden } from './store.js';
+import { S, D, on, loadAll } from './store.js';
 import { startAuto, syncNow } from './sync.js';
 import { call } from './api.js';
 import { PWA, applyTheme, applyUpdate, install, isIOS, registerSW, updateApp } from './pwa.js';
@@ -19,7 +17,7 @@ import { APP_VERSION } from './config.js';
 
 const TABS = [
   { kode: 'beranda', label: 'Beranda', ic: 'home' },
-  { kode: 'anak', label: 'Anak', ic: 'user' },
+  { kode: 'anak', label: 'Cari Siswa', ic: 'search' },
   { kode: 'kelas', label: 'Kelas', ic: 'school' },
   { kode: 'aturan', label: 'Tata Tertib', ic: 'book' },
   { kode: 'info', label: 'Info', ic: 'info' },
@@ -38,47 +36,212 @@ function toggleKid(key, siswa) {
   ls.set('ds.anak', list);
 }
 
+// Pastikan mode nama selalu diaktifkan agar pencarian Nama & Top 10 tampil lengkap
+function ensureShowNames() {
+  if (S && S.settings) S.settings.dashboardSiswa = 'nama';
+}
+
 // ------------------------------------------------------------------ data (lengkap / anonim)
 let memo = { key: '' };
 function data() {
-  const mode = S.d.siswa.length && !hidden() ? 'full' : S.anon ? 'anon' : 'none';
+  ensureShowNames();
+  const mode = S.d.siswa.length ? 'full' : S.anon ? 'anon' : 'none';
   const key = `${mode}:${S.ver}`;
   if (memo.key === key) return memo;
   const levels = sortLevels(S.d.sanksi);
   let siswa = [], recs = [], summaries = new Map();
-  if (mode === 'full') { siswa = S.d.siswa; recs = S.d.pelanggaran.filter((r) => !r.batal); summaries = D().summaries; }
-  if (mode === 'anon') { siswa = S.anon.siswa; recs = S.anon.pelanggaran; summaries = buildSummaries(siswa, recs, levels); }
+  if (mode === 'full') {
+    siswa = S.d.siswa;
+    recs = S.d.pelanggaran.filter((r) => !r.batal);
+    summaries = D().summaries;
+  } else if (mode === 'anon') {
+    siswa = S.anon.siswa;
+    recs = S.anon.pelanggaran;
+    summaries = buildSummaries(siswa, recs, levels);
+  }
   const aktif = siswa.filter((s) => (s.status || 'Aktif') === 'Aktif');
   const kelasList = [...new Set(aktif.map((s) => s.kelas).filter(Boolean))].sort(cmpKelas);
   memo = { key, mode, levels, siswa, aktif, recs, summaries, kelasList };
   return memo;
 }
-const showNames = () => S.settings.dashboardSiswa === 'nama' && data().mode === 'full';
+
+const showNames = () => data().mode !== 'none';
 const keyOf = (s) => (s.nis ? String(s.nis).replace(/\s+/g, '') : `id:${s.id}`);
 
-/** Cari satu siswa: lokal bila data lengkap ada di HP, selain itu tanya server (hasil disimpan untuk offline). */
-async function lookup(key) {
-  const k = String(key || '').replace(/\s+/g, '');
-  if (data().mode === 'full') {
-    const s = k.startsWith('id:') && showNames() ? S.d.siswa.find((x) => x.id === k.slice(3))
-      : S.d.siswa.find((x) => (x.nis && String(x.nis).replace(/\s+/g, '') === k) || (x.nisn && String(x.nisn).replace(/\s+/g, '') === k));
-    if (!s) throw new Error('NIS/NISN tidak ditemukan. Periksa kembali, atau hubungi wali kelas.');
-    return { siswa: s, recs: S.d.pelanggaran.filter((r) => r.siswaId === s.id && !r.batal), tindak: D().tindak.filter((t) => t.siswaId === s.id && t.stored), at: S.sync.lastOk || S.meta.lastPull };
+/** Cari siswa berdasarkan NIS, NISN, ID, atau Nama Siswa */
+async function lookup(rawKey) {
+  const q = String(rawKey || '').trim();
+  const kNoSpace = q.replace(/\s+/g, '');
+  const qLower = q.toLowerCase();
+  const dd = data();
+
+  if (dd.mode === 'full' || dd.siswa.length) {
+    const pool = S.d.siswa.length ? S.d.siswa : dd.siswa;
+    // 1. Cek berdasarkan ID, NIS, atau NISN persis
+    let s = kNoSpace.startsWith('id:')
+      ? pool.find((x) => String(x.id) === kNoSpace.slice(3))
+      : pool.find((x) =>
+          (x.nis && String(x.nis).replace(/\s+/g, '').toLowerCase() === kNoSpace.toLowerCase()) ||
+          (x.nisn && String(x.nisn).replace(/\s+/g, '').toLowerCase() === kNoSpace.toLowerCase())
+        );
+
+    // 2. Cek berdasarkan Nama persis (case-insensitive)
+    if (!s) {
+      s = pool.find((x) => x.nama && x.nama.trim().toLowerCase() === qLower);
+    }
+
+    // 3. Cek berdasarkan kecocokan sebagian Nama / Kelas
+    if (!s) {
+      const matchedList = pool.filter((x) => x.nama && matches(q, x.nama, x.kelas));
+      if (matchedList.length === 1) {
+        s = matchedList[0];
+      } else if (matchedList.length > 1) {
+        const err = new Error(`Ditemukan ${matchedList.length} siswa dengan kata kunci "${q}". Silakan pilih salah satu di bawah.`);
+        err.candidates = matchedList;
+        throw err;
+      }
+    }
+
+    if (s) {
+      const allRecs = S.d.pelanggaran.length ? S.d.pelanggaran : dd.recs;
+      return {
+        siswa: s,
+        recs: allRecs.filter((r) => r.siswaId === s.id && !r.batal),
+        tindak: D().tindak ? D().tindak.filter((t) => t.siswaId === s.id && t.stored) : [],
+        at: S.sync.lastOk || S.meta.lastPull,
+      };
+    }
+    throw new Error(`Siswa dengan Nama / NIS / NISN "${q}" tidak ditemukan. Periksa kembali ejaan atau pilih dari daftar saran.`);
   }
-  const cached = ls.get('ds.cek.' + k, null);
+
+  // Fallback pencarian ke server bila data lokal belum terunduh penuh
+  const cached = ls.get('ds.cek.' + kNoSpace, null);
   if (!navigator.onLine || !S.serverUrl) {
     if (cached) return { ...cached, offline: true };
-    throw new Error('Perlu internet untuk mencari data siswa.');
+    throw new Error('Perlu koneksi internet untuk mencari data siswa pertama kali.');
   }
   try {
-    const r = await call(S.serverUrl, { action: 'cekSiswa', nis: k }, 30000);
+    const r = await call(S.serverUrl, { action: 'cekSiswa', nis: q, nama: q }, 30000);
     const res = { siswa: r.siswa, recs: r.pelanggaran, tindak: r.tindak, at: Date.now() };
-    ls.set('ds.cek.' + k, res);
+    ls.set('ds.cek.' + kNoSpace, res);
     return res;
   } catch (e) {
     if (cached && e.code !== 'NOT_FOUND') return { ...cached, offline: true };
     throw e.code === 'BAD_REQUEST' ? new Error('Server sekolah belum diperbarui ke versi terbaru. Hubungi Admin.') : e;
   }
+}
+
+// ------------------------------------------------------------------ Komponen Top 10 Siswa Poin Terbanyak
+let top10Kelas = 'ALL';
+function renderTop10Section(dd, forcedKelas = null) {
+  const activeKelas = forcedKelas || top10Kelas;
+  const pool = activeKelas === 'ALL' ? dd.aktif : dd.aktif.filter((s) => s.kelas === activeKelas);
+
+  const ranked = pool
+    .map((s) => {
+      const sum = dd.summaries.get(s.id) || { total: 0, count: 0, level: null };
+      return { s, total: sum.total || 0, count: sum.count || 0, level: sum.level };
+    })
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total || b.count - a.count || cmpNama(a.s.nama || '', b.s.nama || ''))
+    .slice(0, 10);
+
+  const maxPts = ranked[0]?.total || 100;
+  const medals = ['👑', '🥈', '🥉'];
+
+  const filterChips = !forcedKelas && dd.kelasList.length > 1
+    ? h('div', { class: 'chips scroll', style: 'margin-bottom: 12px;' },
+        h('button', {
+          type: 'button',
+          class: 'chip' + (top10Kelas === 'ALL' ? ' on' : ''),
+          onclick: () => { top10Kelas = 'ALL'; route(true); },
+        }, h('span', { text: '🌟 Semua Kelas' })),
+        ...dd.kelasList.map((k) =>
+          h('button', {
+            type: 'button',
+            class: 'chip' + (top10Kelas === k ? ' on' : ''),
+            onclick: () => { top10Kelas = k; route(true); },
+          }, h('span', { text: `Kelas ${k}` }))
+        )
+      )
+    : null;
+
+  if (!ranked.length) {
+    return h('section', { class: 'top10-section' },
+      h('div', { class: 'top10-head' },
+        h('div', { class: 'top10-title-wrap' },
+          h('div', { class: 'top10-trophy', text: '🏆' }),
+          h('div', null,
+            h('h3', { class: 'top10-main-title', text: `Top 10 Siswa Poin Terbanyak${forcedKelas ? ` · Kelas ${forcedKelas}` : ''}` }),
+            h('p', { class: 'top10-sub', text: 'Luar biasa! Belum ada siswa yang memiliki poin pelanggaran.' })
+          )
+        )
+      ),
+      filterChips,
+      h('p', { class: 'muted center', style: 'padding: 16px 0;', text: '🎉 Semua siswa di kategori ini memiliki 0 poin pelanggaran!' })
+    );
+  }
+
+  const top3 = ranked.slice(0, 3);
+  const rest = ranked.slice(3, 10);
+
+  return h('section', { class: 'top10-section' },
+    h('div', { class: 'top10-head' },
+      h('div', { class: 'top10-title-wrap' },
+        h('div', { class: 'top10-trophy', text: '⚡' }),
+        h('div', null,
+          h('h3', { class: 'top10-main-title', text: `Top 10 Siswa Poin Terbanyak${forcedKelas ? ` · Kelas ${forcedKelas}` : ''}` }),
+          h('p', { class: 'top10-sub', text: 'Ketuk nama siswa untuk melihat detail riwayat & tahap pembinaan' })
+        )
+      )
+    ),
+    filterChips,
+    // Podium 1 - 3
+    h('div', { class: 'top3-podium' },
+      ...top3.map((item, idx) => {
+        const displayName = item.s.nama || `Siswa #${item.s.nis || item.s.id}`;
+        return h('a', { class: `podium-card r-${idx + 1}`, href: `#anak/${encodeURIComponent(keyOf(item.s))}` },
+          h('span', { class: 'podium-rank', text: medals[idx] }),
+          avatar(displayName, item.s.jk === 'P' ? 'f' : ''),
+          h('div', { class: 'grow min0' },
+            h('strong', { class: 'block ellipsis', text: displayName }),
+            h('span', { class: 'muted small block', text: `Kelas ${item.s.kelas} · ${item.count}x catatan` }),
+            item.level ? levelBadge(item.level, { small: true }) : null
+          ),
+          h('div', { class: 'podium-pts' },
+            h('strong', { text: fmtNum(item.total) }),
+            h('span', { text: 'Poin' })
+          )
+        );
+      })
+    ),
+    // Peringkat 4 - 10
+    rest.length
+      ? h('div', { class: 'top10-list' },
+          ...rest.map((item, idx) => {
+            const rank = idx + 4;
+            const displayName = item.s.nama || `Siswa #${item.s.nis || item.s.id}`;
+            const pct = Math.max(8, Math.min(100, Math.round((item.total / maxPts) * 100)));
+            return h('a', { class: 'top10-row', href: `#anak/${encodeURIComponent(keyOf(item.s))}` },
+              h('span', { class: 'rank-num', text: `#${rank}` }),
+              avatar(displayName, 'sm' + (item.s.jk === 'P' ? ' f' : '')),
+              h('div', { class: 'grow min0' },
+                h('div', { class: 'row gap-sm wrap', style: 'align-items:center;' },
+                  h('strong', { class: 'ellipsis', text: displayName }),
+                  h('span', { class: 'muted small', text: `Kelas ${item.s.kelas} · ${item.count} pelanggaran` }),
+                  item.level ? levelBadge(item.level, { small: true }) : null
+                ),
+                h('div', { class: 'top10-bar-wrap' },
+                  h('div', { class: 'top10-bar-fill', style: `width: ${pct}%` })
+                )
+              ),
+              h('span', { class: 'top10-pts-badge', text: `${fmtNum(item.total)} Poin` }),
+              icon('right')
+            );
+          })
+        )
+      : null
+  );
 }
 
 // ------------------------------------------------------------------ kerangka
@@ -95,7 +258,7 @@ function buildShell() {
   app.replaceChildren(
     h('header', { class: 'topbar' },
       h('a', { class: 'brand', href: '#beranda' }, h('span', { class: 'brand-mark' }, logo),
-        h('span', { class: 'brand-text' }, h('span', { class: 'brand-title', text: 'Info Kedisiplinan' }), h('span', { class: 'brand-sub', text: S.settings.namaSekolah }))),
+        h('span', { class: 'brand-text' }, h('span', { class: 'brand-title', text: '✨ Info Kedisiplinan' }), h('span', { class: 'brand-sub', text: S.settings.namaSekolah }))),
       h('span', { class: 'grow' }), updateBtn,
       h('a', { class: 'user-btn', href: 'index.html', title: 'Halaman guru' }, icon('login'), h('span', { class: 'user-name', text: 'Guru' }))),
     banners, tabsBar, view, bottomNav);
@@ -132,6 +295,7 @@ async function runUpdate() {
 }
 
 function route(keepScroll = false) {
+  ensureShowNames();
   const [tab, ...rest] = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split('/');
   const t = TABS.some((x) => x.kode === tab) ? tab : 'beranda';
   const changed = t !== curTab;
@@ -165,16 +329,16 @@ function pageBeranda(v) {
   const kids = savedKids();
   v.append(h('section', { class: 'ds-hero' },
     h('div', { class: 'grow' },
-      h('h1', { text: 'Halo, Bapak/Ibu & Siswa 👋' }),
+      h('h1', { text: 'Halo, Bapak/Ibu & Siswa! 🌈👋' }),
       h('p', { text: `Pantau perkembangan kedisiplinan siswa ${s.namaSekolah} · TA ${s.tahunAjaran} · Semester ${s.semester}` }),
       h('div', { class: 'row gap-sm wrap' },
-        h('a', { class: 'btn primary big', href: '#anak' }, icon('search'), h('span', { text: 'Cek perkembangan anak' })),
-        h('a', { class: 'btn tonal', href: '#aturan' }, icon('book'), h('span', { text: 'Tata tertib' })))),
+        h('a', { class: 'btn primary big', href: '#anak' }, icon('search'), h('span', { text: 'Cari Nama / NIS Siswa' })),
+        h('a', { class: 'btn tonal', href: '#aturan' }, icon('book'), h('span', { text: 'Tata Tertib' })))),
     h('div', { class: 'ds-hero-art', 'aria-hidden': 'true' }, icon('shield'))));
 
-  if (kids.length) v.append(h('section', { class: 'card' }, h('h3', { text: 'Anak saya' }),
+  if (kids.length) v.append(h('section', { class: 'card' }, h('h3', { text: '💖 Anak Saya' }),
     h('div', { class: 'kid-grid' }, ...kids.map((k) => kidCard(k)))));
-  if (s.infoSiswa) v.append(h('section', { class: 'card notice-card' }, h('div', { class: 'row gap-sm' }, icon('bell'), h('h3', { text: 'Pengumuman' })), h('p', { class: 'pre', text: s.infoSiswa })));
+  if (s.infoSiswa) v.append(h('section', { class: 'card notice-card' }, h('div', { class: 'row gap-sm' }, icon('bell'), h('h3', { text: '📢 Pengumuman Sekolah' })), h('p', { class: 'pre', text: s.infoSiswa })));
   if (dd.mode === 'none') { v.append(noData()); return; }
 
   const pr = periodRange(periode);
@@ -189,10 +353,13 @@ function pageBeranda(v) {
   const teladan = [...kelasStat].sort((a, b) => b.pct - a.pct || a.rata - b.rata)[0];
 
   v.append(h('div', { class: 'tiles ds-tiles' },
-    statTile('Siswa tanpa pelanggaran', `${pct}%`, { ic: 'shield', tone: 'ok', sub: `${fmtNum(bersih)} dari ${fmtNum(dd.aktif.length)} siswa aktif` }),
-    statTile('Pelanggaran bulan ini', fmtNum(nBulan), { ic: 'clipboard', delta: deltaChip(nBulan, nPrev, 'bulan lalu') }),
-    statTile('Rata-rata poin per siswa', fmtNum(dd.aktif.length ? totalPoin / dd.aktif.length : 0, 1), { ic: 'scale', sub: 'akumulasi seluruh masa sekolah' }),
-    statTile('Kelas paling disiplin', teladan ? teladan.kelas : '-', { ic: 'spark', sub: teladan ? `${teladan.pct}% siswa tanpa pelanggaran` : '' })));
+    statTile('Siswa Tanpa Pelanggaran', `${pct}%`, { ic: 'shield', tone: 'ok', sub: `${fmtNum(bersih)} dari ${fmtNum(dd.aktif.length)} siswa aktif` }),
+    statTile('Pelanggaran Bulan Ini', fmtNum(nBulan), { ic: 'clipboard', delta: deltaChip(nBulan, nPrev, 'bulan lalu') }),
+    statTile('Rata-rata Poin Siswa', fmtNum(dd.aktif.length ? totalPoin / dd.aktif.length : 0, 1), { ic: 'scale', sub: 'akumulasi seluruh masa sekolah' }),
+    statTile('Kelas Paling Disiplin', teladan ? teladan.kelas : '-', { ic: 'spark', sub: teladan ? `${teladan.pct}% siswa tanpa pelanggaran` : '' })));
+
+  // Tampilkan Top 10 Siswa dengan Poin Terbanyak di Beranda
+  v.append(renderTop10Section(dd));
 
   v.append(h('div', { class: 'seg ds-period', role: 'tablist', 'aria-label': 'Periode' }, ...[['bulan', 'Bulan ini'], ['semester', 'Semester ini'], ['ta', 'Tahun ajaran']].map(([k, l]) =>
     h('button', { type: 'button', role: 'tab', class: periode === k ? 'on' : '', 'aria-selected': String(periode === k), onclick: () => { periode = k; route(true); } }, h('span', { text: l })))));
@@ -200,16 +367,16 @@ function pageBeranda(v) {
   const grid = h('div', { class: 'dash-grid' });
   v.append(grid);
   const tr = trend(recs, pr.from, pr.to, ymd());
-  grid.append(chartCard({ cls: 'span-8', title: 'Jumlah pelanggaran', sub: `${pr.label} · per ${tr.gran}`, chart: columnChart(tr.buckets),
+  grid.append(chartCard({ cls: 'span-8', title: '📈 Grafik Jumlah Pelanggaran', sub: `${pr.label} · per ${tr.gran}`, chart: columnChart(tr.buckets),
     table: { cols: ['Periode', 'Pelanggaran'], rows: tr.buckets.map((b) => [b.full, b.value]) } }));
   grid.append(levelCard(dd, dd.aktif, 'span-4'));
   const top = countBy(recs, (r) => r.jenisKode).slice(0, 6);
-  grid.append(chartCard({ cls: 'span-6', title: 'Pelanggaran paling sering', sub: 'Mari bersama menghindarinya', chart: barList(top.map((g) => ({ label: uraianOf(g.key, recs), value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'kali', empty: 'Tidak ada pelanggaran pada periode ini. 🎉' }),
+  grid.append(chartCard({ cls: 'span-6', title: '⚠️ Pelanggaran Paling Sering', sub: 'Mari bersama menghindarinya', chart: barList(top.map((g) => ({ label: uraianOf(g.key, recs), value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'kali', empty: 'Tidak ada pelanggaran pada periode ini. 🎉' }),
     table: { cols: ['Pelanggaran', 'Kali', 'Siswa'], rows: top.map((g) => [uraianOf(g.key, recs), g.n, g.nSiswa]) } }));
   const kat = D().kategori.map((k) => ({ label: `${k.kode}. ${k.nama}`, value: recs.filter((r) => r.kategori === k.kode).length }));
-  grid.append(chartCard({ cls: 'span-6', title: 'Per jenis kategori', sub: pr.label, chart: barList(kat, { unit: 'pelanggaran' }), table: { cols: ['Kategori', 'Pelanggaran'], rows: kat.map((k) => [k.label, k.value]) } }));
+  grid.append(chartCard({ cls: 'span-6', title: '🗂️ Per Jenis Kategori', sub: pr.label, chart: barList(kat, { unit: 'pelanggaran' }), table: { cols: ['Kategori', 'Pelanggaran'], rows: kat.map((k) => [k.label, k.value]) } }));
   const rank = [...kelasStat].sort((a, b) => b.pct - a.pct || a.rata - b.rata);
-  grid.append(chartCard({ cls: 'span-12', title: 'Peringkat kelas disiplin', sub: 'Persentase siswa tanpa pelanggaran (seluruh masa sekolah)',
+  grid.append(chartCard({ cls: 'span-12', title: '🏅 Peringkat Kelas Disiplin', sub: 'Persentase siswa tanpa pelanggaran (seluruh masa sekolah)',
     chart: barList(rank.map((k) => ({ label: `Kelas ${k.kelas}`, value: k.pct, sub: `${k.bersih} dari ${k.n} siswa · rata-rata ${fmtNum(k.rata, 1)} poin`, onClick: () => { location.hash = `#kelas/${k.kelas}`; } })), { unit: '%', max: 100, fmt: (x) => `${x}%` }),
     table: { cols: ['Kelas', '% tanpa pelanggaran', 'Siswa', 'Rata-rata poin'], rows: rank.map((k) => [k.kelas, k.pct, k.n, k.rata]) } }));
   v.append(dataStamp());
@@ -228,7 +395,7 @@ const uraianOf = (kode, recs) => { const j = D().jenisMap.get(String(kode)); con
 function levelCard(dd, pool, cls) {
   const parts = [{ label: 'Aman', value: pool.filter((x) => !dd.summaries.get(x.id)?.level).length, color: 'var(--st-ok)' },
     ...dd.levels.map((l) => ({ label: l.label, value: pool.filter((x) => dd.summaries.get(x.id)?.level?.kode === l.kode).length, color: `var(--st-${l.warna || 'warn'})` }))];
-  return chartCard({ cls, title: 'Status siswa', sub: 'Berdasarkan akumulasi poin', chart: stackBar(parts, { unit: 'siswa' }), table: { cols: ['Tahap', 'Siswa'], rows: parts.map((p) => [p.label, p.value]) } });
+  return chartCard({ cls, title: '🛡️ Status Siswa', sub: 'Berdasarkan akumulasi poin', chart: stackBar(parts, { unit: 'siswa' }), table: { cols: ['Tahap', 'Siswa'], rows: parts.map((p) => [p.label, p.value]) } });
 }
 
 const dataStamp = () => h('p', { class: 'muted small center ds-stamp', text: S.demo ? 'Mode Demo · data contoh' : S.sync.lastOk ? `Data diperbarui ${relTime(S.sync.lastOk)} · tekan Update untuk data terbaru` : 'Data belum pernah diperbarui' });
@@ -244,42 +411,135 @@ function kidCard(k) {
     icon('right'));
 }
 
-// ------------------------------------------------------------------ ANAK (cek per siswa)
+// ------------------------------------------------------------------ ANAK (cari per siswa dengan Nama / NIS / NISN)
 let qNama = '';
 function pageAnak(v, key) {
-  const names = showNames();
+  const dd = data();
   const kids = savedKids();
-  const inp = h('input', { type: 'search', value: key && !key.startsWith('id:') ? key : '', placeholder: names ? 'NIS / NISN atau nama siswa' : 'Masukkan NIS atau NISN', 'aria-label': 'NIS atau NISN', inputmode: names ? 'text' : 'numeric', autocomplete: 'off', enterkeyhint: 'search' });
+  const inp = h('input', {
+    type: 'search',
+    value: key && !key.startsWith('id:') ? key : '',
+    placeholder: '🔍 Ketik Nama Siswa, NIS, NISN, atau Kelas…',
+    'aria-label': 'Cari Nama Siswa, NIS, atau NISN',
+    inputmode: 'text',
+    autocomplete: 'off',
+    enterkeyhint: 'search',
+  });
   const results = h('div');
-  const submit = (e) => { e?.preventDefault(); const val = inp.value.trim(); if (!val) return inp.focus(); location.hash = `#anak/${encodeURIComponent(val.replace(/\s+/g, ''))}`; };
-  if (names) inp.addEventListener('input', debounce(() => { qNama = inp.value.trim(); drawNames(); }, 150));
-  function drawNames() {
-    if (!qNama || /^\d+$/.test(qNama)) { results.replaceChildren(); return; }
-    const list = data().aktif.filter((s) => matches(qNama, s.nama, s.kelas)).sort((a, b) => cmpNama(a.nama, b.nama)).slice(0, 20);
-    results.replaceChildren(list.length ? h('div', { class: 'pick-list big' }, ...list.map((s) => h('a', { class: 'pick', href: `#anak/${encodeURIComponent(keyOf(s))}` },
-      avatar(s.nama), h('span', { class: 'grow min0' }, h('span', { class: 'block pick-name ellipsis', text: s.nama }), h('span', { class: 'muted small', text: `Kelas ${s.kelas}` })), icon('right')))) : h('p', { class: 'muted small', text: 'Nama tidak ditemukan.' }));
+
+  const submit = (e) => {
+    e?.preventDefault();
+    const val = inp.value.trim();
+    if (!val) return inp.focus();
+    location.hash = `#anak/${encodeURIComponent(val)}`;
+  };
+
+  inp.addEventListener('input', debounce(() => {
+    qNama = inp.value.trim();
+    drawSuggestions();
+  }, 120));
+
+  function renderStudentPickItem(s) {
+    const sum = dd.summaries.get(s.id) || { total: 0, level: null };
+    return h('a', {
+      class: 'pick',
+      href: `#anak/${encodeURIComponent(keyOf(s))}`,
+      onclick: () => { qNama = ''; },
+    },
+      avatar(s.nama, s.jk === 'P' ? 'f' : ''),
+      h('span', { class: 'grow min0' },
+        h('span', { class: 'block pick-name ellipsis', style: 'font-weight:700;', text: s.nama }),
+        h('span', { class: 'muted small', text: `Kelas ${s.kelas}${s.nis ? ` · NIS ${s.nis}` : ''}${s.nisn ? ` · NISN ${s.nisn}` : ''}` })
+      ),
+      h('span', { class: 'pick-poin-badge' + (sum.total === 0 ? ' clean' : ''), text: `${fmtNum(sum.total)} Poin` }),
+      icon('right')
+    );
   }
-  v.append(head('Cek Perkembangan Siswa', names ? 'Ketik NIS/NISN atau nama siswa.' : 'Masukkan NIS atau NISN anak Anda (tertera di kartu pelajar / rapor).'),
+
+  function drawSuggestions() {
+    if (!qNama) {
+      results.replaceChildren();
+      return;
+    }
+    const qLow = qNama.toLowerCase();
+    const list = dd.aktif
+      .filter((s) =>
+        matches(qNama, s.nama, s.kelas) ||
+        (s.nis && String(s.nis).toLowerCase().includes(qLow)) ||
+        (s.nisn && String(s.nisn).toLowerCase().includes(qLow))
+      )
+      .sort((a, b) => cmpNama(a.nama, b.nama))
+      .slice(0, 25);
+
+    results.replaceChildren(
+      list.length
+        ? h('div', { class: 'pick-list big' },
+            h('div', { class: 'muted small', style: 'padding: 8px 16px; background:#EEF2FF; font-weight:600;', text: `Ditemukan ${list.length} siswa yang cocok — ketuk untuk membuka:` }),
+            ...list.map(renderStudentPickItem)
+          )
+        : h('p', { class: 'muted small', style: 'padding: 8px 4px;', text: 'Tidak ada saran nama/NIS yang cocok di daftar lokal. Tekan "Lihat" untuk mencari.' })
+    );
+  }
+
+  v.append(
+    head('🔍 Cari & Cek Perkembangan Siswa', 'Bisa mencari menggunakan Nama Siswa, NIS, NISN, atau Kelas.'),
     h('form', { class: 'card ds-search', onsubmit: submit },
       h('label', { class: 'fsel search big block' }, icon('search'), inp),
-      btn('Lihat', null, { kind: 'primary', type: 'submit', ic: 'right' })),
+      btn('Lihat', null, { kind: 'primary', type: 'submit', ic: 'right' })
+    ),
     results,
-    kids.length ? h('div', { class: 'chips' }, h('span', { class: 'muted small', text: 'Anak saya:' }), ...kids.map((k) => h('a', { class: 'chip' + (k.key === key ? ' on' : ''), href: `#anak/${encodeURIComponent(k.key)}` }, h('span', { text: `${k.nama} · ${k.kelas}` })))) : null);
-  if (names && qNama) { inp.value = qNama; drawNames(); }
+    kids.length
+      ? h('div', { class: 'chips' },
+          h('span', { class: 'muted small', text: '💖 Anak saya:' }),
+          ...kids.map((k) => h('a', { class: 'chip' + (k.key === key ? ' on' : ''), href: `#anak/${encodeURIComponent(k.key)}` }, h('span', { text: `${k.nama} · ${k.kelas}` })))
+        )
+      : null
+  );
+
+  if (qNama && !key) {
+    inp.value = qNama;
+    drawSuggestions();
+  }
+
   if (!key) {
-    v.append(h('section', { class: 'card ds-help' }, h('h3', { text: 'Apa yang bisa dilihat?' }),
-      h('ul', { class: 'rules-list' },
-        h('li', { text: 'Total poin pelanggaran dan tahap pembinaan anak saat ini.' }),
-        h('li', { text: 'Riwayat pelanggaran: tanggal, bentuk pelanggaran, dan poinnya.' }),
-        h('li', { text: 'Grafik perjalanan poin dan berapa poin lagi menuju tahap berikutnya.' }),
-        h('li', { text: 'Simpan sebagai "Anak saya" agar berikutnya cukup sekali ketuk.' }))));
+    if (dd.mode !== 'none') {
+      v.append(renderTop10Section(dd));
+    }
+    v.append(
+      h('section', { class: 'card ds-help' },
+        h('h3', { text: '✨ Apa saja yang bisa dilihat di sini?' }),
+        h('ul', { class: 'rules-list' },
+          h('li', { text: 'Cari siswa dengan mudah cukup ketik Nama Lengkap, Nama Panggilan, NIS, atau NISN.' }),
+          h('li', { text: 'Lihat total poin pelanggaran dan tahap pembinaan anak saat ini.' }),
+          h('li', { text: 'Riwayat pelanggaran lengkap: tanggal, bentuk pelanggaran, dan poinnya.' }),
+          h('li', { text: 'Simpan sebagai "Anak saya" agar berikutnya cukup sekali ketuk di Beranda.' })
+        )
+      )
+    );
     return;
   }
-  const box = h('div', { class: 'stack' }, h('p', { class: 'muted center', text: 'Mencari data…' }));
+
+  const box = h('div', { class: 'stack' }, h('p', { class: 'muted center', text: 'Mencari data siswa…' }));
   v.append(box);
-  lookup(key).then((res) => { box.replaceChildren(...detail(res, key)); }, (e) => {
-    box.replaceChildren(emptyState('search', 'Data tidak ditemukan', e.message, h('a', { class: 'btn tonal', href: '#anak' }, h('span', { text: 'Cari lagi' }))));
-  });
+  lookup(key).then(
+    (res) => {
+      results.replaceChildren();
+      box.replaceChildren(...detail(res, keyOf(res.siswa)));
+    },
+    (e) => {
+      if (e.candidates && e.candidates.length) {
+        box.replaceChildren(
+          h('section', { class: 'card' },
+            h('h3', { text: `🔍 Hasil Pencarian Nama "${key}" (${e.candidates.length} Siswa)` }),
+            h('p', { class: 'muted small', style: 'margin-bottom:12px;', text: 'Pilih nama siswa yang ingin Anda lihat:' }),
+            h('div', { class: 'pick-list big' }, ...e.candidates.map(renderStudentPickItem))
+          )
+        );
+      } else {
+        box.replaceChildren(emptyState('search', 'Data tidak ditemukan', e.message, h('a', { class: 'btn tonal', href: '#anak' }, h('span', { text: 'Cari lagi' }))));
+      }
+    }
+  );
 }
 
 function detail(res, key) {
@@ -297,7 +557,7 @@ function detail(res, key) {
   return [
     h('section', { class: 'card ds-kid' },
       h('div', { class: 'profile-top' }, avatar(s.nama, 'lg' + (s.jk === 'P' ? ' f' : '')),
-        h('div', { class: 'grow min0' }, h('h2', { class: 'profile-name', text: s.nama }), h('p', { class: 'muted', text: `Kelas ${s.kelas}${s.nis ? ' · NIS ' + s.nis : ''}` }))),
+        h('div', { class: 'grow min0' }, h('h2', { class: 'profile-name', text: s.nama }), h('p', { class: 'muted', text: `Kelas ${s.kelas}${s.nis ? ' · NIS ' + s.nis : ''}${s.nisn ? ' · NISN ' + s.nisn : ''}` }))),
       h('div', { class: `ds-mood st-${mood.cls}` }, icon(mood.ic), h('div', null, h('strong', { text: mood.title }), h('p', { text: mood.text }))),
       h('div', { class: 'ds-score' },
         h('div', { class: 'score' }, h('span', { class: 'score-n', text: fmtNum(sum.total) }), h('span', { class: 'muted', text: 'poin akumulasi' })),
@@ -321,7 +581,7 @@ function detail(res, key) {
           h('div', { class: 'row-sub muted' }, h('span', { text: fmtTgl(t.rec.tanggal, { hari: true }) }), tingkatBadge(t.rec.tingkat), t.rec.tindakanLangsung ? h('span', { text: `Tindakan: ${t.rec.tindakanLangsung}` }) : null)),
         h('span', { class: 'muted small nowrap', text: `= ${t.after}` }))))
         : h('p', { class: 'muted', text: 'Belum ada pelanggaran. 👍' })),
-    h('section', { class: 'card ds-tips' }, h('h3', { text: 'Tips untuk orang tua' }),
+    h('section', { class: 'card ds-tips' }, h('h3', { text: '💡 Tips untuk Orang Tua' }),
       h('ul', { class: 'rules-list' },
         h('li', { text: 'Ajak anak berbicara dengan tenang tentang catatan pelanggarannya dan dengarkan alasannya.' }),
         h('li', { text: 'Bantu anak disiplin waktu, kerapian seragam, dan penggunaan HP yang bijak.' }),
@@ -333,7 +593,7 @@ function detail(res, key) {
 // ------------------------------------------------------------------ KELAS
 function pageKelas(v, kelasArg) {
   const dd = data();
-  v.append(head('Rekap Kelas', 'Perkembangan kedisiplinan per kelas'));
+  v.append(head('🏫 Rekap Kelas', 'Perkembangan kedisiplinan per kelas'));
   if (dd.mode === 'none') { v.append(noData()); return; }
   const kidKelas = savedKids()[0]?.kelas;
   const kelas = dd.kelasList.includes(kelasArg) ? kelasArg : dd.kelasList.includes(kidKelas) ? kidKelas : dd.kelasList[0];
@@ -346,27 +606,41 @@ function pageKelas(v, kelasArg) {
   const t = totals(recs);
   v.append(h('div', { class: 'tiles ds-tiles' },
     statTile('Siswa', fmtNum(ss.length), { ic: 'users', sub: `${ss.filter((x) => x.jk === 'L').length} L · ${ss.filter((x) => x.jk === 'P').length} P` }),
-    statTile('Tanpa pelanggaran', `${st.pct}%`, { ic: 'shield', tone: 'ok', sub: `${st.bersih} siswa` }),
+    statTile('Tanpa Pelanggaran', `${st.pct}%`, { ic: 'shield', tone: 'ok', sub: `${st.bersih} siswa` }),
     statTile(`Pelanggaran · ${pr.label}`, fmtNum(t.n), { ic: 'clipboard', sub: `${fmtNum(t.poin)} poin` }),
-    statTile('Rata-rata poin', fmtNum(st.rata, 1), { ic: 'scale', sub: 'per siswa (akumulasi)' })));
+    statTile('Rata-rata Poin', fmtNum(st.rata, 1), { ic: 'scale', sub: 'per siswa (akumulasi)' })));
+
+  // Top 10 khusus kelas terpilih
+  v.append(renderTop10Section(dd, kelas));
+
   v.append(h('div', { class: 'seg ds-period', role: 'tablist', 'aria-label': 'Periode' }, ...[['bulan', 'Bulan ini'], ['semester', 'Semester ini'], ['ta', 'Tahun ajaran']].map(([k, l]) =>
     h('button', { type: 'button', role: 'tab', class: periode === k ? 'on' : '', 'aria-selected': String(periode === k), onclick: () => { periode = k; route(true); } }, h('span', { text: l })))));
   const grid = h('div', { class: 'dash-grid' });
   v.append(grid);
   const tr = trend(recs, pr.from, pr.to, ymd());
-  grid.append(chartCard({ cls: 'span-8', title: `Pelanggaran kelas ${kelas}`, sub: `${pr.label} · per ${tr.gran}`, chart: columnChart(tr.buckets), table: { cols: ['Periode', 'Pelanggaran'], rows: tr.buckets.map((b) => [b.full, b.value]) } }));
+  grid.append(chartCard({ cls: 'span-8', title: `📈 Pelanggaran Kelas ${kelas}`, sub: `${pr.label} · per ${tr.gran}`, chart: columnChart(tr.buckets), table: { cols: ['Periode', 'Pelanggaran'], rows: tr.buckets.map((b) => [b.full, b.value]) } }));
   grid.append(levelCard(dd, ss, 'span-4'));
   const top = countBy(recs, (r) => r.jenisKode).slice(0, 6);
-  grid.append(chartCard({ cls: 'span-6', title: 'Pelanggaran paling sering', sub: pr.label, chart: barList(top.map((g) => ({ label: uraianOf(g.key, recs), value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'kali', empty: 'Tidak ada pelanggaran pada periode ini. 🎉' }),
+  grid.append(chartCard({ cls: 'span-6', title: '⚠️ Pelanggaran Paling Sering', sub: pr.label, chart: barList(top.map((g) => ({ label: uraianOf(g.key, recs), value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'kali', empty: 'Tidak ada pelanggaran pada periode ini. 🎉' }),
     table: { cols: ['Pelanggaran', 'Kali'], rows: top.map((g) => [uraianOf(g.key, recs), g.n]) } }));
   const kat = D().kategori.map((k) => ({ label: `${k.kode}. ${k.nama}`, value: recs.filter((r) => r.kategori === k.kode).length }));
-  grid.append(chartCard({ cls: 'span-6', title: 'Per kategori', sub: pr.label, chart: barList(kat, { unit: 'pelanggaran' }), table: { cols: ['Kategori', 'Pelanggaran'], rows: kat.map((k) => [k.label, k.value]) } }));
+  grid.append(chartCard({ cls: 'span-6', title: '🗂️ Per Kategori', sub: pr.label, chart: barList(kat, { unit: 'pelanggaran' }), table: { cols: ['Kategori', 'Pelanggaran'], rows: kat.map((k) => [k.label, k.value]) } }));
+
   if (showNames()) {
-    const sorted = [...ss].sort((a, b) => cmpNama(a.nama, b.nama));
-    grid.append(h('section', { class: 'card span-12' }, h('h3', { text: 'Daftar siswa' }),
-      h('div', { class: 'list' }, ...sorted.map((x) => { const sm = dd.summaries.get(x.id); return h('a', { class: 'row-item', href: `#anak/${encodeURIComponent(keyOf(x))}` }, avatar(x.nama), h('span', { class: 'grow min0 ellipsis', text: x.nama }), h('strong', { text: `${sm.total}` }), levelBadge(sm.level, { small: true })); }))));
-  } else {
-    v.append(h('p', { class: 'muted small center', text: 'Demi privasi, nama siswa tidak ditampilkan. Untuk melihat data anak, buka menu "Anak" dan masukkan NIS.' }));
+    const sorted = [...ss].sort((a, b) => (dd.summaries.get(b.id)?.total || 0) - (dd.summaries.get(a.id)?.total || 0) || cmpNama(a.nama, b.nama));
+    grid.append(h('section', { class: 'card span-12' }, h('h3', { text: `📋 Daftar Siswa Kelas ${kelas} (${sorted.length} Siswa)` }),
+      h('div', { class: 'list' }, ...sorted.map((x) => {
+        const sm = dd.summaries.get(x.id) || { total: 0, level: null };
+        return h('a', { class: 'row-item', href: `#anak/${encodeURIComponent(keyOf(x))}` },
+          avatar(x.nama, x.jk === 'P' ? 'f' : ''),
+          h('div', { class: 'grow min0' },
+            h('strong', { class: 'block ellipsis', text: x.nama }),
+            h('span', { class: 'muted small', text: x.nis ? `NIS ${x.nis}` : '' })
+          ),
+          h('span', { class: 'pick-poin-badge' + (sm.total === 0 ? ' clean' : ''), text: `${sm.total} Poin` }),
+          levelBadge(sm.level, { small: true })
+        );
+      }))));
   }
   v.append(dataStamp());
 }
@@ -377,15 +651,15 @@ function pageAturan(v) { aturan.render(v, { parts: [], query: {} }, { publik: tr
 function pageInfo(v) {
   const s = S.settings;
   const wa = waNumber(s.waSekolah);
-  v.append(head('Informasi', s.namaSekolah));
+  v.append(head('ℹ️ Informasi Sekolah', s.namaSekolah));
   if (s.infoSiswa) v.append(h('section', { class: 'card notice-card' }, h('div', { class: 'row gap-sm' }, icon('bell'), h('h3', { text: 'Pengumuman' })), h('p', { class: 'pre', text: s.infoSiswa })));
-  v.append(h('section', { class: 'card stack-sm' }, h('h3', { text: 'Kontak sekolah' }),
+  v.append(h('section', { class: 'card stack-sm' }, h('h3', { text: '📞 Kontak Sekolah' }),
     s.alamat ? h('p', null, icon('pin'), ' ', s.alamat) : null,
     s.telepon ? h('p', null, icon('phone'), ' ', h('a', { href: `tel:${s.telepon.replace(/[^\d+]/g, '')}`, text: s.telepon })) : null,
     s.email ? h('p', null, icon('info'), ' ', h('a', { href: `mailto:${s.email}`, text: s.email })) : null,
-    wa ? h('a', { class: 'btn wa', href: `https://wa.me/${wa}`, target: '_blank', rel: 'noopener' }, icon('wa'), h('span', { text: 'WhatsApp sekolah' })) : null,
+    wa ? h('a', { class: 'btn wa', href: `https://wa.me/${wa}`, target: '_blank', rel: 'noopener' }, icon('wa'), h('span', { text: 'WhatsApp Sekolah' })) : null,
     !s.alamat && !s.telepon && !s.email && !wa ? h('p', { class: 'muted', text: 'Kontak belum diisi oleh sekolah.' }) : null));
-  v.append(h('section', { class: 'card' }, h('h3', { text: 'Cara membaca poin' }),
+  v.append(h('section', { class: 'card' }, h('h3', { text: '📖 Cara Membaca Poin' }),
     h('ul', { class: 'rules-list' },
       h('li', { text: 'Setiap pelanggaran diberi poin sesuai tata tertib (guru dapat menyesuaikan sesuai kejadian).' }),
       h('li', { text: 'Poin dijumlahkan selama siswa bersekolah dan tidak dapat dikurangi.' }),
@@ -394,7 +668,7 @@ function pageInfo(v) {
       h('li', { text: 'Setiap pelanggaran didokumentasikan dalam Berita Acara Pemeriksaan (BAP).' }))));
   const installBtn = PWA.installEvt ? btn('Pasang di HP', () => install(), { kind: 'primary', ic: 'install' })
     : isIOS() && !PWA.installed ? btn('Cara pasang di iPhone', () => dialog('Pasang di iPhone/iPad', 'Buka halaman ini di Safari → ketuk tombol Bagikan → "Tambah ke Layar Utama".'), { ic: 'install' }) : null;
-  v.append(h('section', { class: 'card stack-sm' }, h('h3', { text: 'Aplikasi' }),
+  v.append(h('section', { class: 'card stack-sm' }, h('h3', { text: '📱 Aplikasi' }),
     h('p', { class: 'muted small', text: `Versi ${APP_VERSION} · halaman ini bisa dibuka tanpa internet setelah dibuka sekali. ${S.sync.lastOk ? `Data diperbarui ${relTime(S.sync.lastOk)}.` : ''}` }),
     h('div', { class: 'row gap-sm wrap' }, installBtn, btn('Update data & tampilan', runUpdate, { ic: 'download' }), h('a', { class: 'btn text', href: 'index.html' }, icon('login'), h('span', { text: 'Halaman guru' })))));
 }
@@ -407,12 +681,14 @@ async function boot() {
     document.getElementById('app').replaceChildren(emptyState('alert', 'Penyimpanan HP tidak dapat dibuka', e.message));
     return;
   }
+  ensureShowNames();
   buildShell();
   route();
   document.getElementById('splash')?.remove();
   window.addEventListener('hashchange', () => route());
   let pending = false;
   const live = debounce(() => {
+    ensureShowNames();
     const a = document.activeElement;
     if ((a && view.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || document.querySelector('.scrim')) { pending = true; return; }
     pending = false;

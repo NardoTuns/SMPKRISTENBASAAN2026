@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Raport Admin</title>
+  <meta name="description" content="Dashboard admin E-Raport SMP Kristen 65 Basaan: cetak raport, leger, ranking, analisis, data siswa, dan pengaturan.">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/print.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ========================= SIDEBAR ========================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-section">
+      <div class="brand-logo-wrap"><img src="assets/logo_left.png" alt="Logo SMP Kristen 65 Basaan"></div>
+      <div>
+        <div class="brand-title">E-RAPORT</div>
+        <div class="brand-sub">SMP Kristen 65 Basaan</div>
+      </div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-header">Menu Utama</li>
+      <li><a class="nav-item active" data-tab="dashboard">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Dashboard Ikhtisar</a></li>
+      <li><a class="nav-item" data-tab="raport">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        Cetak Raport Siswa</a></li>
+      <li><a class="nav-item" data-tab="leger">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+        Daftar Nilai (Leger/DKN)</a></li>
+
+      <li class="nav-header">Data Raport</li>
+      <li><a class="nav-item" data-tab="siswa">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.4-1.8M17 20H7m10 0v-2c0-.7-.1-1.3-.4-1.8M7 20H2v-2a3 3 0 015.4-1.8M7 20v-2c0-.7.1-1.3.4-1.8m0 0a5 5 0 019.2 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Data Siswa</a></li>
+      <li><a class="nav-item" data-tab="pelengkap">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        Sikap, Ekskul &amp; Kehadiran</a></li>
+      <li><a class="nav-item" data-tab="deskripsi">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        Bank Deskripsi</a></li>
+      <li><a class="nav-item" data-tab="impor">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Import / Export Excel</a></li>
+      <li><a class="nav-item" data-tab="pengambilan">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.8 4.7a3.4 3.4 0 001.9-.8 3.4 3.4 0 014.6 0 3.4 3.4 0 001.9.8 3.4 3.4 0 013.1 3.1c.1.7.3 1.4.8 1.9a3.4 3.4 0 010 4.6 3.4 3.4 0 00-.8 1.9 3.4 3.4 0 01-3.1 3.1 3.4 3.4 0 00-1.9.8 3.4 3.4 0 01-4.6 0 3.4 3.4 0 00-1.9-.8 3.4 3.4 0 01-3.1-3.1 3.4 3.4 0 00-.8-1.9 3.4 3.4 0 010-4.6 3.4 3.4 0 00.8-1.9 3.4 3.4 0 013.1-3.1z"/></svg>
+        Pengambilan Raport</a></li>
+
+      <li class="nav-header">Analisis &amp; Evaluasi</li>
+      <li><a class="nav-item" data-tab="ranking">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        Perengkingan Siswa</a></li>
+      <li><a class="nav-item" data-tab="peringkat-tingkat">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8m-4-4v4m-5-17h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3m10-4h3v1a3 3 0 01-3 3"/></svg>
+        Ranking Tingkat &amp; Sekolah</a></li>
+      <li><a class="nav-item" data-tab="mapel">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        Nilai per Mata Pelajaran</a></li>
+      <li><a class="nav-item" data-tab="analisis">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        Analisis &amp; Statistik</a></li>
+      <li><a class="nav-item" data-tab="kelengkapan">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+        <span>Kelengkapan Nilai</span>
+        <span id="nav-incomplete-badge" class="badge badge-danger" style="display:none;margin-left:auto;font-size:10px;padding:2px 7px;">0</span></a></li>
+      <li><a class="nav-item" data-tab="log">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Log Aktivitas Guru</a></li>
+
+      <li class="nav-header">Konfigurasi</li>
+      <li><a class="nav-item" data-tab="settings">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Pengaturan, Mapel &amp; Wali</a></li>
+      <li><a class="nav-item" id="nav-logout">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Keluar</a></li>
+    </ul>
+
+    <div class="nav-footer">
+      <div id="footer-sekolah">SMP KRISTEN 65 BASAAN</div>
+      <div style="margin-top:2px;" id="footer-ta">Raport System</div>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ========================= MAIN ========================= -->
+  <div class="main-wrapper">
+    <header class="top-bar">
+      <div class="page-info-title">
+        <button class="btn-theme btn-menu" id="btn-menu" title="Menu" aria-label="Buka menu">
+          <svg style="width:18px;height:18px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span id="page-title">Dashboard Ikhtisar</span>
+      </div>
+
+      <div class="top-bar-controls">
+        <div class="class-picker-wrap">
+          <label for="class-select">KELAS:</label>
+          <select id="class-select" class="class-picker-select"></select>
+        </div>
+
+        <div class="wali-badge"><span>Wali:</span><strong id="top-wali-name">-</strong></div>
+
+        <span class="conn-pill" id="conn-pill" title="Status koneksi">Online</span>
+
+        <button class="btn btn-secondary btn-sm" id="btn-refresh" title="Ambil data terbaru dari spreadsheet">
+          <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.6m14.8 2A8 8 0 004.6 9m0 0H9m11 11v-5h-.6m0 0a8 8 0 01-15.4-2m15.4 2H15"/></svg>
+          Sinkron
+        </button>
+
+        <div class="dropdown" id="excel-dropdown">
+          <button class="btn btn-secondary btn-sm" id="btn-excel-menu" title="Import / template Excel">
+            <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Excel ▾
+          </button>
+          <div class="dropdown-menu">
+            <label for="excel-file-input">📥 Import Excel (siswa / nilai / pelengkap)</label>
+            <div class="dropdown-sep"></div>
+            <button data-action="tpl-full-class">📄 Template Import Lengkap (kelas ini)</button>
+            <button data-action="tpl-full-all">📄 Template Import Lengkap (semua kelas)</button>
+            <button data-action="tpl-siswa">👥 Template Data Siswa (kosong)</button>
+            <div class="dropdown-sep"></div>
+            <button data-action="export-all">📊 Export Seluruh Data (Excel)</button>
+          </div>
+        </div>
+        <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display:none;">
+
+        <button id="theme-toggle" class="btn-theme" title="Ubah Tema Gelap / Terang">
+          <svg style="width:18px;height:18px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="content-body">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="grid-kpi">
+          <div class="kpi-card">
+            <div class="kpi-title">Total Siswa Kelas</div>
+            <div class="kpi-value" id="dash-total-students">0</div>
+            <div class="kpi-sub" id="dash-total-all">Siswa aktif di kelas ini</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-title">Rata-Rata Kelas</div>
+            <div class="kpi-value" id="dash-class-avg">0.0</div>
+            <div class="kpi-sub">Rerata seluruh mata pelajaran</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-title">Peringkat 1 (Juara)</div>
+            <div class="kpi-value" style="font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="dash-rank-1-name">-</div>
+            <div class="kpi-sub" id="dash-rank-1-score">Total Skor: 0</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-title">Kelengkapan Input</div>
+            <div class="kpi-value" id="dash-progress">0%</div>
+            <div class="kpi-sub" id="dash-progress-sub">Nilai &amp; deskripsi terisi</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Progres Input Nilai Guru per Mata Pelajaran (Kelas <span class="js-kelas"></span>)</div>
+            <div class="card-actions">
+              <button class="btn btn-primary btn-sm" onclick="switchTab('raport')">Buka Cetak Raport</button>
+              <button class="btn btn-secondary btn-sm" onclick="switchTab('kelengkapan')">Kelengkapan</button>
+              <button class="btn btn-secondary btn-sm" onclick="switchTab('peringkat-tingkat')">Ranking Tingkat</button>
+              <button class="btn btn-secondary btn-sm" onclick="switchTab('pengambilan')">Pengambilan Raport</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;" id="dash-mapel-progress"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Ringkasan Siswa Peringkat Teratas Kelas</div>
+            <div class="muted" id="dash-sync-info"></div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:70px;">RANK</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:120px;">NISN</th>
+                  <th class="center" style="width:100px;">JUMLAH</th>
+                  <th class="center" style="width:90px;">RATA-RATA</th>
+                  <th class="center" style="width:130px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="dash-quick-students"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CETAK RAPORT ===================== -->
+      <section id="tab-raport" class="tab-pane">
+        <div class="raport-preview-toolbar">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label for="raport-student-select" style="font-size:13px;font-weight:700;">SISWA:</label>
+              <select id="raport-student-select" class="form-control" style="width:260px;padding:7px 10px;"></select>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-secondary btn-sm" onclick="prevStudent()" title="Siswa Sebelumnya">&larr;</button>
+              <button class="btn btn-secondary btn-sm" onclick="nextStudent()" title="Siswa Berikutnya">&rarr;</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label for="raport-format-select" style="font-size:13px;font-weight:700;">FORMAT:</label>
+              <select id="raport-format-select" class="form-control" style="width:230px;padding:7px 10px;" onchange="changeRaportFormat(this.value)">
+                <option value="semester">Raport Semester (Template Rapor)</option>
+                <option value="mid">Laporan Mid Semester (format lama)</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label for="raport-theme-select" style="font-size:13px;font-weight:700;">TEMA:</label>
+              <select id="raport-theme-select" class="form-control" style="width:200px;padding:7px 10px;" onchange="changeRaportTheme(this.value)"></select>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(239,68,68,0.08);padding:4px 8px;border-radius:var(--radius-sm);border:1px dashed rgba(239,68,68,0.35);">
+              <span style="font-size:11px;font-weight:800;color:#ef4444;margin-right:2px;">1 KELAS:</span>
+              <button class="btn btn-sm btn-danger" onclick="downloadClassRaportPdf()" title="Download seluruh raport 1 kelas dalam 1 file PDF">Unduh PDF 1 Kelas</button>
+              <button class="btn btn-sm btn-secondary" onclick="openClassRaportPdf()" title="Buka PDF 1 kelas di tab baru">Buka PDF di Tab</button>
+              <button class="btn btn-sm btn-success" onclick="printAllRaportClass()" title="Cetak langsung seluruh kelas">Cetak Massal</button>
+              <button class="btn btn-sm btn-secondary" onclick="downloadClassZip()" title="ZIP berisi file Word tiap siswa">ZIP Word</button>
+              <button class="btn btn-sm btn-secondary" onclick="downloadClassDoc()" title="1 file Word berisi seluruh kelas">Word 1 Kelas</button>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(59,130,246,0.08);padding:4px 8px;border-radius:var(--radius-sm);border:1px dashed rgba(59,130,246,0.35);">
+              <span style="font-size:11px;font-weight:800;color:#3b82f6;margin-right:2px;">PER SISWA:</span>
+              <button class="btn btn-sm btn-secondary" onclick="downloadSingleRaportPdf()">Unduh PDF</button>
+              <button class="btn btn-sm btn-secondary" onclick="openSingleRaportPdf()">Buka di Tab</button>
+              <button class="btn btn-sm btn-primary" onclick="printSingleRaport()">Cetak Raport</button>
+              <button class="btn btn-sm btn-secondary" onclick="downloadSingleDocx()">Word (.doc)</button>
+            </div>
+          </div>
+        </div>
+        <div id="raport-warning"></div>
+        <div class="raport-paper-wrapper">
+          <div id="raport-preview-container"></div>
+        </div>
+      </section>
+
+      <!-- ===================== LEGER ===================== -->
+      <section id="tab-leger" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Tabel Daftar Kumpulan Nilai (DKN / Leger)</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">Matriks seluruh nilai mata pelajaran, jumlah, rata-rata, dan perankingan kelas.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <select id="leger-view" class="form-control" style="width:auto;" onchange="renderLeger()">
+                <option value="P">Nilai Pengetahuan</option>
+                <option value="K">Nilai Keterampilan</option>
+              </select>
+              <button class="btn btn-danger" onclick="exportLegerPdf()">Unduh PDF Leger</button>
+              <button class="btn btn-secondary" onclick="openLegerPdf()">Buka PDF di Tab</button>
+              <button class="btn btn-success" onclick="exportLegerExcel()">Export Excel Berwarna</button>
+              <button class="btn btn-primary" onclick="printLeger()">Cetak Print</button>
+            </div>
+          </div>
+          <div class="table-responsive" id="leger-table-container"></div>
+        </div>
+      </section>
+
+      <!-- ===================== DATA SISWA ===================== -->
+      <section id="tab-siswa" class="tab-pane">
+        <div class="grid-kpi" id="siswa-kpi"></div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Data Siswa</div>
+              <div class="muted" style="margin-top:3px;">Tambah, ubah, hapus, atau import data siswa dari Excel. Data tersimpan di spreadsheet (sheet "Siswa").</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="openSiswaForm()">+ Tambah Siswa</button>
+              <label class="btn btn-success btn-sm" for="excel-file-input">Import Excel</label>
+              <button class="btn btn-secondary btn-sm" onclick="downloadTemplateSiswa(false)">Template Excel</button>
+              <button class="btn btn-secondary btn-sm" onclick="downloadTemplateSiswa(true)">Export Siswa</button>
+            </div>
+          </div>
+          <div class="toolbar-row">
+            <input type="search" class="form-control" id="siswa-search" placeholder="Cari nama / NISN..." style="min-width:220px;">
+            <select class="form-control" id="siswa-kelas-filter"><option value="__sel">Kelas terpilih</option><option value="__all">Semua kelas</option></select>
+            <button class="btn btn-danger btn-sm" id="btn-siswa-del-selected" onclick="deleteSelectedSiswa()" disabled>Hapus Terpilih</button>
+            <button class="btn btn-secondary btn-sm" onclick="openPindahKelas()" id="btn-siswa-move" disabled>Pindah Kelas</button>
+            <button class="btn btn-ghost btn-sm" onclick="renumberAbsen()" title="Urutkan nomor absen kelas terpilih berdasarkan abjad">Urutkan No. Absen A-Z</button>
+            <span class="muted" id="siswa-count"></span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:40px;"><input type="checkbox" id="siswa-check-all"></th>
+                  <th class="center" style="width:55px;">NO</th>
+                  <th class="center" style="width:120px;">NISN</th>
+                  <th class="center" style="width:100px;">NIS</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:80px;">KELAS</th>
+                  <th class="center" style="width:60px;">L/P</th>
+                  <th class="center" style="width:120px;">NILAI TERISI</th>
+                  <th class="center" style="width:150px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="siswa-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PELENGKAP RAPORT ===================== -->
+      <section id="tab-pelengkap" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Sikap, Ekstrakurikuler, Kehadiran &amp; Keputusan (Kelas <span class="js-kelas"></span>)</div>
+              <div class="muted" style="margin-top:3px;">Bagian A (Sikap), C (Ekstrakurikuler), dan D (Kehadiran) pada raport. Kolom kosong memakai teks bawaan dari Pengaturan.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="openPelengkapMassal()">Isi Massal</button>
+              <button class="btn btn-primary btn-sm" id="btn-pelengkap-save" onclick="savePelengkap()">Simpan Perubahan</button>
+            </div>
+          </div>
+          <div class="table-responsive" id="pelengkap-container"></div>
+        </div>
+      </section>
+
+      <!-- ===================== BANK DESKRIPSI ===================== -->
+      <section id="tab-deskripsi" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Bank Deskripsi Capaian Kompetensi</div>
+              <div class="muted" style="margin-top:3px;">Daftar pilihan deskripsi yang dipakai guru ("paling dikuasai" &amp; "perlu ditingkatkan"). Guru juga dapat menambah dari HP.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="openDeskForm()">+ Tambah Deskripsi</button>
+            </div>
+          </div>
+          <div class="toolbar-row">
+            <select class="form-control" id="desk-mapel-filter"></select>
+            <select class="form-control" id="desk-tingkat-filter">
+              <option value="all">Semua tingkat</option>
+              <option value="Semua">Berlaku semua tingkat</option>
+              <option value="7">Kelas 7</option>
+              <option value="8">Kelas 8</option>
+              <option value="9">Kelas 9</option>
+            </select>
+            <input type="search" class="form-control" id="desk-search" placeholder="Cari deskripsi..." style="min-width:220px;">
+            <span class="muted" id="desk-count"></span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:50px;">NO</th>
+                  <th>DESKRIPSI</th>
+                  <th class="center" style="width:110px;">TINGKAT</th>
+                  <th style="width:160px;">DIBUAT OLEH</th>
+                  <th class="center" style="width:90px;">DIPAKAI</th>
+                  <th class="center" style="width:140px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="desk-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== IMPORT / EXPORT ===================== -->
+      <section id="tab-impor" class="tab-pane">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">📥 Import Excel</div></div>
+            <p class="muted" style="margin-bottom:14px;line-height:1.6;">
+              Unggah file Excel dengan format template. Aplikasi otomatis mengenali sheet:
+              <b>Siswa</b> (data siswa), sheet bernama <b>kode mapel</b> seperti <code>MTK</code>, <code>IPA</code> (nilai &amp; deskripsi),
+              <b>Pelengkap</b> (sikap, ekskul, kehadiran), dan <b>Daftar_Deskripsi</b> (bank deskripsi).
+              Format lama (sheet Siswa + Nilai) tetap bisa dibaca. Sebelum disimpan, ringkasan &amp; peringatan ditampilkan dulu.
+            </p>
+            <label for="excel-file-input" class="btn btn-success btn-lg" style="width:100%;">Pilih File Excel untuk Diimport</label>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">📄 Download Template Excel</div></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn btn-primary" onclick="downloadTemplateFull(true)">Template Import Lengkap - Kelas <span class="js-kelas"></span></button>
+              <button class="btn btn-secondary" onclick="downloadTemplateFull(false)">Template Import Lengkap - Semua Kelas</button>
+              <button class="btn btn-secondary" onclick="downloadTemplateSiswa(false)">Template Data Siswa (kosong)</button>
+              <p class="muted">Template lengkap sudah berisi daftar siswa &amp; nilai yang ada sekarang, sehingga cukup diisi/diubah lalu diimport kembali.</p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">📊 Export &amp; Cadangan</div></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn btn-success" onclick="exportAllExcel()">Export Seluruh Data (Excel)</button>
+              <button class="btn btn-secondary" onclick="downloadBackupJson()">Unduh Cadangan Lengkap (.json)</button>
+              <label class="btn btn-secondary" for="restore-file-input">Pulihkan dari Cadangan (.json)</label>
+              <input type="file" id="restore-file-input" accept=".json" style="display:none;">
+              <p class="muted">Cadangan .json berisi seluruh isi spreadsheet. Pemulihan akan MENGGANTI semua data di spreadsheet.</p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title" style="color:var(--danger);">⚠️ Hapus Nilai</div></div>
+            <div class="form-group"><label>Mata Pelajaran</label><select class="form-control" id="del-nilai-mapel"></select></div>
+            <div class="form-group"><label>Kelas</label><select class="form-control" id="del-nilai-kelas"></select></div>
+            <button class="btn btn-danger" onclick="deleteNilaiBulk()">Hapus Nilai Terpilih dari Spreadsheet</button>
+            <p class="muted" style="margin-top:8px;">Berguna untuk mengosongkan nilai semester lalu. Unduh cadangan terlebih dahulu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== RANKING ===================== -->
+      <section id="tab-ranking" class="tab-pane">
+        <div class="podium-container" id="ranking-podium"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Daftar Peringkat Lengkap Siswa</div>
+            <div class="card-actions"><button class="btn btn-primary" onclick="printRanking()">Cetak Lembar Peringkat</button></div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:90px;">PERINGKAT</th>
+                  <th class="center" style="width:110px;">NISN</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:110px;">JUMLAH</th>
+                  <th class="center" style="width:100px;">RATA-RATA</th>
+                  <th class="center" style="width:140px;">PREDIKAT</th>
+                  <th class="center" style="width:130px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="ranking-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== RANKING TINGKAT & KESELURUHAN ===================== -->
+      <section id="tab-peringkat-tingkat" class="tab-pane">
+        <div class="card">
+          <div class="card-header" style="flex-wrap:wrap;gap:10px;">
+            <div>
+              <div class="card-title">Ranking per Tingkat (gabungan semua rombel) &amp; Keseluruhan</div>
+              <div class="muted" style="margin-top:3px;">Pilih Kelas 7, 8, 9 (misal 7A + 7B dirangking bersama) atau Keseluruhan siswa kelas 7-9.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="printPeringkatTingkat()">Cetak Ranking</button>
+              <button class="btn btn-secondary btn-sm" onclick="printJuaraKelas()">Cetak Juara 1-3 Tiap Kelas</button>
+              <button class="btn btn-secondary btn-sm" onclick="printTopMapel()">Cetak Nilai Tertinggi per Mapel</button>
+              <button class="btn btn-success btn-sm" onclick="exportPeringkatExcel()">Export Excel (Semua Tingkat)</button>
+            </div>
+          </div>
+          <div class="toolbar-row">
+            <div id="pt-scope-buttons" style="display:flex;gap:4px;flex-wrap:wrap;background:var(--bg-input);padding:3px;border-radius:var(--radius-md);border:1px solid var(--border-color);"></div>
+            <select class="form-control" id="pt-basis" title="Dasar peringkat">
+              <option value="total">Dasar: Jumlah Nilai</option>
+              <option value="avg">Dasar: Rata-rata Nilai</option>
+            </select>
+            <select class="form-control" id="pt-limit" title="Batasi jumlah yang ditampilkan / dicetak">
+              <option value="0">Tampilkan semua</option>
+              <option value="3">3 besar</option>
+              <option value="5">5 besar</option>
+              <option value="10">10 besar</option>
+              <option value="20">20 besar</option>
+            </select>
+            <input type="search" class="form-control" id="pt-search" placeholder="Cari nama / NISN / kelas...">
+          </div>
+        </div>
+
+        <div class="grid-kpi" id="pt-kpi"></div>
+        <div class="podium-container" id="pt-podium"></div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title" id="pt-title">Peringkat</div></div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:90px;">PERINGKAT</th>
+                  <th class="center" style="width:110px;">NISN</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:70px;">KELAS</th>
+                  <th class="center" style="width:90px;">RANK KELAS</th>
+                  <th class="center" style="width:80px;">MAPEL</th>
+                  <th class="center" style="width:90px;">JUMLAH</th>
+                  <th class="center" style="width:90px;">RATA-RATA</th>
+                  <th class="center" style="width:140px;">PREDIKAT</th>
+                  <th class="center" style="width:90px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="pt-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:20px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Juara 1-3 Tiap Kelas (Rombel)</div></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;" id="pt-juara-kelas"></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Nilai Tertinggi per Mata Pelajaran</div></div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th class="center" style="width:40px;">NO</th><th>MATA PELAJARAN</th><th class="center" style="width:80px;">NILAI</th><th>SISWA</th></tr></thead>
+                <tbody id="pt-top-mapel"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PENGAMBILAN RAPORT ===================== -->
+      <section id="tab-pengambilan" class="tab-pane">
+        <div class="grid-kpi" id="amb-kpi"></div>
+
+        <div class="card">
+          <div class="card-header" style="flex-wrap:wrap;gap:10px;">
+            <div>
+              <div class="card-title">Pencatatan Pengambilan Raport</div>
+              <div class="muted" style="margin-top:3px;">Catat siswa / orang tua yang datang mengambil raport. Tersimpan di spreadsheet (sheet "Pengambilan"); saat offline disimpan dulu di perangkat lalu dikirim otomatis.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="printLaporanPengambilan()">Cetak Laporan</button>
+              <button class="btn btn-secondary btn-sm" onclick="printDaftarTtdAmbil()">Cetak Daftar Tanda Tangan</button>
+              <button class="btn btn-secondary btn-sm" onclick="printRekapAmbil()">Cetak Rekap per Kelas</button>
+              <button class="btn btn-success btn-sm" onclick="exportAmbilExcel()">Export Excel</button>
+              <button class="btn btn-secondary btn-sm" onclick="copyWaBelumAmbil()">Salin Pengumuman WA (Belum Ambil)</button>
+              <button class="btn btn-secondary btn-sm" onclick="syncPengambilan()">Kirim ke Spreadsheet</button>
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="background:rgba(148,163,184,0.2);height:10px;border-radius:999px;overflow:hidden;"><div id="amb-progress-bar" style="background:var(--success);width:0%;height:100%;transition:width .3s;"></div></div>
+            <div class="muted" style="font-size:12px;margin-top:4px;" id="amb-progress-text"></div>
+          </div>
+          <div class="toolbar-row">
+            <input type="search" class="form-control" id="amb-search" placeholder="Ketik nama / NISN lalu Enter untuk mencatat..." style="min-width:280px;">
+            <select class="form-control" id="amb-scope"></select>
+            <select class="form-control" id="amb-status">
+              <option value="all">Semua status</option>
+              <option value="Belum">Belum mengambil</option>
+              <option value="Sudah">Sudah mengambil</option>
+            </select>
+            <button class="btn btn-success btn-sm" id="btn-amb-bulk" onclick="ambilTerpilih()" disabled>Tandai Terpilih Sudah Ambil</button>
+            <span class="muted" id="amb-count"></span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:40px;"><input type="checkbox" id="amb-check-all"></th>
+                  <th class="center" style="width:45px;">NO</th>
+                  <th class="center" style="width:110px;">NISN</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:65px;">KELAS</th>
+                  <th class="center" style="width:110px;">STATUS</th>
+                  <th style="width:150px;">WAKTU AMBIL</th>
+                  <th style="width:170px;">DIAMBIL OLEH</th>
+                  <th style="width:150px;">HP / CATATAN</th>
+                  <th class="center" style="width:210px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="amb-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Rekap Pengambilan per Kelas</div></div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead><tr><th class="center" style="width:70px;">KELAS</th><th>WALI KELAS</th><th class="center" style="width:80px;">SISWA</th><th class="center" style="width:80px;">SUDAH</th><th class="center" style="width:80px;">BELUM</th><th style="width:220px;">PROGRES</th></tr></thead>
+              <tbody id="amb-rekap-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== NILAI PER MAPEL ===================== -->
+      <section id="tab-mapel" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="card-title">Daftar Nilai per Mata Pelajaran:</div>
+              <select id="mapel-select" class="form-control" style="width:260px;font-weight:bold;"></select>
+            </div>
+            <div class="card-actions"><button class="btn btn-primary" onclick="printMapel()">Cetak Lembar Nilai Guru</button></div>
+          </div>
+          <div class="grid-kpi" style="margin-bottom:20px;">
+            <div class="kpi-card"><div class="kpi-title">Standar KKM</div><div class="kpi-value" id="mapel-kpi-kkm">75</div></div>
+            <div class="kpi-card info"><div class="kpi-title">Rata-Rata Nilai</div><div class="kpi-value" id="mapel-kpi-avg">0.0</div></div>
+            <div class="kpi-card success"><div class="kpi-title">Nilai Tertinggi</div><div class="kpi-value" id="mapel-kpi-max">0</div></div>
+            <div class="kpi-card warning"><div class="kpi-title">Nilai Terendah</div><div class="kpi-value" id="mapel-kpi-min">0</div></div>
+            <div class="kpi-card success"><div class="kpi-title">Jumlah Tuntas</div><div class="kpi-value" id="mapel-kpi-tuntas">0</div></div>
+            <div class="kpi-card danger"><div class="kpi-title">Butuh Remedial</div><div class="kpi-value" id="mapel-kpi-remedial" style="color:#ef4444;">0</div></div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:50px;">NO</th>
+                  <th class="center" style="width:110px;">NISN</th>
+                  <th>NAMA SISWA</th>
+                  <th class="center" style="width:80px;">NILAI</th>
+                  <th class="center" style="width:60px;">PRE</th>
+                  <th class="center" style="width:70px;">KKM</th>
+                  <th class="center" style="width:80px;">SELISIH</th>
+                  <th class="center" style="width:110px;">STATUS</th>
+                  <th>DESKRIPSI</th>
+                  <th class="center" style="width:80px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="mapel-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ANALISIS ===================== -->
+      <section id="tab-analisis" class="tab-pane">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:20px;margin-bottom:24px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Rata-Rata Nilai per Mapel vs KKM</div></div>
+            <div style="height:280px;position:relative;"><canvas id="chart-mapel-avg"></canvas></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Ketuntasan (Tuntas vs Remedial)</div></div>
+            <div style="height:280px;position:relative;"><canvas id="chart-mapel-pass"></canvas></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Sebaran Predikat (A/B/C/D)</div></div>
+            <div style="height:280px;position:relative;"><canvas id="chart-predikat"></canvas></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><div class="card-title">Perbandingan Rata-Rata Antar Kelas</div></div>
+            <div style="height:280px;position:relative;"><canvas id="chart-kelas"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title" style="color:#ef4444;">Daftar Siswa Butuh Remedial / Pendampingan</div>
+          </div>
+          <div id="remedial-list-container"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Tabel Rangkuman Analisis Butir Mata Pelajaran</div>
+            <div class="card-actions"><button class="btn btn-primary" onclick="printAnalisis()">Cetak Laporan Analisis</button></div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:40px;">NO</th>
+                  <th>MATA PELAJARAN</th>
+                  <th class="center" style="width:70px;">KKM</th>
+                  <th class="center" style="width:85px;">RATA2</th>
+                  <th class="center" style="width:70px;">MAX</th>
+                  <th class="center" style="width:70px;">MIN</th>
+                  <th class="center" style="width:80px;">TUNTAS</th>
+                  <th class="center" style="width:80px;">REMEDIAL</th>
+                  <th class="center" style="width:95px;">% KETUNTASAN</th>
+                  <th class="center" style="width:130px;">EVALUASI</th>
+                </tr>
+              </thead>
+              <tbody id="analisis-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== KELENGKAPAN ===================== -->
+      <section id="tab-kelengkapan" class="tab-pane">
+        <div class="grid-kpi">
+          <div class="kpi-card"><div class="kpi-title">Total Siswa Kelas</div><div class="kpi-value" id="kpi-kelengkapan-total">0</div><div class="kpi-sub">Siswa terdaftar di rombel</div></div>
+          <div class="kpi-card success"><div class="kpi-title">Nilai 100% Lengkap</div><div class="kpi-value" id="kpi-kelengkapan-complete" style="color:var(--success);">0</div><div class="kpi-sub">Semua mapel sudah terisi</div></div>
+          <div class="kpi-card danger"><div class="kpi-title">Nilai Belum Lengkap</div><div class="kpi-value" id="kpi-kelengkapan-incomplete" style="color:var(--danger);">0</div><div class="kpi-sub">Masih memiliki mapel kosong</div></div>
+          <div class="kpi-card warning"><div class="kpi-title">Total Nilai Kosong</div><div class="kpi-value" id="kpi-kelengkapan-missing-grades" style="color:var(--warning);">0</div><div class="kpi-sub" id="kpi-kelengkapan-missing-desk">Nilai mapel yang belum disetor</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Status Penginputan per Mata Pelajaran</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:3px;">Pantauan nilai &amp; deskripsi yang sudah disetor guru pengampu.</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;" id="kelengkapan-mapel-breakdown"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="flex-wrap:wrap;gap:12px;">
+            <div>
+              <div class="card-title">Daftar Siswa dengan Nilai Belum Lengkap</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:3px;">Rincian mata pelajaran yang belum diinput per siswa.</div>
+            </div>
+            <div class="card-actions" style="flex-wrap:wrap;gap:8px;">
+              <div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <button class="btn btn-sm btn-primary btn-filter-kelengkapan" data-mode="incomplete">Belum Lengkap</button>
+                <button class="btn btn-sm btn-secondary btn-filter-kelengkapan" data-mode="all">Semua Siswa</button>
+                <button class="btn btn-sm btn-secondary btn-filter-kelengkapan" data-mode="complete">Lengkap</button>
+              </div>
+              <select id="filter-missing-mapel" class="form-control" style="width:200px;padding:6px 10px;font-size:12.5px;">
+                <option value="all">Semua Mata Pelajaran</option>
+              </select>
+              <button class="btn btn-success btn-sm" onclick="copyWaReminder()">Salin Pengingat WA Guru</button>
+              <button class="btn btn-primary btn-sm" onclick="printKelengkapan()">Cetak Lembar Kontrol</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:45px;">NO</th>
+                  <th class="center" style="width:110px;">NISN</th>
+                  <th>NAMA SISWA</th>
+                  <th style="width:170px;">KELENGKAPAN</th>
+                  <th>MATA PELAJARAN YANG BELUM ADA NILAI</th>
+                  <th class="center" style="width:120px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="kelengkapan-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== LOG ===================== -->
+      <section id="tab-log" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Log Aktivitas (Sinkron Guru &amp; Perubahan Admin)</div>
+              <div class="muted" style="margin-top:3px;">Riwayat siapa mengirim nilai, kapan, dan untuk mapel/kelas apa.</div>
+            </div>
+            <div class="card-actions"><button class="btn btn-secondary btn-sm" onclick="loadLog()">Muat Ulang</button></div>
+          </div>
+          <div class="toolbar-row">
+            <input type="search" class="form-control" id="log-search" placeholder="Cari nama guru / aksi..." style="min-width:240px;">
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead><tr><th style="width:170px;">WAKTU</th><th style="width:200px;">PENGGUNA</th><th style="width:90px;">PERAN</th><th style="width:190px;">AKSI</th><th>DETAIL</th></tr></thead>
+              <tbody id="log-table-body"><tr><td colspan="5" class="center muted">Buka tab ini saat online untuk memuat log.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PENGATURAN ===================== -->
+      <section id="tab-settings" class="tab-pane">
+        <form id="settings-form" onsubmit="saveSettings(event)">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Identitas Sekolah</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Nama Sekolah di Raport:</label><input type="text" id="cfg-nama-sekolah-raport" class="form-control"></div>
+              <div class="form-group"><label>Alamat di Raport:</label><input type="text" id="cfg-alamat-raport" class="form-control"></div>
+              <div class="form-group"><label>Nama Yayasan (kop):</label><input type="text" id="cfg-yayasan" class="form-control"></div>
+              <div class="form-group"><label>Bidang / Pengelola (kop):</label><input type="text" id="cfg-bidang" class="form-control"></div>
+              <div class="form-group"><label>Nama Sekolah (kop):</label><input type="text" id="cfg-nama-sekolah" class="form-control"></div>
+              <div class="form-group"><label>Alamat Sekolah (kop):</label><input type="text" id="cfg-alamat" class="form-control"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Periode &amp; Format Raport</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Judul Raport Semester:</label><input type="text" id="cfg-judul-raport" class="form-control"></div>
+              <div class="form-group"><label>Semester:</label>
+                <select id="cfg-semester" class="form-control"><option>Ganjil</option><option>Genap</option></select></div>
+              <div class="form-group"><label>Tahun Pelajaran:</label><input type="text" id="cfg-tahun-ajaran" class="form-control"></div>
+              <div class="form-group"><label>Tempat Titimangsa:</label><input type="text" id="cfg-tempat-raport" class="form-control"></div>
+              <div class="form-group"><label>Tanggal Titimangsa:</label><input type="text" id="cfg-tanggal-raport" class="form-control" placeholder=".... Desember 2026"></div>
+              <div class="form-group"><label>Format Raport Bawaan:</label>
+                <select id="cfg-format-raport" class="form-control">
+                  <option value="semester">Raport Semester (Template Rapor)</option>
+                  <option value="mid">Laporan Mid Semester (format lama)</option>
+                </select></div>
+              <div class="form-group"><label>Nilai Keterampilan:</label>
+                <select id="cfg-mode-keterampilan" class="form-control">
+                  <option value="sama">Sama dengan nilai pengetahuan (guru input 1 angka)</option>
+                  <option value="terpisah">Terpisah (guru input 2 angka: P &amp; K)</option>
+                </select></div>
+            </div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:6px;">
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="cfg-tampilkan-qr"> <span style="font-size:13.5px;font-weight:600;">Tampilkan QR Code verifikasi di raport</span></label>
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="cfg-tampilkan-keputusan"> <span style="font-size:13.5px;font-weight:600;">Tampilkan kotak KEPUTUSAN</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Halaman Cek Nilai Siswa (Cek_Nilai.html)</div></div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;">
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="cfg-cek-nilai-aktif"> <span style="font-size:13.5px;font-weight:600;">Buka halaman Cek Nilai untuk siswa</span></label>
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="cfg-cek-nilai-ranking"> <span style="font-size:13.5px;font-weight:600;">Tampilkan ranking kelas &amp; tingkat ke siswa</span></label>
+            </div>
+            <p class="muted" style="margin-top:8px;">Tanpa kata sandi: siswa cukup memilih <b>kelas</b> lalu <b>nama</b>, dan nilainya langsung tampil. Karena itu siapa pun yang membuka halaman bisa melihat nilai siswa mana saja — matikan pilihan pertama untuk menutup halaman (misal sebelum raport dibagikan).</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Predikat &amp; Kalimat Deskripsi</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Predikat A jika nilai &ge;</label><input type="number" id="cfg-predikat-a" class="form-control"></div>
+              <div class="form-group"><label>Predikat B jika nilai &ge;</label><input type="number" id="cfg-predikat-b" class="form-control"></div>
+              <div class="form-group"><label>Predikat C jika nilai &ge; (di bawahnya D)</label><input type="number" id="cfg-predikat-c" class="form-control"></div>
+              <div class="form-group"><label>Kata predikat A:</label><input type="text" id="cfg-kata-a" class="form-control"></div>
+              <div class="form-group"><label>Kata predikat B:</label><input type="text" id="cfg-kata-b" class="form-control"></div>
+              <div class="form-group"><label>Kata predikat C:</label><input type="text" id="cfg-kata-c" class="form-control"></div>
+              <div class="form-group"><label>Kata predikat D:</label><input type="text" id="cfg-kata-d" class="form-control"></div>
+            </div>
+            <div class="form-group">
+              <label>Pola kalimat deskripsi (penanda: {NAMA} {KATA} {PREDIKAT} {DIKUASAI} {DITINGKATKAN}):</label>
+              <input type="text" id="cfg-format-deskripsi" class="form-control">
+              <div class="muted" style="margin-top:6px;" id="cfg-format-preview"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Teks Bawaan Sikap, Ekskul &amp; Keputusan</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Predikat Sikap Spiritual:</label><input type="text" id="cfg-sp-pred" class="form-control"></div>
+              <div class="form-group"><label>Predikat Sikap Sosial:</label><input type="text" id="cfg-so-pred" class="form-control"></div>
+            </div>
+            <div class="form-group"><label>Deskripsi Sikap Spiritual:</label><textarea id="cfg-sp-desk" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Deskripsi Sikap Sosial:</label><textarea id="cfg-so-desk" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Deskripsi Ekskul bawaan ({EKSKUL} = nama ekskul):</label><textarea id="cfg-ek-desk" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Teks Keputusan bawaan:</label><textarea id="cfg-keputusan" class="form-control" rows="2"></textarea></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Kepala Sekolah</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Nama Kepala Sekolah &amp; Gelar:</label><input type="text" id="cfg-kepsek" class="form-control"></div>
+              <div class="form-group"><label>NIP Kepala Sekolah:</label><input type="text" id="cfg-nip-kepsek" class="form-control"></div>
+              <div class="form-group">
+                <label>Tanda tangan / stempel (gambar, opsional):</label>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                  <img id="cfg-ttd-preview" class="ttd-preview" alt="" style="display:none;">
+                  <label class="btn btn-secondary btn-sm" for="cfg-ttd-file">Pilih Gambar</label>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="clearTtd()">Hapus</button>
+                  <input type="file" id="cfg-ttd-file" accept="image/*" style="display:none;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Kelas &amp; Wali Kelas</div>
+              <div class="card-actions"><button type="button" class="btn btn-secondary btn-sm" onclick="addKelasRow()">+ Tambah Kelas</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th style="width:100px;">KELAS</th><th style="width:130px;">LABEL RAPORT</th><th>NAMA WALI KELAS &amp; GELAR</th><th style="width:200px;">NIP WALI</th><th style="width:80px;">URUT</th><th style="width:60px;"></th></tr></thead>
+                <tbody id="kelas-edit-body"></tbody>
+              </table>
+            </div>
+            <p class="muted" style="margin-top:8px;">Label raport tampil di kolom "Kelas" raport, contoh: <b>VII</b>/Ganjil.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Mata Pelajaran &amp; KKM</div>
+              <div class="card-actions"><button type="button" class="btn btn-secondary btn-sm" onclick="addMapelRow()">+ Tambah Mapel</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th style="width:110px;">KODE</th><th>NAMA DI RAPORT</th><th style="width:120px;">KELOMPOK</th><th style="width:90px;">KKM</th><th style="width:80px;">URUT</th><th style="width:80px;">AKTIF</th><th style="width:60px;"></th></tr></thead>
+                <tbody id="mapel-edit-body"></tbody>
+              </table>
+            </div>
+            <p class="muted" style="margin-top:8px;">Kode dipakai sebagai nama sheet di template Excel. Jangan ubah kode mapel yang sudah memiliki nilai.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Format Laporan Mid Semester (format lama)</div></div>
+            <div class="grid-form">
+              <div class="form-group"><label>Judul Utama:</label><input type="text" id="cfg-judul-laporan" class="form-control"></div>
+              <div class="form-group"><label>Subjudul:</label><input type="text" id="cfg-subjudul" class="form-control"></div>
+            </div>
+            <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="cfg-tampilkan-ket"> <span style="font-size:13.5px;font-weight:600;">Tampilkan Tuntas / Belum Tuntas di kolom Keterangan</span></label>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:30px;position:sticky;bottom:10px;">
+            <button type="submit" class="btn btn-primary btn-lg">Simpan Seluruh Pengaturan ke Spreadsheet</button>
+          </div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal serbaguna -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title">-</div>
+        <button class="modal-close" onclick="closeModal()" aria-label="Tutup">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="print-area"></div>
+  <div class="loading-overlay" id="loading"><div class="spinner"></div><div id="loading-text">Memproses...</div></div>
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Pustaka lokal (offline) -->
+  <script src="assets/vendor/xlsx-style.bundle.js"></script>
+  <script src="assets/vendor/chart.umd.min.js"></script>
+  <script src="assets/vendor/html2pdf.bundle.min.js"></script>
+  <script src="assets/vendor/jszip.min.js"></script>
+  <script src="assets/vendor/qrcode.min.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/seed.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/admin/app.js"></script>
+  <script src="js/admin/raport.js"></script>
+  <script src="js/admin/reports.js"></script>
+  <script src="js/admin/data.js"></script>
+  <script src="js/admin/excel.js"></script>
+  <script src="js/admin/settings.js"></script>
+  <script src="js/admin/peringkat.js"></script>
+  <script src="js/admin/pengambilan.js"></script>
+</body>
+</html>

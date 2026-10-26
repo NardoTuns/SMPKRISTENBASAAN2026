@@ -1,0 +1,139 @@
+# E-Raport SMP Kristen 65 Basaan (v3.2)
+
+> **Pembaruan v3.2 (WAJIB untuk Admin):** tempel ulang `backend/Code.gs` ke Apps Script, lalu **Terapkan → Kelola
+> deployment → Edit → Versi: Versi baru**. Kolom baru `Hadir`, `Kokurikuler_Nilai`, `Kokurikuler_Kuat`,
+> `Kokurikuler_Lemah`, `Kokurikuler_Deskripsi` ditambahkan otomatis di ujung kanan sheet `Pelengkap`.
+> Selama Code.gs belum diperbarui, aplikasi menampilkan peringatan dan isian Hadir/Kokurikuler belum masuk spreadsheet.
+>
+> Isi v3.2:
+> - **Guru → Deskripsi**: mata pelajaran dipilih dari **daftar pilihan** (+ tombol ‹ ›), bukan lagi chip geser.
+> - **Guru → menu baru WALI KELAS**: wali kelas mengisi **Kehadiran** (Hadir, Sakit, Izin, Tidak Hadir), **Nilai Kokurikuler**
+>   (nilai + dimensi profil lulusan "sudah baik" & "perlu penguatan" → kalimat otomatis, atau tulis sendiri),
+>   **nilai OSIS & IBADAH** (ekskul diatur admin), dan **Catatan Wali**. Tersimpan di HP, dikirim saat Sinkron
+>   (hanya kolom yang diubah). Ada Isi Massal, Hitung Hadir otomatis (hari efektif), filter belum lengkap, export Excel.
+> - **Admin → Pengaturan → "Isian Wali Kelas"**: pilih isian apa saja yang tampil, daftar ekskul (maks. 2), pilihan nilai
+>   ekskul & kokurikuler, daftar dimensi, pola kalimat, hari efektif, dan opsi "guru hanya bisa membuka kelasnya sendiri".
+> - **Admin → menu baru Kehadiran Siswa**: tabel H/S/I/TH yang bisa diedit, % kehadiran, **Template Excel**
+>   (kolom `NO;NISN;NIS;NAMA;KELAS;HADIR;SAKIT;IZIN;TIDAK HADIR`), Template CSV, **Import CSV** (pemisah `;` `,` atau tab,
+>   juga bisa file Excel) dengan pratinjau & validasi, Isi HADIR otomatis, Export Excel, Cetak Rekap, dan
+>   **Progres Isian Wali Kelas** per kelas + salin pengingat WA.
+> - **Format raport baru**:
+>   - **Format Pembelajaran Mendalam** — 1 nilai per mapel: A. Sikap, **B. PENILAIAN**, **C. KOKURIKULER**,
+>     D. EKSTRAKURIKULER, E. KEHADIRAN (jumlah/rata-rata/ranking memakai 1 nilai).
+>   - **Format Raport Kementerian** — mengikuti *Format Laporan Hasil Belajar (Rapor) Jenjang SMP* pada Panduan
+>     Pembelajaran dan Asesmen edisi revisi 2025 (Kemendikdasmen): identitas + Fase, No/Mata Pelajaran/Nilai Akhir/
+>     Capaian Kompetensi, Kokurikuler, Ekstrakurikuler, Ketidakhadiran, Catatan Wali Kelas, Tanggapan Orang Tua/Wali
+>     Murid, tanda tangan Orang Tua – Wali Kelas – Kepala Sekolah (Keputusan hanya di semester Genap).
+>   - Format Semester & Mid Semester lama tetap ada. Semua format bisa dicetak, PDF, Word, ZIP.
+> - Tabel **Sikap, Ekskul & Kokurikuler** dan template/import/export Excel kini memuat kolom Hadir & Kokurikuler.
+> - Halaman **Cek Nilai** siswa menampilkan Kokurikuler dan jumlah Hadir.
+
+Aplikasi web untuk **input nilai oleh Guru** (dari HP, bisa offline) dan **pengolahan & cetak raport oleh Admin**.
+Database dan backend berada di **Google Spreadsheet + Google Apps Script**. Aplikasinya berupa file statis yang bisa
+diunggah ke **GitHub Pages**, dan bisa dipasang di HP seperti aplikasi (PWA).
+
+## Pengguna
+
+| Peran | Password bawaan | Tugas |
+|---|---|---|
+| Guru  | `guru123`  | Pilih mapel → pilih kelas → isi nilai angka + pilih 2 deskripsi (paling dikuasai & perlu ditingkatkan) → Simpan |
+| Admin | `admin123` | Data siswa, sikap/ekskul/kehadiran, cetak raport, leger, ranking, analisis, import/export Excel, pengaturan |
+
+Ganti password di `js/config.js`.
+
+## Cara Pasang
+
+### 1. Siapkan Spreadsheet & Apps Script
+1. Buat Google Spreadsheet baru (misal: "Database E-Raport").
+2. Menu **Ekstensi → Apps Script**. Hapus isi `Code.gs`, lalu tempel seluruh isi file `backend/Code.gs`. Simpan.
+3. Pilih fungsi `setupSheets` lalu klik **Jalankan** (izinkan akses). Sheet database otomatis dibuat.
+4. Klik **Terapkan → Deployment baru → Jenis: Aplikasi web**
+   - Jalankan sebagai: **Saya**
+   - Yang memiliki akses: **Siapa saja**
+5. Salin **URL Aplikasi Web** (berakhiran `/exec`).
+
+> Jika `Code.gs` diubah, buka **Terapkan → Kelola deployment → Edit → Versi: Versi baru**.
+
+### 2. Atur `js/config.js`
+```js
+API_URL: 'https://script.google.com/macros/s/XXXX/exec',
+API_KEY: 'krisba-raport-2026',   // harus sama dengan KUNCI_API di Code.gs
+PASSWORD_GURU: 'guru123',
+PASSWORD_ADMIN: 'admin123',
+```
+Jika `API_URL` dikosongkan, aplikasi berjalan dalam **Mode Demo** (data contoh, hanya tersimpan di perangkat) untuk mencoba fitur.
+
+### 3. Unggah ke GitHub
+1. Buat repository baru, unggah seluruh isi folder ini (folder `_arsip_versi_lama` otomatis diabaikan oleh `.gitignore`).
+2. **Settings → Pages → Branch: main / root → Save**.
+3. Buka `https://<username>.github.io/<repo>/`.
+4. **Admin masuk pertama kali** → spreadsheet kosong otomatis diisi data awal (12 mapel, 6 kelas & wali kelas, pengaturan, bank deskripsi).
+5. Admin mengisi data siswa (menu Data Siswa / Import Excel).
+
+> Bisa juga dijalankan tanpa GitHub: buka `index.html` di Chrome/Edge (fitur offline/PWA penuh hanya aktif bila dibuka lewat http/https).
+
+## Alur Guru (HP)
+- **Masuk harus online** → data siswa, mapel, dan deskripsi diambil dari spreadsheet.
+- Nilai yang diketik **langsung tersimpan di HP** (tanda kuning "Tersimpan di HP"). Tekan **Simpan** untuk mengirim ke spreadsheet.
+- Tanpa internet tetap bisa input; data dikirim otomatis saat online kembali (bisa dimatikan di menu Akun) atau tekan tombol **Sinkron** di pojok kanan atas.
+- Nilai **tetap tersimpan di HP** walaupun sudah sinkron. Penghapusan dilakukan dari menu **Data**: per mapel & kelas, yang sudah tersinkron saja, atau semuanya (ada peringatan jika masih ada data yang belum terkirim).
+- Fitur lain: tambah/ubah deskripsi (bisa banyak sekaligus, per tingkat), isi deskripsi massal, filter (belum diisi / di bawah KKM / belum sinkron), statistik kelas, pratinjau kalimat raport, rekap + export Excel + bagikan ke WhatsApp, cadangan & pulihkan (pindah HP), riwayat sinkron, mode gelap, pasang sebagai aplikasi.
+
+## Fitur Admin
+Semua fitur versi lama tetap ada, dengan tambahan:
+- **Cetak Raport** format **Semester** sesuai `Template Rapor.pdf` (identitas, sikap, pengetahuan & keterampilan + deskripsi, jumlah/rata-rata/ranking, ekstrakurikuler, kehadiran, keputusan, tanda tangan, QR verifikasi). Halaman dibagi otomatis ke kertas F4. Format **Laporan Mid Semester** lama tetap bisa dipilih.
+- Unduh PDF (per siswa / 1 kelas), buka PDF di tab, cetak massal, Word (.doc) per siswa / 1 kelas, ZIP Word.
+- **Data Siswa**: tambah, ubah, hapus, pindah kelas, urut nomor absen, import & template Excel.
+- **Sikap, Ekskul & Kehadiran** per kelas (+ isi massal), **Bank Deskripsi**, **Log Aktivitas Guru**, monitoring progres input per mapel.
+- **Excel**: template import lengkap (Siswa, 1 sheet per mapel, Pelengkap, Daftar_Deskripsi) yang sudah terisi data saat ini; import dengan **pratinjau & validasi** sebelum disimpan; file format lama (sheet Siswa + Nilai) dan Leger tetap terbaca; export seluruh data; Leger Excel berwarna.
+- **Ranking Tingkat & Sekolah** (baru, v3.1): ranking gabungan semua rombel per tingkat — pilih **Kelas 7**, **8**,
+  atau **9** (misal 7A + 7B dirangking bersama) — dan **Ranking Keseluruhan** siswa kelas 7-9. Dasar peringkat jumlah
+  atau rata-rata, batasi 3/5/10/20 besar, cari siswa. Cetak ranking, cetak **Juara 1-3 tiap kelas**, cetak **nilai
+  tertinggi per mapel**, export Excel (1 sheet per tingkat + keseluruhan).
+- **Pengambilan Raport** (baru, v3.1): catat siswa / orang tua yang datang mengambil raport (tanggal & jam, nama
+  pengambil, hubungan, no. HP, catatan) → tersimpan di sheet **Pengambilan**. Tombol **✓ Cepat** & tandai massal,
+  kotak cari (ketik nama/NISN lalu Enter). Saat **offline** catatan disimpan dulu di perangkat lalu dikirim otomatis
+  ketika online. Cetak: laporan (semua / sudah / belum ambil, per kelas / tingkat / semua), **daftar tanda tangan**
+  per kelas, **rekap per kelas**, **tanda terima** per siswa. Export Excel & salin pengumuman WA siswa yang belum ambil.
+- Cadangan & pemulihan lengkap (.json, termasuk data pengambilan raport), hapus nilai per mapel/kelas (misal pergantian semester).
+- **Pengaturan**: identitas, semester & tahun pelajaran, batas & kata predikat, pola kalimat deskripsi, teks bawaan sikap/ekskul/keputusan, kepala sekolah + gambar tanda tangan, kelas & wali kelas, mapel & KKM, nilai keterampilan sama/terpisah.
+
+## Halaman Cek Nilai Siswa (baru, v3.1)
+Alamat: `https://<username>.github.io/<repo>/Cek_Nilai.html` (juga ada tombol **Siswa: Cek Nilai Saya** di halaman masuk).
+- **Tanpa kata sandi**: siswa memilih **kelas**, lalu mengetuk **namanya** (ada kotak cari nama).
+- Yang tampil: identitas, rata-rata (grafik lingkaran), jumlah nilai, **ranking kelas** dan **ranking tingkat**
+  (semua rombel) dengan medali untuk juara 1-3, nilai tiap mapel + predikat + tuntas/belum + bar nilai terhadap KKM +
+  kalimat deskripsi (ketuk mapel), sikap, ekskul, ketidakhadiran, catatan wali kelas, dan status pengambilan raport.
+  Bisa dicetak / disimpan PDF. Mendukung mode gelap.
+- Server hanya mengirim daftar nama (aksi `cekDaftar`) dan nilai siswa yang dipilih (aksi `cekNilai`), bukan seluruh database.
+- Daftar nama & nilai yang pernah dibuka tersimpan di HP sehingga tetap bisa dilihat saat offline.
+- Karena tanpa kata sandi, siapa pun yang membuka halaman ini bisa melihat nilai siswa mana pun.
+- Admin dapat **menutup** halaman ini atau **menyembunyikan ranking** di menu Pengaturan → "Halaman Cek Nilai Siswa".
+
+## Struktur
+```
+index.html            Login (Guru / Admin)
+Cek_Nilai.html        Cek nilai untuk siswa (js/cek_nilai.js)
+guru.html             Aplikasi guru (mobile)
+admin.html            Aplikasi admin
+js/config.js          URL API & password  <- diedit
+js/seed.js            Data bawaan (mapel, kelas, bank deskripsi)
+js/core.js            API, penyimpanan HP, perhitungan nilai/predikat/deskripsi
+js/guru.js            Logika aplikasi guru
+js/admin/*.js         Modul admin (raport, laporan, data, excel, pengaturan,
+                      peringkat = ranking tingkat/keseluruhan, pengambilan = pengambilan raport,
+                      kehadiran = kehadiran siswa + import CSV + progres wali kelas)
+backend/Code.gs       Backend Google Apps Script
+sw.js, manifest.json  Mode offline / pasang di HP
+_arsip_versi_lama/    Versi Python sebelumnya (tidak diunggah ke GitHub)
+```
+
+## Sheet di Spreadsheet
+`Pengaturan`, `Kelas`, `Mapel`, `Siswa`, `Nilai`, `Deskripsi`, `Pelengkap`, `Log`, `Pengambilan` — dibuat otomatis. Sebaiknya data diubah lewat aplikasi, bukan langsung di spreadsheet.
+
+> **Pembaruan v3.1 (WAJIB):** tempel ulang `backend/Code.gs` ke Apps Script, lalu **Terapkan → Kelola deployment → Edit →
+> Versi: Versi baru**. Tanpa ini, Pengambilan Raport hanya tersimpan di perangkat dan Cek Nilai menampilkan
+> "Aksi tidak dikenal". Sheet `Pengambilan` dibuat otomatis. URL `/exec` tidak berubah.
+
+## Catatan Keamanan
+Sesuai kebutuhan sekolah, password disimpan di kode (`js/config.js`) dan dapat dilihat oleh siapa pun yang membuka kode sumber di GitHub. Jangan simpan data yang sangat rahasia. Jika repository publik, pertimbangkan mengganti password & `API_KEY` secara berkala.

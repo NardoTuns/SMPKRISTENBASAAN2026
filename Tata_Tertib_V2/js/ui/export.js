@@ -34,10 +34,10 @@ function paginate(html, landscape) {
   const src = h('div');
   src.innerHTML = cleanHtml(html);
   const pages = [];
-  let page, holder;
+  let page, holder, docClass = 'doc';
   const newPage = () => {
     page = h('div', { class: 'paper docs' + (landscape ? ' landscape' : '') });
-    holder = h('div', { class: 'doc' });
+    holder = h('div', { class: docClass }); // kelas dokumen (mis. "doc rpt" = laporan berwarna) ikut ke setiap halaman
     page.append(holder);
     stage.append(page);
     pages.push(page);
@@ -55,6 +55,7 @@ function paginate(html, landscape) {
   const cloneTable = (t) => { const c = t.cloneNode(false); if (t.tHead) c.append(t.tHead.cloneNode(true)); c.append(document.createElement('tbody')); return c; };
 
   for (const doc of src.querySelectorAll(':scope > .doc')) {
+    docClass = doc.className.replace(/\bpage-break\b/, '').trim() || 'doc';
     newPage();
     for (const el of [...doc.children]) {
       holder.append(el);

@@ -114,7 +114,7 @@ export function columnChart(buckets, { height = 190, unit = 'pelanggaran', onPic
 }
 
 // ------------------------------------------------------------------ daftar batang horizontal
-/** items: [{label, value, sub?, onClick?, badge?}] — label di atas batang, nilai di ujung. */
+/** items: [{label, value, sub?, onClick?, badge?, color?}] — label di atas batang, nilai di ujung. color hanya untuk warna status. */
 export function barList(items, { max, fmt = fmtNum, unit = '', empty = 'Belum ada data.' } = {}) {
   if (!items.length) return h('p', { class: 'muted small empty-chart', text: empty });
   const m = max || Math.max(1, ...items.map((i) => i.value));
@@ -124,7 +124,7 @@ export function barList(items, { max, fmt = fmtNum, unit = '', empty = 'Belum ad
         h('span', { class: 'barrow-label', text: it.label }),
         it.badge || null,
         h('span', { class: 'barrow-val', text: fmt(it.value) })),
-      h('div', { class: 'barrow-track' }, h('div', { class: 'barrow-fill', style: { width: `${Math.max(it.value > 0 ? 1.5 : 0, (it.value / m) * 100)}%` } })),
+      h('div', { class: 'barrow-track' }, h('div', { class: 'barrow-fill', style: { width: `${Math.max(it.value > 0 ? 1.5 : 0, (it.value / m) * 100)}%`, ...(it.color ? { background: it.color } : {}) } })),
       it.sub ? h('div', { class: 'barrow-sub', text: it.sub }) : null);
     bindTip(row, () => ({ title: it.label, rows: [{ value: fmt(it.value), label: unit }, ...(it.sub ? [{ value: '', label: it.sub }] : [])] }));
     return row;

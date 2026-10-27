@@ -1,10 +1,10 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "date": "2026-10-27",
   "notes": [
-    "Laporan Harian baru: semua pelanggaran pada tanggal yang dipilih (bawaan hari ini) lengkap dengan kronologi, rekap per kelas, dan siswa yang mencapai tahap sanksi.",
-    "Catatan kronologi kejadian kini ikut di setiap laporan: kolom di laporan harian & daftar rinci, lampiran di rekap & ringkasan, serta di kartu kedisiplinan dan surat.",
-    "Halaman Laporan lebih sederhana: 3 langkah (Pilih laporan → Atur tanggal/periode → Unduh/kirim), tombol Lihat pratinjau.",
-    "Riwayat: tombol Laporan di setiap tanggal untuk langsung membuka laporan harian hari itu."
+    "Dokumen laporan kini berwarna: pita judul, kotak angka, batang tingkat pelanggaran, grafik batang, tabel berkepala biru tua, dan label warna untuk tingkat/tahap/status. Surat resmi tetap formal.",
+    "Beranda lebih sederhana: kartu Hari ini dengan tombol Catat pelanggaran & Laporan hari ini, menu cepat, dan grafik lengkap dilipat di Grafik & analisis lengkap.",
+    "Halaman Laporan: kartu besar Laporan Hari Ini (bisa pilih tanggal) dan kartu berwarna untuk setiap rekap/daftar; hasil dilengkapi grafik.",
+    "Catatan kronologi tetap ikut di setiap laporan; Laporan Harian kini punya kolom Tingkat tersendiri."
   ]
 }

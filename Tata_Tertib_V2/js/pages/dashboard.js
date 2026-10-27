@@ -1,4 +1,6 @@
 // Dasbor kedisiplinan — terbuka untuk semua pengguna (kecuali Admin mengatur akses "login").
+// Susunan sederhana: kartu "Hari ini" + tombol utama, menu cepat, statistik inti, status siswa, perlu perhatian,
+// catatan terbaru; grafik & analisis lengkap dilipat (ketuk untuk membuka, pilihan diingat).
 import { h, icon, btn } from '../ui/dom.js';
 import { barList, chartCard, columnChart, heatGrid, stackBar } from '../ui/charts.js';
 import { emptyState, filterBar, levelBadge, pageHead, recordRow, statTile, deltaChip, studentRow, TINGKAT_WARNA } from '../ui/widgets.js';
@@ -7,24 +9,41 @@ import { kronOf, printSummary } from '../ui/print.js';
 import { S, D, hidden, me } from '../store.js';
 import { countBy, filterRecords, heat, periodRange, totals, trend } from '../core/stats.js';
 import { TINGKAT } from '../core/rules.js';
-import { fmtNum, relTime, ymd, HARI } from '../core/util.js';
+import { fmtNum, fmtTgl, relTime, ymd, HARI } from '../core/util.js';
 import { enterDemo } from './akun.js';
 
 export const meta = { title: 'Beranda', live: true };
 
-let F = { periode: localStorage.getItem('dash.periode') || '30h', kelas: '', kategori: '', tingkat: '' };
+const lsGet = (k, def) => { try { return localStorage.getItem(k) ?? def; } catch { return def; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* mode privat */ } };
+let F = { periode: lsGet('dash.periode', '30h'), kelas: '', kategori: '', tingkat: '' };
+let openAnalisis = lsGet('dash.analisis', '') === '1';
+let moreFilters = false;
 
 export function render(view) {
   const d = D();
   const s = S.settings;
+  const u = me();
   const blocker = setupNotice();
-  view.append(pageHead('Dasbor Kedisiplinan', `${s.namaSekolah} · TA ${s.tahunAjaran} · Semester ${s.semester}${S.demo ? ' · Mode Demo' : S.sync.lastOk ? ` · data per ${relTime(S.sync.lastOk)}` : ''}`,
-    blocker ? null : btn('Ringkasan · PDF/WA', () => printSummary(ringkasan()), { ic: 'report', kind: 'tonal', title: 'Unduh ringkasan dasbor (PDF/PNG) atau kirim ke WhatsApp' }),
-    h('a', { class: 'btn text', href: 'DashboardSiswa.html' }, icon('users'), h('span', { text: 'Halaman Siswa & Orang Tua' }))));
+  if (blocker) {
+    view.append(pageHead('Dasbor Kedisiplinan', `${s.namaSekolah} · TA ${s.tahunAjaran} · Semester ${s.semester}`,
+      h('a', { class: 'btn text', href: 'DashboardSiswa.html' }, icon('users'), h('span', { text: 'Halaman Siswa & Orang Tua' }))), blocker);
+    return;
+  }
 
-  if (blocker) { view.append(blocker); return; }
+  view.append(welcome(u), quickMenu(d, u));
 
-  view.append(filterBar(F, (nf) => { F = nf; try { localStorage.setItem('dash.periode', F.periode); } catch { /* mode privat */ } rerender(view); }));
+  // ---- statistik (mengikuti penyaring)
+  view.append(h('div', { class: 'sec-head' },
+    h('div', { class: 'grow min0' }, h('h2', { text: 'Statistik kedisiplinan' }),
+      h('p', { class: 'muted small', text: `TA ${s.tahunAjaran} · Semester ${s.semester}${S.demo ? ' · Mode Demo' : S.sync.lastOk ? ` · data per ${relTime(S.sync.lastOk)}` : ''}` })),
+    btn('Ringkasan · PDF/WA', () => printSummary(ringkasan()), { ic: 'report', kind: 'tonal', small: true, title: 'Unduh ringkasan dasbor (PDF/PNG) atau kirim ke WhatsApp' })));
+  // Kategori & tingkat disembunyikan sampai diminta agar penyaring tetap ringkas.
+  const lainnya = moreFilters || !!(F.kategori || F.tingkat);
+  view.append(filterBar(F, (nf) => { F = nf; lsSet('dash.periode', F.periode); rerender(view); }, {
+    fields: ['periode', 'kelas', ...(lainnya ? ['kategori', 'tingkat'] : [])],
+    extra: lainnya ? [] : [h('button', { class: 'chip-btn', type: 'button', onclick: () => { moreFilters = true; rerender(view); } }, icon('filter'), h('span', { text: 'Filter lain' }))],
+  }));
 
   const pr = periodRange(F.periode, ymd(), F);
   const base = { kelas: F.kelas, kategori: F.kategori, tingkat: F.tingkat };
@@ -39,15 +58,15 @@ export function render(view) {
 
   // ---- angka utama
   grid.append(h('section', { class: 'card hero span-4' },
-    h('div', { class: 'tile-label' }, icon('clipboard'), h('span', { text: `Pelanggaran tercatat · ${pr.label}` })),
+    h('div', { class: 'tile-label' }, h('span', { class: 'tile-ic acc-emerald' }, icon('clipboard')), h('span', { text: `Pelanggaran tercatat · ${pr.label}` })),
     h('div', { class: 'hero-value', text: fmtNum(t.n) }),
     deltaChip(t.n, tp?.n, prevLabel),
     h('p', { class: 'muted small', text: F.kelas ? `Kelas ${F.kelas}` : `${fmtNum(d.aktif.length)} siswa aktif · ${d.kelasList.length} kelas` })));
   grid.append(h('div', { class: 'tiles span-8' },
-    statTile('Total poin', fmtNum(t.poin), { ic: 'scale', delta: deltaChip(t.poin, tp?.poin, prevLabel) }),
-    statTile('Siswa terlibat', fmtNum(t.siswa), { ic: 'users', sub: d.aktif.length ? `${Math.round((t.siswa / d.aktif.length) * 100)}% dari siswa aktif` : '' }),
-    statTile('Rata-rata poin per siswa', fmtNum(t.rata, 1), { ic: 'chart', sub: 'di antara siswa yang melanggar' }),
-    statTile('Pelanggaran berat', fmtNum(t.berat), { ic: 'alert', tone: t.berat ? 'critical' : '', sub: `${fmtNum(t.sedang)} sedang · ${fmtNum(t.ringan)} ringan` })));
+    statTile('Total poin', fmtNum(t.poin), { ic: 'scale', acc: 'blue', delta: deltaChip(t.poin, tp?.poin, prevLabel) }),
+    statTile('Siswa terlibat', fmtNum(t.siswa), { ic: 'users', acc: 'violet', sub: d.aktif.length ? `${Math.round((t.siswa / d.aktif.length) * 100)}% dari siswa aktif` : '' }),
+    statTile('Rata-rata poin per siswa', fmtNum(t.rata, 1), { ic: 'chart', acc: 'teal', sub: 'di antara siswa yang melanggar' }),
+    statTile('Pelanggaran berat', fmtNum(t.berat), { ic: 'alert', acc: 'rose', tone: t.berat ? 'critical' : '', sub: `${fmtNum(t.sedang)} sedang · ${fmtNum(t.ringan)} ringan` })));
 
   // ---- status siswa (akumulasi seluruh masa sekolah)
   const pool = d.aktif.filter((x) => !F.kelas || x.kelas === F.kelas);
@@ -60,6 +79,65 @@ export function render(view) {
       levelCard(null, byLevel.get(''), `0–${(d.levels[0]?.min || 10) - 1} poin`, pool.length),
       ...d.levels.map((l, i) => levelCard(l, byLevel.get(l.kode), d.levels[i + 1] ? `${l.min}–${d.levels[i + 1].min - 1} poin` : `≥ ${l.min} poin`, pool.length)))));
 
+  // ---- perlu perhatian & terbaru
+  grid.append(attentionCard(pool, d));
+  const latest = [...recs].sort((a, b) => ((b.tanggal + (b.jam || '')) > (a.tanggal + (a.jam || '')) ? 1 : -1)).slice(0, 6);
+  grid.append(h('section', { class: 'card span-6' },
+    h('div', { class: 'card-head' }, h('div', { class: 'grow' }, h('h3', { text: 'Pelanggaran terbaru' }), h('p', { class: 'muted small', text: pr.label })),
+      btn('Riwayat', () => go('riwayat', { periode: F.periode, kelas: F.kelas, kategori: F.kategori, tingkat: F.tingkat }), { kind: 'text', small: true })),
+    latest.length ? h('div', { class: 'list' }, ...latest.map((r) => recordRow(r))) : h('p', { class: 'muted small', text: 'Tidak ada pelanggaran pada periode ini. 🎉' })));
+
+  // ---- grafik & analisis lengkap (dilipat; dibuat saat dibuka)
+  const body = h('div', { class: 'dash-grid analisis-body' });
+  const fill = () => { if (!body.childElementCount) analisis(body, { d, pr, recs, t, pool }); };
+  const box = h('details', { class: 'analisis', open: openAnalisis },
+    h('summary', null, h('span', { class: 'tile-ic acc-indigo' }, icon('chart')),
+      h('span', { class: 'grow min0' }, h('strong', { class: 'block', text: 'Grafik & analisis lengkap' }),
+        h('span', { class: 'muted small', text: 'Tren, tingkat, kategori, kelas, pelanggaran tersering, poin tertinggi, pola waktu, pencatat' })),
+      h('span', { class: 'analisis-tog' }, icon('down'))),
+    body);
+  box.addEventListener('toggle', () => { openAnalisis = box.open; lsSet('dash.analisis', box.open ? '1' : ''); if (box.open) fill(); });
+  if (openAnalisis) fill();
+  view.append(box);
+}
+
+/** Sambutan + angka hari ini (seluruh sekolah) + dua tombol utama. */
+function welcome(u) {
+  const s = S.settings;
+  const today = ymd();
+  const t = totals(filterRecords(S.d.pelanggaran, { from: today, to: today }));
+  const jam = new Date().getHours();
+  const salam = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 19 ? 'Selamat sore' : 'Selamat malam';
+  const stat = (n, label) => h('div', null, h('strong', { text: fmtNum(n) }), h('span', { text: label }));
+  return h('section', { class: 'welcome' },
+    h('div', { class: 'welcome-top' },
+      h('div', { class: 'grow min0' },
+        h('p', { class: 'welcome-hi', text: u ? `${salam}, ${u.nama.split(' ')[0]}` : `${salam}!` }),
+        h('h1', { text: 'Dasbor Kedisiplinan' }),
+        h('p', { class: 'welcome-sub', text: `${fmtTgl(today, { hari: true })} · ${s.namaSekolah}` })),
+      h('span', { class: 'welcome-art', 'aria-hidden': 'true' }, icon('shield'))),
+    h('div', { class: 'today-label' }, icon('calendar'), h('span', { text: 'Hari ini' })),
+    h('div', { class: 'today-stats' }, stat(t.n, 'pelanggaran'), stat(t.poin, 'poin'), stat(t.siswa, 'siswa')),
+    h('div', { class: 'welcome-actions' },
+      u ? h('a', { class: 'btn big light', href: '#/catat' }, icon('plus'), h('span', { text: 'Catat pelanggaran' }))
+        : h('a', { class: 'btn big light', href: '#/login' }, icon('login'), h('span', { text: 'Masuk guru' })),
+      h('a', { class: 'btn big glass', href: '#/laporan?jenis=harian' }, icon('report'), h('span', { text: 'Laporan hari ini' }))));
+}
+
+/** Pintasan ke halaman yang paling sering dipakai (tidak menggantikan menu). */
+function quickMenu(d, u) {
+  const belum = d.tindak.filter((x) => x.berlaku && x.status === 'Belum').length;
+  const item = (href, label, ic, acc, badge = 0) => h('a', { class: `quick acc-${acc}`, href },
+    h('span', { class: 'rt-ic' }, icon(ic), badge ? h('span', { class: 'count', text: badge > 99 ? '99+' : String(badge) }) : null), h('span', { text: label }));
+  return h('nav', { class: 'quick-grid', 'aria-label': 'Menu cepat' },
+    item('#/siswa', 'Cari siswa', 'search', 'blue'),
+    item('#/kelas', 'Rekap kelas', 'school', 'teal'),
+    u ? item('#/tindak', 'Tindak lanjut', 'checklist', 'orange', belum) : item('#/aturan', 'Tata tertib', 'book', 'orange'),
+    item('DashboardSiswa.html', 'Halaman ortu', 'users', 'violet'));
+}
+
+/** Grafik lengkap (sama seperti sebelumnya), digambar ke dalam lipatan "Grafik & analisis lengkap". */
+function analisis(grid, { d, pr, recs, t, pool }) {
   // ---- tren & komposisi
   const tr = trend(recs, pr.from, pr.to, ymd());
   grid.append(chartCard({
@@ -104,7 +182,7 @@ export function render(view) {
       btn('Semua', () => go('siswa', { urut: 'poin', kelas: F.kelas }), { kind: 'text', small: true })),
     top.length ? h('div', { class: 'list' }, ...top.map((x) => studentRow(x.s, x.sum))) : h('p', { class: 'muted small', text: 'Belum ada siswa dengan poin.' })));
 
-  // ---- pola waktu & perlu perhatian
+  // ---- pola waktu
   const hm = heat(recs);
   const hariShort = (i) => HARI[i].slice(0, 3);
   grid.append(chartCard({ cls: 'span-6', title: 'Pola waktu kejadian', sub: `Hari × jam · ${pr.label}${hm.tanpaJam ? ` · ${hm.tanpaJam} tanpa jam` : ''}`,
@@ -112,15 +190,7 @@ export function render(view) {
       rowTitle: (r) => HARI[hm.days[hm.days.map(hariShort).indexOf(r)]], colTitle: (c) => `pukul ${c}.00–${c}.59` }),
     table: { cols: ['Hari', ...hm.hours.map((x) => `${x}:00`)], rows: hm.grid.map((row, i) => [HARI[hm.days[i]], ...row]) } }));
 
-  grid.append(attentionCard(pool, d));
-
-  // ---- terbaru & pencatat
-  const latest = [...recs].sort((a, b) => ((b.tanggal + (b.jam || '')) > (a.tanggal + (a.jam || '')) ? 1 : -1)).slice(0, 6);
-  grid.append(h('section', { class: 'card span-6' },
-    h('div', { class: 'card-head' }, h('div', { class: 'grow' }, h('h3', { text: 'Pelanggaran terbaru' }), h('p', { class: 'muted small', text: pr.label })),
-      btn('Riwayat', () => go('riwayat', { periode: F.periode, kelas: F.kelas, kategori: F.kategori, tingkat: F.tingkat }), { kind: 'text', small: true })),
-    latest.length ? h('div', { class: 'list' }, ...latest.map((r) => recordRow(r))) : h('p', { class: 'muted small', text: 'Tidak ada pelanggaran pada periode ini. 🎉' })));
-
+  // ---- pencatat
   const byGuru = countBy(recs, (r) => r.guruNama || r.guru).slice(0, 6);
   grid.append(chartCard({ cls: 'span-6', title: 'Pencatat teraktif', sub: pr.label, chart: barList(byGuru.map((g) => ({ label: g.key, value: g.n, sub: `${g.nSiswa} siswa` })), { unit: 'catatan' }),
     table: { cols: ['Guru', 'Catatan', 'Siswa', 'Poin'], rows: byGuru.map((g) => [g.key, g.n, g.nSiswa, g.poin]) } }));
@@ -139,6 +209,7 @@ function ringkasan() {
     title: 'Ringkasan Kedisiplinan Siswa',
     meta: [`Periode: ${pr.label}`, F.kelas ? `Kelas ${F.kelas}` : 'Semua kelas', F.kategori ? `Kategori ${F.kategori}` : '', F.tingkat ? `Pelanggaran ${F.tingkat}` : '', `TA ${S.settings.tahunAjaran}`].filter(Boolean),
     tiles: [['Pelanggaran', fmtNum(t.n)], ['Total poin', fmtNum(t.poin)], ['Siswa terlibat', fmtNum(t.siswa), `dari ${pool.length} siswa aktif`], ['Pelanggaran berat', fmtNum(t.berat)]],
+    comp: t,
     sections: [
       { title: 'Status siswa (akumulasi seluruh masa sekolah)', cols: ['Tahap', 'Rentang poin', 'Jumlah siswa'], bar: 2,
         rows: [['Aman', `0–${(d.levels[0]?.min || 10) - 1}`, lvCount('')], ...d.levels.map((l, i) => [l.label, d.levels[i + 1] ? `${l.min}–${d.levels[i + 1].min - 1}` : `≥ ${l.min}`, lvCount(l.kode)])] },

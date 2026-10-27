@@ -29,9 +29,10 @@ export function pageHead(title, sub, ...actions) {
     actions.length ? h('div', { class: 'page-actions' }, ...actions) : null);
 }
 
-export function statTile(label, value, { sub, delta, ic, tone } = {}) {
-  return h('div', { class: 'tile' + (tone ? ' tone-' + tone : '') },
-    h('div', { class: 'tile-label' }, ic ? icon(ic) : null, h('span', { text: label })),
+/** acc: aksen warna ikon (emerald, blue, violet, …; lihat .acc-* di app.css) — hiasan saja. */
+export function statTile(label, value, { sub, delta, ic, tone, acc } = {}) {
+  return h('div', { class: 'tile' + (tone ? ' tone-' + tone : '') + (acc ? ` acc acc-${acc}` : '') },
+    h('div', { class: 'tile-label' }, ic ? (acc ? h('span', { class: 'tile-ic' }, icon(ic)) : icon(ic)) : null, h('span', { text: label })),
     h('div', { class: 'tile-value', text: value }),
     delta || null,
     sub ? h('div', { class: 'tile-sub muted', text: sub }) : null);

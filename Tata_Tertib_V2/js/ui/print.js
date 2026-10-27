@@ -56,9 +56,9 @@ export const kronOf = (recs) => (showKron() ? recs.filter((r) => !r.batal && Str
 /** Lampiran laporan: catatan pelanggaran yang kronologinya diisi guru (urut waktu kejadian). */
 export function kronHtml(recs = []) {
   if (!recs.length) return '';
-  return `<h3>Catatan kronologi kejadian</h3>
+  return `<h3 class="kron-h">Catatan kronologi kejadian (${recs.length})</h3>
     <table class="tbl-print kron-tbl"><thead><tr><th>No</th><th>Tanggal</th><th>Siswa</th><th>Pelanggaran</th><th>Kronologi</th></tr></thead><tbody>
-    ${recs.map((r, i) => `<tr><td>${i + 1}</td><td class="nw">${fmtTgl(r.tanggal, { short: true })}${r.jam ? `<br>${esc(r.jam)}` : ''}</td><td>${esc(r.nama)}<br>Kelas ${esc(r.kelas)}</td><td>${esc(r.jenisKode)}. ${esc(r.uraian)} (${esc(r.poin)} poin)</td><td>${esc(r.kronologi)}</td></tr>`).join('')}
+    ${recs.map((r, i) => `<tr><td class="no">${i + 1}</td><td class="nw">${fmtTgl(r.tanggal, { short: true })}${r.jam ? `<br>${esc(r.jam)}` : ''}</td><td><b>${esc(r.nama)}</b><br>Kelas ${esc(r.kelas)}</td><td>${esc(r.jenisKode)}. ${esc(r.uraian)}<br>${pill(r.tingkat)} <b>${esc(r.poin)} poin</b></td><td>${esc(r.kronologi)}</td></tr>`).join('')}
     </tbody></table>`;
 }
 
@@ -201,27 +201,69 @@ export function printSurat(item, o = {}) {
 }
 const nextMin = (level) => { const n = D().levels.find((l) => l.min > (level?.min || 0)); return n ? n.min : 100; };
 
-// ------------------------------------------------------------------ laporan tabel
+// ------------------------------------------------------------------ laporan berwarna (rekap, daftar, ringkasan)
+// Surat resmi (BAP, kartu, surat tahap, tata tertib) tetap hitam-putih. Laporan memakai gaya .rpt: pita judul,
+// kotak angka, grafik batang HTML (aman untuk html2canvas), tabel berkepala navy, dan pil warna untuk
+// tingkat/tahap/status — warna selalu disertai tulisan, jadi tetap terbaca bila dicetak hitam-putih.
 const dicetak = () => `Dibuat ${fmtTgl(ymd())}${me() ? ` oleh ${esc(me().nama)}` : ''} dari aplikasi Tata Tertib ${esc(st().namaSekolah)}.`;
 const signPejabat = () => sign([{ role: 'Guru BK', name: st().guruBK, nip: st().nipBK }, { top: 'Mengetahui,', role: 'Kepala Sekolah', name: st().kepalaSekolah, nip: st().nipKepsek }]);
 
-const tableHtml = (cols, rows, numeric = []) => `<table class="tbl-print"><thead><tr><th>No</th>${cols.map((c, i) => `<th class="${numeric.includes(i) ? 'num' : ''}">${esc(c)}</th>`).join('')}</tr></thead>
-    <tbody>${rows.length ? rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map((v, j) => `<td class="${numeric.includes(j) ? 'num' : ''}">${esc(typeof v === 'number' ? fmtNum(v, 1) : v)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length + 1}"><em>Tidak ada data.</em></td></tr>`}</tbody></table>`;
+const PILL = { Ringan: 'warn', Sedang: 'serious', Berat: 'critical', Aman: 'ok', Belum: 'warn', Dijadwalkan: 'info', Selesai: 'ok' };
+/** Warna status untuk isi sel bermakna status (tingkat, tahap sanksi, status tindak lanjut); '' bila bukan. */
+export function pillOf(v) {
+  if (typeof v !== 'string' || !v) return '';
+  if (PILL[v]) return PILL[v];
+  const lv = D().levels.find((l) => l.label === v);
+  return lv ? lv.warna || 'warn' : '';
+}
+const pill = (v) => { const p = pillOf(v); return p ? `<span class="pill p-${p}">${esc(v)}</span>` : esc(v || ''); };
+const cellHtml = (v) => (typeof v === 'number' ? fmtNum(v, 1) : pill(v));
+
+const rptHead = (title, meta = []) => `${kop()}<div class="rpt-head"><div class="rpt-kicker">Laporan Kedisiplinan Siswa</div>
+  <h1 class="doc-title">${esc(title)}</h1>${meta.length ? `<div class="rpt-meta">${meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>` : ''}</div>`;
+
+const tilesHtml = (tiles = []) => (tiles.length ? `<div class="rpt-tiles">${tiles.map(([l, v, sub], i) =>
+  `<div class="rt c${(i % 4) + 1}"><span>${esc(l)}</span><b>${esc(v)}</b>${sub ? `<em>${esc(sub)}</em>` : ''}</div>`).join('')}</div>` : '');
+
+/** Komposisi tingkat (ringan/sedang/berat): batang bertumpuk berwarna status + angka & persen tertulis. */
+function compHtml(c) {
+  const parts = [['Ringan', c?.ringan || 0, 'warn'], ['Sedang', c?.sedang || 0, 'serious'], ['Berat', c?.berat || 0, 'critical']];
+  const total = parts.reduce((t, p) => t + p[1], 0);
+  if (!total) return '';
+  return `<div class="rpt-comp"><span class="rpt-comp-l">Tingkat pelanggaran</span>
+    <span class="rpt-stack">${parts.filter((p) => p[1]).map(([, n, w]) => `<span class="s-${w}" style="flex-grow:${n}"></span>`).join('')}</span>
+    <span class="rpt-legend">${parts.map(([l, n, w]) => `<span><i class="s-${w}"></i>${l} <b>${fmtNum(n)}</b> (${Math.round((n / total) * 100)}%)</span>`).join('')}</span></div>`;
+}
+
+/**
+ * Grafik batang mendatar satu warna (besaran); batang berwarna status hanya bila item punya tone (mis. tahap sanksi).
+ * spec: {title, unit, items:[{label, value, tone?}]} — label & angka selalu tertulis.
+ */
+function chartHtml(c) {
+  if (!c?.items?.length || !c.items.some((x) => x.value > 0)) return '';
+  const max = Math.max(1, ...c.items.map((x) => x.value));
+  const short = (s) => (String(s).length > 64 ? String(s).slice(0, 62) + '…' : String(s));
+  return `<div class="rpt-chart"><div class="rpt-chart-h"><b>${esc(c.title)}</b>${c.unit ? `<span>${esc(c.unit)}</span>` : ''}</div>
+    ${c.items.map((x) => `<div class="rb"><span class="rb-l">${esc(short(x.label))}</span><span class="rb-t"><span class="${x.tone ? 's-' + x.tone : ''}" style="width:${Math.max(x.value > 0 ? 1 : 0, Math.round((x.value / max) * 1000) / 10)}%"></span></span><span class="rb-v">${fmtNum(x.value, 1)}</span></div>`).join('')}</div>`;
+}
+
+const tableHtml = (cols, rows, numeric = []) => `<table class="tbl-print"><thead><tr><th class="no">No</th>${cols.map((c, i) => `<th class="${numeric.includes(i) ? 'num' : ''}">${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.map((r, i) => `<tr><td class="no">${i + 1}</td>${r.map((v, j) => `<td class="${numeric.includes(j) ? 'num' : ''}">${cellHtml(v)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length + 1}"><em>Tidak ada data.</em></td></tr>`}</tbody></table>`;
 
 /**
  * HTML laporan (dipakai lembar Bagikan maupun tombol PDF/PNG/WA langsung di halaman Laporan).
- * Opsional: tiles [[label, nilai]] (kotak angka), sections [{title, cols, rows, numeric}] (tabel tambahan),
+ * Opsional: tiles [[label, nilai, ket]] (kotak angka), comp {ringan, sedang, berat} (batang tingkat),
+ * chart {title, unit, items} (grafik batang), tableTitle, sections [{title, cols, rows, numeric}] (tabel tambahan),
  * kronologi [catatan] (lampiran "Catatan kronologi kejadian").
  */
-export function reportHtml({ title, meta = [], cols, rows, numeric = [], note = '', tiles = [], sections = [], kronologi = [] }) {
-  return `<div class="doc">${kop()}<h1 class="doc-title">${esc(title)}</h1>
-    <p class="meta">${meta.map(esc).join(' · ')}</p>
-    ${tiles.length ? `<div class="dsum-grid">${tiles.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : ''}
-    ${tableHtml(cols, rows, numeric)}
+export function reportHtml({ title, meta = [], cols, rows, numeric = [], note = '', tiles = [], comp = null, chart = null, tableTitle = '', sections = [], kronologi = [] }) {
+  return `<div class="doc rpt">${rptHead(title, meta)}
+    ${tilesHtml(tiles)}${compHtml(comp)}${chartHtml(chart)}
+    ${tableTitle ? `<h3>${esc(tableTitle)}</h3>` : ''}${tableHtml(cols, rows, numeric)}
     ${sections.map((s) => `<h3>${esc(s.title)}</h3>${tableHtml(s.cols, s.rows, s.numeric)}`).join('')}
-    ${note ? `<p class="small">${esc(note)}</p>` : ''}
+    ${note ? `<p class="small note">${esc(note)}</p>` : ''}
     ${kronHtml(kronologi)}
-    <p class="small">${dicetak()}</p>
+    <p class="small foot">${dicetak()}</p>
     <p class="right">${tempatTanggal()}</p>${signPejabat()}</div>`;
 }
 export const reportOpts = (rep) => ({ landscape: !!rep.landscape, fileBase: rep.fileBase || `${rep.title} ${ymd()}`, waText: `${rep.title} — ${[...(rep.meta || [])].join(' · ')} (${st().namaSekolah})` });
@@ -229,19 +271,20 @@ export function printReport(rep) { printDoc(rep.title, reportHtml(rep), reportOp
 
 /**
  * Ringkasan bergaya dasbor: kotak angka + beberapa tabel berbatang.
- * spec: {title, meta[], tiles:[[label, value, sub]], sections:[{title, cols, rows, bar: indexKolomAngka}], kronologi:[catatan]}
+ * spec: {title, meta[], tiles:[[label, value, sub]], comp, sections:[{title, cols, rows, bar: indexKolomAngka}], kronologi:[catatan]}
  */
-export function summaryHtml({ title, meta = [], tiles = [], sections = [], note = '', kronologi = [] }) {
+export function summaryHtml({ title, meta = [], tiles = [], comp = null, sections = [], note = '', kronologi = [] }) {
   const table = (sec) => {
     const max = Math.max(1, ...sec.rows.map((r) => Number(r[sec.bar]) || 0));
-    return `<h3>${esc(sec.title)}</h3><table class="tbl-print"><thead><tr>${sec.cols.map((c, i) => `<th class="${i === sec.bar ? 'num' : ''}">${esc(c)}</th>`).join('')}${sec.bar != null ? '<th style="width:28%"></th>' : ''}</tr></thead><tbody>
-      ${sec.rows.length ? sec.rows.map((r) => `<tr class="dbar-row">${r.map((v, i) => `<td class="${i === sec.bar ? 'num' : ''}">${esc(typeof v === 'number' ? fmtNum(v, 1) : v)}</td>`).join('')}${sec.bar != null ? `<td><div class="dbar" style="width:${Math.round(((Number(r[sec.bar]) || 0) / max) * 100)}%"></div></td>` : ''}</tr>`).join('')
+    const num = (i) => i === sec.bar || (sec.rows.length && sec.rows.every((r) => typeof r[i] === 'number'));
+    return `<h3>${esc(sec.title)}</h3><table class="tbl-print"><thead><tr>${sec.cols.map((c, i) => `<th class="${num(i) ? 'num' : ''}">${esc(c)}</th>`).join('')}${sec.bar != null ? '<th style="width:28%"></th>' : ''}</tr></thead><tbody>
+      ${sec.rows.length ? sec.rows.map((r) => `<tr class="dbar-row">${r.map((v, i) => `<td class="${num(i) ? 'num' : ''}">${cellHtml(v)}</td>`).join('')}${sec.bar != null ? `<td><div class="dbar${pillOf(r[0]) ? ' s-' + pillOf(r[0]) : ''}" style="width:${Math.round(((Number(r[sec.bar]) || 0) / max) * 100)}%"></div></td>` : ''}</tr>`).join('')
         : `<tr><td colspan="${sec.cols.length + 1}"><em>Tidak ada data.</em></td></tr>`}</tbody></table>`;
   };
-  return `<div class="doc">${kop()}<h1 class="doc-title">${esc(title)}</h1><p class="meta">${meta.map(esc).join(' · ')}</p>
-    ${tiles.length ? `<div class="dsum-grid">${tiles.map(([l, v, sub]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`).join('')}</div>` : ''}
+  return `<div class="doc rpt">${rptHead(title, meta)}
+    ${tilesHtml(tiles)}${compHtml(comp)}
     ${sections.map(table).join('')}
-    ${note ? `<p class="small">${esc(note)}</p>` : ''}${kronHtml(kronologi)}<p class="small">${dicetak()}</p></div>`;
+    ${note ? `<p class="small note">${esc(note)}</p>` : ''}${kronHtml(kronologi)}<p class="small foot">${dicetak()}</p></div>`;
 }
 export function printSummary(spec) {
   printDoc(spec.title, summaryHtml(spec), { fileBase: `${spec.title} ${ymd()}`, waText: `${spec.title} — ${(spec.meta || []).join(' · ')} (${st().namaSekolah})` });

@@ -66,10 +66,10 @@ function renderDetail(view, kelas) {
   const grid = h('div', { class: 'dash-grid' });
   view.append(grid);
   grid.append(h('div', { class: 'tiles span-12' },
-    statTile(`Pelanggaran · ${pr.label}`, fmtNum(t.n), { ic: 'clipboard', delta: deltaChip(t.n, prev?.n, 'periode sebelumnya') }),
-    statTile('Total poin', fmtNum(t.poin), { ic: 'scale' }),
-    statTile('Siswa terlibat', `${fmtNum(t.siswa)} / ${ss.length}`, { ic: 'users' }),
-    statTile('Pelanggaran berat', fmtNum(t.berat), { ic: 'alert', tone: t.berat ? 'critical' : '' })));
+    statTile(`Pelanggaran · ${pr.label}`, fmtNum(t.n), { ic: 'clipboard', acc: 'emerald', delta: deltaChip(t.n, prev?.n, 'periode sebelumnya') }),
+    statTile('Total poin', fmtNum(t.poin), { ic: 'scale', acc: 'blue' }),
+    statTile('Siswa terlibat', `${fmtNum(t.siswa)} / ${ss.length}`, { ic: 'users', acc: 'violet' }),
+    statTile('Pelanggaran berat', fmtNum(t.berat), { ic: 'alert', acc: 'rose', tone: t.berat ? 'critical' : '' })));
 
   const tr = trend(recs, pr.from, pr.to, ymd());
   grid.append(chartCard({ cls: 'span-8', title: 'Tren pelanggaran kelas', sub: `${pr.label} · per ${tr.gran}`, chart: columnChart(tr.buckets),
@@ -102,7 +102,11 @@ function printRekap() {
     const sem = totals(filterRecords(S.d.pelanggaran, { kelas: k, from }));
     return [k, ss.length, sums.filter((x) => x.total > 0).length, sem.n, sem.poin, total, ss.length ? Math.round((total / ss.length) * 10) / 10 : 0, sums.filter((x) => x.level?.surat).length];
   });
+  const sum = (i) => rows.reduce((t, r) => t + r[i], 0);
   printReport({ title: 'Rekap Kedisiplinan per Kelas', meta: [`TA ${S.settings.tahunAjaran}`, `Semester ${S.settings.semester}`],
-    cols: ['Kelas', 'Siswa', 'Pernah melanggar', 'Pelanggaran semester', 'Poin semester', 'Total poin akumulasi', 'Rata-rata/siswa', 'Siswa tahap surat (SP+)'], rows, numeric: [1, 2, 3, 4, 5, 6, 7],
+    tiles: [['Siswa aktif', fmtNum(sum(1))], ['Pelanggaran semester', fmtNum(sum(3))], ['Poin semester', fmtNum(sum(4))], ['Siswa tahap surat (SP+)', fmtNum(sum(7))]],
+    comp: totals(filterRecords(S.d.pelanggaran, { from })),
+    chart: { title: 'Pelanggaran semester ini per kelas', unit: 'kejadian', items: rows.map((r) => ({ label: `Kelas ${r[0]}`, value: r[3] })) },
+    cols:['Kelas', 'Siswa', 'Pernah melanggar', 'Pelanggaran semester', 'Poin semester', 'Total poin akumulasi', 'Rata-rata/siswa', 'Siswa tahap surat (SP+)'], rows, numeric: [1, 2, 3, 4, 5, 6, 7],
     kronologi: kronOf(filterRecords(S.d.pelanggaran, { from })) });
 }

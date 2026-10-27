@@ -1,0 +1,10 @@
+{
+  "version": "1.2.0",
+  "date": "2026-10-27",
+  "notes": [
+    "Laporan Harian baru: semua pelanggaran pada tanggal yang dipilih (bawaan hari ini) lengkap dengan kronologi, rekap per kelas, dan siswa yang mencapai tahap sanksi.",
+    "Catatan kronologi kejadian kini ikut di setiap laporan: kolom di laporan harian & daftar rinci, lampiran di rekap & ringkasan, serta di kartu kedisiplinan dan surat.",
+    "Halaman Laporan lebih sederhana: 3 langkah (Pilih laporan → Atur tanggal/periode → Unduh/kirim), tombol Lihat pratinjau.",
+    "Riwayat: tombol Laporan di setiap tanggal untuk langsung membuka laporan harian hari itu."
+  ]
+}

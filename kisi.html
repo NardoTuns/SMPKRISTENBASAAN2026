@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Pengetahuan Umum SMP</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 14px;
+            background: #f1f5f9;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .score-benar { color: #10b981; }
+        .score-salah { color: #ef4444; }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+        }
+
+        /* Warna saat dievaluasi */
+        .option-btn.correct {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #047857;
+        }
+
+        .option-btn.wrong {
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #b91c1c;
+        }
+
+        .next-btn, .start-btn, .restart-btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background 0.3s;
+            display: none; /* Sembunyikan default */
+            width: 100%;
+        }
+
+        .next-btn:hover, .start-btn:hover, .restart-btn:hover {
+            background: #2a5298;
+        }
+
+        .screen {
+            display: none; /* Sembunyikan semua screen awalnya */
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        /* Footer Keterangan */
+        .feedback {
+            margin-top: 15px;
+            font-weight: 600;
+            font-size: 15px;
+            min-height: 24px;
+        }
+        .feedback.benar { color: #10b981; }
+        .feedback.salah { color: #ef4444; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- START SCREEN -->
+        <div id="start-screen" class="screen active">
+            <div class="result-icon">🎓</div>
+            <div class="header">
+                <h1>Kuis Pengetahuan Umum SMP</h1>
+                <p>Uji wawasanmu tentang Sumpah Pemuda, Indonesia, Dunia, dan Sulawesi Utara!</p>
+            </div>
+            <p style="margin-bottom: 20px; font-size: 14px; color: #64748b;">Total Soal: 100 Nomor<br>Setiap jawaban benar mendapat poin. Jika salah juga dicatat.</p>
+            <button class="start-btn" onclick="startQuiz()" style="display: block;">Mulai Kuis Sekarang</button>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="quiz-screen" class="screen">
+            <div class="stats">
+                <span id="question-counter">Soal: 1 / 100</span>
+                <span>
+                    <span class="score-benar">Benar: <span id="benar-count">0</span></span> | 
+                    <span class="score-salah">Salah: <span id="salah-count">0</span></span>
+                </span>
+            </div>
+            
+            <div id="question-text" class="question-text">Memuat pertanyaan...</div>
+            
+            <div class="options-container" id="options-container">
+                <!-- Tombol pilihan akan dirender oleh JavaScript -->
+            </div>
+
+            <div id="feedback-message" class="feedback"></div>
+
+            <button id="next-btn" class="next-btn" onclick="nextQuestion()">Selanjutnya ➔</button>
+        </div>
+
+        <!-- END SCREEN -->
+        <div id="end-screen" class="screen">
+            <div class="result-icon">🏆</div>
+            <div class="header">
+                <h1>Kuis Selesai!</h1>
+                <p>Kerja bagus, kamu telah menyelesaikan 100 soal.</p>
+            </div>
+            <div style="font-size: 20px; margin: 20px 0; padding: 20px; background: #f8fafc; border-radius: 10px;">
+                <p class="score-benar" style="margin-bottom: 10px;">✅ Jawaban Benar: <strong id="final-benar">0</strong></p>
+                <p class="score-salah">❌ Jawaban Salah: <strong id="final-salah">0</strong></p>
+            </div>
+            <button class="restart-btn" onclick="location.reload()" style="display: block;">Ulangi Kuis</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Data 100 Soal (50 Sumpah Pemuda, 50 Umum & Sulut)
+        // Format: q = Pertanyaan, c = Array Pilihan Ganda, a = Index Jawaban Benar (0-3)
+        const questions = [
+            // BAGIAN 1: Sumpah Pemuda (25 Soal)
+            {q:"Kapan Kongres Pemuda II diselenggarakan?", c:["27-28 Oktober 1928", "20 Mei 1908", "17 Agustus 1945", "1 Juni 1945"], a:0},
+            {q:"Di kota manakah Kongres Pemuda II dilaksanakan?", c:["Bandung", "Surabaya", "Jakarta (Batavia)", "Yogyakarta"], a:2},
+            {q:"Siapakah ketua panitia Kongres Pemuda II?", c:["Mohammad Yamin", "Sugondo Djojopuspito", "Soekarno", "Amir Sjarifuddin"], a:1},
+            {q:"Mohammad Yamin dalam panitia Kongres Pemuda II menjabat sebagai?", c:["Ketua", "Bendahara", "Sekretaris", "Pembantu"], a:2},
+            {q:"Berapa jumlah butir ikrar Sumpah Pemuda?", c:["2", "3", "4", "5"], a:1},
+            {q:"'Kami putra dan putri Indonesia, mengaku bertumpah darah yang satu,...'. Lanjutan kalimat tersebut adalah?", c:["Tanah Air Indonesia", "Bangsa Indonesia", "Bahasa Indonesia", "Negara Kesatuan"], a:0},
+            {q:"Lagu kebangsaan yang pertama kali diperdengarkan pada Kongres Pemuda II adalah?", c:["Bagimu Negeri", "Indonesia Pusaka", "Indonesia Raya", "Garuda Pancasila"], a:2},
+            {q:"Organisasi pemuda Jong Java berasal dari daerah?", c:["Sulawesi", "Jawa", "Sumatera", "Ambon"], a:1},
+            {q:"Siapakah pencipta lagu Indonesia Raya?", c:["Ismail Marzuki", "W.R. Supratman", "Ibu Sud", "Kusbini"], a:1},
+            {q:"Organisasi pemuda Jong Ambon diketuai oleh perwakilan bernama?", c:["J. Leimena", "Amir Sjarifuddin", "Mohammad Yamin", "R.C.L. Senduk"], a:0},
+            {q:"Gedung tempat Sumpah Pemuda dibacakan saat ini menjadi museum di jalan?", c:["Jl. Kramat Raya 106", "Jl. Merdeka Barat", "Jl. Pegangsaan Timur 56", "Jl. Imam Bonjol"], a:0},
+            {q:"Apa nama surat kabar yang pertama kali memuat teks Sumpah Pemuda?", c:["De Express", "Sin Po", "Oetoesan Hindia", "Medan Prijaji"], a:1},
+            {q:"Siapakah tokoh yang mengusulkan Bahasa Melayu menjadi bahasa persatuan?", c:["Mohammad Yamin", "Soekarno", "Ki Hajar Dewantara", "Sutan Sjahrir"], a:0},
+            {q:"Apa alat musik yang digunakan W.R. Supratman saat mengumandangkan Indonesia Raya pertama kali?", c:["Piano", "Gitar", "Biola", "Seruling"], a:2},
+            {q:"Organisasi Jong Celebes mewakili pemuda dari daerah?", c:["Jawa", "Sulawesi", "Sumatera", "Kalimantan"], a:1},
+            {q:"Kongres Pemuda I dilaksanakan pada tahun berapa?", c:["1926", "1927", "1928", "1908"], a:0},
+            {q:"Siapa ketua Kongres Pemuda I?", c:["M. Tabrani", "Sugondo Djojopuspito", "Mohammad Yamin", "Soetomo"], a:0},
+            {q:"Hari Sumpah Pemuda diperingati setiap tanggal?", c:["28 Oktober", "10 November", "20 Mei", "17 Agustus"], a:0},
+            {q:"Nilai luhur utama dari peristiwa Sumpah Pemuda adalah?", c:["Persatuan dan Kesatuan", "Perlawanan fisik", "Kedaerahan", "Perpecahan"], a:0},
+            {q:"Jong Sumatranen Bond adalah organisasi pemuda dari?", c:["Sumatera", "Jawa", "Sulawesi", "Maluku"], a:0},
+            {q:"Ikrar ketiga Sumpah Pemuda menjunjung tinggi bahasa persatuan, yaitu?", c:["Bahasa Jawa", "Bahasa Melayu", "Bahasa Indonesia", "Bahasa Belanda"], a:2},
+            {q:"Rapat pertama Kongres Pemuda II diadakan di gedung?", c:["KJB (Katholieke Jongenlingen Bond)", "Oost-Java Bioscoop", "Indonesische Clubgebouw", "STOVIA"], a:0},
+            {q:"Tokoh pemuda keturunan Tionghoa yang turut hadir di Kongres Pemuda II adalah?", c:["Kwee Thiam Hong", "Yap Thiam Hien", "Soe Hok Gie", "Liem Swie King"], a:0},
+            {q:"Siapa tokoh dari Jong Batak yang menjadi bendahara Kongres Pemuda II?", c:["Amir Sjarifuddin", "J. Leimena", "R.C.L. Senduk", "Mohammad Yamin"], a:0},
+            {q:"Tokoh perempuan yang hadir di Kongres Pemuda II adalah?", c:["R.A. Kartini", "Emma Puradiredja", "Cut Nyak Dien", "Martha Christina Tiahahu"], a:1},
+            
+            // BAGIAN 2: Pengetahuan Umum (Indo, Dunia, Sulut) - 25 Soal
+            {q:"Apa ibu kota Provinsi Sulawesi Utara?", c:["Makassar", "Manado", "Palu", "Kendari"], a:1},
+            {q:"Taman Nasional laut di Sulawesi Utara yang sangat terkenal dengan keindahan terumbu karangnya adalah?", c:["Raja Ampat", "Wakatobi", "Taman Nasional Bunaken", "Taka Bonerate"], a:2},
+            {q:"Gunung tertinggi di dunia yang terletak di Himalaya adalah?", c:["Gunung Kilimanjaro", "Gunung Everest", "Gunung Elbrus", "Gunung Fuji"], a:1},
+            {q:"Candi Borobudur yang terletak di Magelang bercorak agama?", c:["Hindu", "Buddha", "Islam", "Konghucu"], a:1},
+            {q:"Benua terbesar dan terluas di dunia adalah?", c:["Afrika", "Eropa", "Amerika", "Asia"], a:3},
+            {q:"Danau terbesar di Provinsi Sulawesi Utara adalah?", c:["Danau Toba", "Danau Poso", "Danau Tondano", "Danau Matano"], a:2},
+            {q:"Mata uang resmi yang digunakan oleh sebagian besar negara Uni Eropa adalah?", c:["Dolar", "Poundsterling", "Euro", "Yen"], a:2},
+            {q:"Hewan endemik Sulawesi Utara berupa monyet hitam berjambul disebut?", c:["Orangutan", "Komodo", "Yaki", "Anoa"], a:2},
+            {q:"Lagu daerah 'Ampar-Ampar Pisang' berasal dari provinsi?", c:["Kalimantan Selatan", "Sulawesi Utara", "Jawa Tengah", "Papua"], a:0},
+            {q:"Suku asli yang mendiami wilayah semenanjung utara pulau Sulawesi adalah?", c:["Suku Bugis", "Suku Minahasa", "Suku Toraja", "Suku Dayak"], a:1},
+            {q:"Ibu kota dari negara Australia adalah?", c:["Sydney", "Melbourne", "Canberra", "Perth"], a:2},
+            {q:"Makanan khas Manado berupa bubur yang dimasak dengan berbagai macam sayuran disebut?", c:["Tinutuan", "Coto", "Gudeg", "Papeda"], a:0},
+            {q:"Tari Kecak dan Tari Pendet berasal dari provinsi?", c:["Jawa Timur", "Bali", "Nusa Tenggara Barat", "Sumatera Barat"], a:1},
+            {q:"Samudra terluas di dunia yang membentang di antara benua Asia, Australia, dan Amerika adalah?", c:["Atlantik", "Hindia", "Arktik", "Pasifik"], a:3},
+            {q:"Pahlawan nasional wanita dari Sulawesi Utara yang memperjuangkan kemajuan perempuan Minahasa adalah?", c:["Cut Nyak Dien", "Maria Walanda Maramis", "Nyi Ageng Serang", "Fatmawati"], a:1},
+            {q:"Pahlawan asal Sulut yang fotonya terdapat pada uang kertas pecahan Rp20.000 (emisi 2016) adalah?", c:["Pangeran Antasari", "Sam Ratulangi", "Kapitan Pattimura", "Ki Hajar Dewantara"], a:1},
+            {q:"Organisasi kesehatan dunia di bawah PBB disebut?", c:["UNICEF", "UNESCO", "WHO", "FAO"], a:2},
+            {q:"Gunung api aktif yang terkenal dan berada di Kepulauan Sitaro, Sulut adalah?", c:["Gunung Lokon", "Gunung Soputan", "Gunung Karangetang", "Gunung Klabat"], a:2},
+            {q:"Bangsa Indonesia memperingati Hari Pendidikan Nasional setiap tanggal?", c:["2 Mei", "1 Juni", "17 Agustus", "10 November"], a:0},
+            {q:"Satu-satunya benua di dunia yang tidak memiliki gurun pasir adalah?", c:["Eropa", "Australia", "Amerika Selatan", "Asia"], a:0},
+            {q:"Alat musik tradisional Sulawesi Utara yang terbuat dari bilah kayu dan dipukul adalah?", c:["Angklung", "Kolintang", "Gamelan", "Sasando"], a:1},
+            {q:"Presiden RI ke-3 yang dijuluki Bapak Teknologi Indonesia adalah?", c:["Soeharto", "B.J. Habibie", "Abdurrahman Wahid", "Megawati"], a:1},
+            {q:"Negara di kawasan Asia Timur yang dijuluki Negara Matahari Terbit adalah?", c:["Tiongkok", "Korea Selatan", "Jepang", "Thailand"], a:2},
+            {q:"Selat yang memisahkan antara Pulau Jawa dan Sumatera adalah?", c:["Selat Makassar", "Selat Bali", "Selat Sunda", "Selat Malaka"], a:2},
+            {q:"Pahlawan asal Jawa Barat pendiri sekolah Keutamaan Istri adalah?", c:["Raden Dewi Sartika", "R.A. Kartini", "Cut Meutia", "Rasuna Said"], a:0},
+
+            // BAGIAN 3: Sumpah Pemuda Detail (25 Soal)
+            {q:"Siapa tokoh Jong Celebes yang terkenal sebagai pembantu panitia dalam Kongres Pemuda II?", c:["R.C.L. Senduk", "J. Leimena", "Amir Sjarifuddin", "Mohammad Yamin"], a:0},
+            {q:"Siapa tokoh yang memberikan pidato tentang pentingnya kepanduan (pramuka) bagi pemuda di Kongres Pemuda II?", c:["Sunario", "Soekarno", "Mohammad Hatta", "Sutan Sjahrir"], a:0},
+            {q:"Kapan istilah 'Sumpah Pemuda' mulai populer digunakan?", c:["Saat kongres berlangsung", "Setelah masa kongres (peringatan tahun-tahun berikutnya)", "Sebelum kongres dimulai", "Di masa Reformasi"], a:1},
+            {q:"Peristiwa Sumpah Pemuda menjadi tonggak yang mengubah perlawanan kedaerahan menjadi bersifat?", c:["Nasional", "Internasional", "Agamis", "Kesukuan"], a:0},
+            {q:"Organisasi pelopor kebangkitan nasional yang berdiri pada 20 Mei 1908 adalah?", c:["Budi Utomo", "Sarekat Islam", "Indische Partij", "Perhimpunan Indonesia"], a:0},
+            {q:"Tokoh perwakilan Jong Islamieten Bond yang menjabat Pembantu I di kepanitiaan Kongres Pemuda II adalah?", c:["Djohan Mohammad Tjaja", "Amir Sjarifuddin", "J. Leimena", "Kwee Thiam Hong"], a:0},
+            {q:"Rapat kedua Kongres Pemuda II pada 28 Oktober 1928 pagi hari diadakan di gedung mana?", c:["Oost-Java Bioscoop", "Gedung KJB", "Indonesische Clubgebouw", "STOVIA"], a:0},
+            {q:"Pada tahun berapakah Keppres No. 316 yang menetapkan Hari Sumpah Pemuda dikeluarkan?", c:["1928", "1945", "1959", "1965"], a:2},
+            {q:"Apa nama organisasi perkumpulan pelajar seluruh Indonesia yang menggagas Kongres Pemuda II?", c:["PPPI", "Panitia Sembilan", "BPUPKI", "KNIP"], a:0},
+            {q:"Siapakah yang memberikan usulan rumusan teks Sumpah Pemuda yang ditulis di secarik kertas?", c:["Sugondo Djojopuspito", "Mohammad Yamin", "Amir Sjarifuddin", "Soekarno"], a:1},
+            {q:"Selain bahasa, ikrar pertama Sumpah Pemuda menekankan pada kesatuan?", c:["Tanah Air", "Pakaian Adat", "Senjata", "Lagu Daerah"], a:0},
+            {q:"Siapakah tokoh yang membacakan doa (utusan agama) pada Kongres Pemuda II meskipun sering tidak disorot?", c:["Amir Sjarifuddin", "Sutan Sjahrir", "T.B. Simatupang", "P.K. Roem"], a:0},
+            {q:"Apa latar belakang utama diselenggarakannya Kongres Pemuda oleh para pelajar?", c:["Keinginan kuat untuk bersatu melawan penjajahan kolonial", "Keinginan mendirikan partai politik", "Persiapan melawan Jepang", "Mencari dukungan dana dari Belanda"], a:0},
+            {q:"Di gedung milik siapakah naskah Sumpah Pemuda dibacakan (Gedung Kramat 106)?", c:["Sie Kong Liong", "Mohammad Husni Thamrin", "Tjipto Mangoenkoesoemo", "Douwes Dekker"], a:0},
+            {q:"Berapa perkiraan usia W.R. Supratman saat ia mengumandangkan lagu Indonesia Raya tahun 1928?", c:["25 Tahun", "35 Tahun", "45 Tahun", "18 Tahun"], a:0},
+            {q:"Sebelum bernama Indonesia Raya, teks asli lagu ciptaan W.R Supratman berjudul?", c:["Indonesia Merdeka", "Indonesia", "Tanah Airku", "Kebangsaan Kita"], a:1},
+            {q:"Kongres Pemuda II berlangsung secara berurutan selama berapa hari?", c:["1 hari", "2 hari", "3 hari", "1 minggu"], a:1},
+            {q:"Organisasi Pemuda Kaum Betawi pada masa itu dipimpin oleh tokoh bernama?", c:["Mohammad Husni Thamrin", "Rohjani Soe'oed", "Ismail Marzuki", "Benyamin Sueb"], a:1},
+            {q:"Pesan utama dari lirik lagu Indonesia Raya stanza pertama adalah?", c:["Kesedihan karena dijajah", "Ajakan untuk bangun dan bersatu membela bangsa", "Kemarahan kepada Belanda", "Mendeskripsikan kekayaan alam"], a:1},
+            {q:"Siapakah penasihat Kongres Pemuda II yang juga tokoh hukum tata negara?", c:["Sarmidi Mangunsarkoro", "Mr. Sunario", "Prof. Soepomo", "Soekarno"], a:1},
+            {q:"Gedung Indonesische Clubgebouw (IC) merupakan tempat rapat penutup. Dahulu gedung tersebut difungsikan sebagai?", c:["Markas tentara Belanda", "Rumah kos pelajar/mahasiswa", "Gedung bioskop", "Rumah sakit militer"], a:1},
+            {q:"Apa dampak langsung Kongres Pemuda II bagi pergerakan organisasi pemuda daerah?", c:["Perlahan melebur menjadi satu wadah 'Indonesia Muda'", "Membentuk militer bersenjata", "Membubarkan diri total", "Membelot ke pihak penjajah"], a:0},
+            {q:"Siapakah tokoh pendidikan yang turut hadir meninjau Kongres Pemuda II namun tidak menjadi pembicara utama?", c:["Ki Hajar Dewantara", "K.H. Ahmad Dahlan", "K.H. Hasyim Asy'ari", "Tjipto Mangoenkoesoemo"], a:0},
+            {q:"Kongres Pemuda II ditutup dengan menyanyikan lagu Indonesia Raya dan...", c:["Pembacaan doa lintas agama", "Pembacaan putusan (Ikrar) kongres", "Pemberian gelar pahlawan", "Penyerangan ke markas Belanda"], a:1},
+            {q:"Setelah Kongres Pemuda II, para pemuda bersepakat untuk menghilangkan ego kedaerahan. Istilah populernya adalah?", c:["Eksklusivisme", "Chauvinisme", "Primordialisme (sifat kedaerahan sempit)", "Fasisme"], a:2},
+
+            // BAGIAN 4: Pengetahuan Umum (Indo, Dunia, Sulut) - 25 Soal
+            {q:"Apa nama tarian perang tradisional masyarakat Minahasa di Sulawesi Utara?", c:["Tari Kabasaran", "Tari Cakalele", "Tari Maengket", "Tari Poco-Poco"], a:0},
+            {q:"Provinsi pemekaran termuda di pulau Sulawesi saat ini adalah?", c:["Sulawesi Barat", "Gorontalo", "Sulawesi Tenggara", "Sulawesi Tengah"], a:0},
+            {q:"Monumen bersejarah di kota Paris, Prancis yang berbentuk menara besi paku keling adalah?", c:["Menara Pisa", "Menara Eiffel", "Big Ben", "Patung Liberty"], a:1},
+            {q:"Pulau dengan ukuran terluas (paling besar) di wilayah Indonesia adalah?", c:["Pulau Jawa", "Pulau Sumatera", "Pulau Kalimantan", "Pulau Papua"], a:3},
+            {q:"Ilmuwan yang dikenal sebagai penemu bola lampu pijar komersial pertama adalah?", c:["Albert Einstein", "Thomas Alva Edison", "Alexander Graham Bell", "Nikola Tesla"], a:1},
+            {q:"Batas wilayah laut bagian utara provinsi Sulawesi Utara berbatasan langsung dengan negara?", c:["Malaysia", "Singapura", "Filipina", "Australia"], a:2},
+            {q:"Semboyan negara 'Bhinneka Tunggal Ika' diambil dari kitab klasik karya Mpu Tantular, yaitu?", c:["Kitab Sutasoma", "Kitab Negarakertagama", "Kitab Arjuna Wiwaha", "Kitab Mahabarata"], a:0},
+            {q:"Planet dengan ukuran paling besar dalam sistem tata surya kita adalah?", c:["Bumi", "Mars", "Saturnus", "Yupiter"], a:3},
+            {q:"Kota di Sulawesi Utara yang memiliki udara sejuk dan dijuluki 'Kota Bunga' adalah?", c:["Manado", "Bitung", "Tomohon", "Tondano"], a:2},
+            {q:"Garis khayal pada peta yang membagi bumi menjadi belahan bumi utara dan selatan disebut?", c:["Garis Bujur", "Garis Khatulistiwa (Ekuator)", "Garis Meridian", "Garis Tropik"], a:1},
+            {q:"Siapakah nama pelukis maestro kebanggaan Indonesia yang sangat terkenal dengan aliran ekspresionisme tingkat dunia?", c:["Raden Saleh", "Affandi", "Basuki Abdullah", "S. Sudjojono"], a:1},
+            {q:"Apakah nama ibu kota dari negara Amerika Serikat (USA)?", c:["New York", "Los Angeles", "Washington D.C.", "Chicago"], a:2},
+            {q:"Gunung tertinggi di provinsi Sulawesi Utara dengan ketinggian sekitar 1.995 mdpl adalah?", c:["Gunung Klabat", "Gunung Lokon", "Gunung Awu", "Gunung Soputan"], a:0},
+            {q:"Dasar negara Republik Indonesia, yaitu Pancasila, pertama kali dikemukakan oleh Ir. Soekarno pada tanggal?", c:["17 Agustus 1945", "1 Juni 1945", "18 Agustus 1945", "20 Mei 1908"], a:1},
+            {q:"Mamalia dengan ukuran tubuh terbesar yang masih hidup di bumi saat ini adalah?", c:["Gajah Afrika", "Paus Biru", "Jerapah", "Hiu Paus (Rhincodon typus)"], a:1},
+            {q:"Sungai terpanjang di benua Afrika dan juga di dunia adalah?", c:["Sungai Amazon", "Sungai Nil", "Sungai Yangtze", "Sungai Kapuas"], a:1},
+            {q:"Bandar udara internasional yang terletak di kota Manado, Sulawesi Utara bernama?", c:["Bandara Sultan Hasanuddin", "Bandara Sam Ratulangi", "Bandara Ngurah Rai", "Bandara Soekarno-Hatta"], a:1},
+            {q:"'Pulau Dewata' adalah julukan pariwisata internasional untuk pulau?", c:["Pulau Lombok", "Pulau Sumba", "Pulau Bali", "Pulau Jawa"], a:2},
+            {q:"Tokoh penjelajah samudra yang diakui menemukan benua Amerika pada tahun 1492 adalah?", c:["Vasco da Gama", "Christopher Columbus", "Ferdinand Magellan", "James Cook"], a:1},
+            {q:"Ibu kota dari negara Jepang adalah?", c:["Beijing", "Seoul", "Tokyo", "Bangkok"], a:2},
+            {q:"Organisasi internasional Perserikatan Bangsa-Bangsa dalam bahasa Inggris disingkat?", c:["ASEAN", "UN (United Nations)", "WHO", "NATO"], a:1},
+            {q:"Di provinsi manakah letak Istana Kepresidenan Tampaksiring berada?", c:["Jawa Barat", "Jawa Tengah", "Bali", "DI Yogyakarta"], a:2},
+            {q:"Benua yang memiliki wilayah daratan paling kecil (terkecil) di dunia adalah?", c:["Benua Eropa", "Benua Australia", "Benua Antartika", "Benua Amerika Selatan"], a:1},
+            {q:"Batu mulia dari perut bumi yang memiliki tingkat kekerasan paling tinggi di dunia adalah?", c:["Emas", "Zamrud", "Berlian (Intan)", "Mutiara"], a:2},
+            {q:"Anggota Panitia Sembilan BPUPKI (Perumus Piagam Jakarta) yang merupakan putra daerah asli Minahasa, Sulawesi Utara adalah?", c:["Sam Ratulangi", "Alexander Andries (A.A.) Maramis", "J. Leimena", "Maria Walanda Maramis"], a:1}
+        ];
+
+        let currentIndex = 0;
+        let scoreBenar = 0;
+        let scoreSalah = 0;
+        let hasAnswered = false;
+
+        const screens = {
+            start: document.getElementById('start-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            end: document.getElementById('end-screen')
+        };
+
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[screenName].classList.add('active');
+        }
+
+        function startQuiz() {
+            currentIndex = 0;
+            scoreBenar = 0;
+            scoreSalah = 0;
+            updateScoreboard();
+            switchScreen('quiz');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            hasAnswered = false;
+            const qData = questions[currentIndex];
+            
+            document.getElementById('question-counter').innerText = `Soal: ${currentIndex + 1} / ${questions.length}`;
+            document.getElementById('question-text').innerText = `${currentIndex + 1}. ${qData.q}`;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = ''; // Bersihkan tombol sebelumnya
+
+            const letters = ['A', 'B', 'C', 'D'];
+            
+            qData.c.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<strong>${letters[index]}.</strong> ${choice}`;
+                btn.onclick = () => selectAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('feedback-message').innerText = '';
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function selectAnswer(selectedIndex, clickedBtn) {
+            if (hasAnswered) return; // Mencegah klik lebih dari 1 kali per soal
+            hasAnswered = true;
+
+            const qData = questions[currentIndex];
+            const isCorrect = (selectedIndex === qData.a);
+            
+            const allButtons = document.querySelectorAll('.option-btn');
+            const feedback = document.getElementById('feedback-message');
+
+            // Nonaktifkan semua tombol
+            allButtons.forEach(btn => btn.disabled = true);
+
+            if (isCorrect) {
+                clickedBtn.classList.add('correct');
+                scoreBenar++;
+                feedback.innerHTML = "✅ Tepat Sekali!";
+                feedback.className = "feedback benar";
+            } else {
+                clickedBtn.classList.add('wrong');
+                scoreSalah++;
+                // Beri tahu mana yang benar
+                allButtons[qData.a].classList.add('correct');
+                feedback.innerHTML = `❌ Kurang Tepat. Jawaban yang benar adalah: <strong>${qData.c[qData.a]}</strong>`;
+                feedback.className = "feedback salah";
+            }
+
+            updateScoreboard();
+            document.getElementById('next-btn').style.display = 'block'; // Tampilkan tombol lanjut
+        }
+
+        function updateScoreboard() {
+            document.getElementById('benar-count').innerText = scoreBenar;
+            document.getElementById('salah-count').innerText = scoreSalah;
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            document.getElementById('final-benar').innerText = scoreBenar;
+            document.getElementById('final-salah').innerText = scoreSalah;
+            switchScreen('end');
+        }
+    </script>
+</body>
+</html>

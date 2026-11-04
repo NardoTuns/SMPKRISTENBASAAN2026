@@ -139,28 +139,134 @@
   });
   $('btnSetupKembali').addEventListener('click', function () { tampilLogin(); });
 
+  /* Overlay progres unduh: 4 tahap — server menyiapkan, menerima data, menyimpan di HP, gambar soal */
+  var Unduh = {
+    pct: 0, timer: null, lewati: null,
+    buka: function () {
+      this.pct = 0; this.henti();
+      $('unduhBar').style.width = '0%'; $('unduhPersen').textContent = '0%'; $('unduhDetail').textContent = '';
+      $('unduhJudul').textContent = '📥 Mengunduh data ujian…'; $('unduhLewati').classList.add('hidden'); $('unduhCatatan').classList.remove('hidden');
+      document.querySelectorAll('#unduhLangkah li').forEach(function (li) { li.className = ''; li.querySelector('small').textContent = ''; });
+      $('unduhOverlay').classList.remove('hidden');
+    },
+    /** Persen hanya boleh naik */
+    set: function (pct, detail) {
+      this.pct = Math.max(this.pct, Math.min(100, pct));
+      $('unduhBar').style.width = this.pct.toFixed(1) + '%';
+      $('unduhPersen').textContent = Math.floor(this.pct) + '%';
+      $('unduhBar').parentNode.setAttribute('aria-valuenow', Math.floor(this.pct));
+      if (detail != null) $('unduhDetail').textContent = detail;
+    },
+    /** Tandai tahap ke-i aktif, tahap sebelumnya selesai. ket = keterangan kecil di tahap itu. */
+    tahap: function (i, ket) {
+      document.querySelectorAll('#unduhLangkah li').forEach(function (li, j) {
+        li.className = j < i ? 'selesai' : j === i ? 'aktif' : '';
+        if (j === i && ket != null) li.querySelector('small').textContent = ket;
+      });
+    },
+    ket: function (i, teks) { $('unduhLangkah').children[i].querySelector('small').textContent = teks; },
+    /** Selama menunggu server: persen naik perlahan mendekati batas, sambil menampilkan lama menunggu */
+    tunggu: function (dari, ke, teks) {
+      var self = this, mulai = Date.now();
+      this.henti();
+      this.timer = setInterval(function () {
+        var dtk = (Date.now() - mulai) / 1000;
+        self.set(dari + (ke - dari) * (1 - Math.exp(-dtk / 8)), teks + ' (' + Math.floor(dtk) + ' detik)');
+      }, 250);
+    },
+    henti: function () { clearInterval(this.timer); this.timer = null; },
+    tutup: function (tunda) {
+      this.henti();
+      return new Promise(function (ok) { setTimeout(function () { $('unduhOverlay').classList.add('hidden'); ok(); }, tunda || 0); });
+    }
+  };
+  $('unduhLewati').addEventListener('click', function () { if (Unduh.lewati) Unduh.lewati(); });
+  function ukuranKB(b) { return b < 1024 * 1024 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+
   function unduhPaket(kelas) {
-    return UE.api('unduh', { kelas: kelas, dev: devId(), info: devInfo() }, 90000).then(function (r) {
+    var mulaiTerima = false, ukuran = 0;
+    Unduh.buka();
+    Unduh.tahap(0, 'Kelas ' + kelas.join(', '));
+    Unduh.set(3, 'Menghubungi server…');
+    Unduh.tunggu(4, 55, 'Server sedang menyiapkan soal & data siswa');
+    return UE.api('unduh', { kelas: kelas, dev: devId(), info: devInfo() }, 90000, function (diterima, total) {
+      if (!mulaiTerima) { mulaiTerima = true; Unduh.henti(); Unduh.tahap(1); }
+      ukuran = diterima;
+      var tahu = total && diterima <= total; // total = ukuran terkompresi; bila terlampaui, anggap tidak diketahui
+      Unduh.set(56 + 20 * (tahu ? diterima / total : 1 - Math.exp(-diterima / 150000)),
+        'Menerima data: ' + ukuranKB(diterima) + (tahu ? ' dari ' + ukuranKB(total) : ''));
+      Unduh.ket(1, ukuranKB(diterima));
+    }).then(function (r) {
+      Unduh.henti();
       if (r.versi !== 2) throw new Error('Server masih versi 1. Perbarui Code.gs ke versi 2.');
       var p = { versi: 2, sekolah: r.sekolah, kelas: r.kelas, users: {}, paket: {}, unduh: Date.now(), selisih: r.waktuServer - Date.now() };
       r.users.forEach(function (u) { p.users[u.u] = u; });
       r.paket.forEach(function (x) { p.paket[x.id] = x; });
+      var ringkas = r.users.length + ' siswa · ' + r.paket.length + ' ujian';
+      Unduh.tahap(2, ringkas);
+      if (!mulaiTerima) Unduh.ket(1, 'selesai');
+      Unduh.set(78, 'Menyimpan ' + ringkas + ' di HP…');
       if (!store.set(K.PKG, p)) throw new Error('Gagal menyimpan data di HP');
       $('schoolName').textContent = r.sekolah || '';
-      simpanGambar(r.paket);
-      if (Math.abs(p.selisih) > 5 * 60000) {
-        UE.dialog({ judul: 'Jam HP tidak tepat', pesan: 'Jam HP ini berbeda ' + Math.round(Math.abs(p.selisih) / 60000) + ' menit dari jam server. Betulkan jam HP agar token dan timer sesuai jadwal.' });
-      }
-      return p;
-    });
+      return simpanGambar(r.paket).then(function (g) {
+        p.gambar = g;
+        Unduh.tahap(4);
+        var kurang = g.total - g.ok;
+        Unduh.set(100, 'Selesai! ' + ringkas + (g.total ? ' · ' + g.ok + '/' + g.total + ' gambar' : '') + ' siap dipakai tanpa internet.' +
+          (!kurang ? '' : g.lewat ? ' ' + kurang + ' gambar sisanya tetap diunduh di latar belakang selama aplikasi terbuka.'
+            : ' ' + kurang + ' gambar belum tersimpan — tekan "Perbarui data" lagi saat sinyal bagus.'));
+        if (g.total) Unduh.ket(3, g.ok + '/' + g.total + ' tersimpan');
+        $('unduhJudul').textContent = '✅ Data berhasil diunduh';
+        $('unduhCatatan').classList.add('hidden');
+        return Unduh.tutup(kurang ? 3000 : 1300);
+      }).then(function () {
+        if (Math.abs(p.selisih) > 5 * 60000) {
+          UE.dialog({ judul: 'Jam HP tidak tepat', pesan: 'Jam HP ini berbeda ' + Math.round(Math.abs(p.selisih) / 60000) + ' menit dari jam server. Betulkan jam HP agar token dan timer sesuai jadwal.' });
+        }
+        return p;
+      });
+    }).catch(function (e) { return Unduh.tutup(0).then(function () { throw e; }); });
   }
+
+  function fetchBatas(u, ms) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
+    return fetch(u, { mode: 'no-cors', signal: ctrl ? ctrl.signal : undefined }).finally(function () { clearTimeout(t); });
+  }
+  /** Simpan gambar soal ke cache (4 sekaligus) sambil menampilkan progres. Hasil: {total, ok}. Gambar yang gagal tidak menggagalkan unduhan. */
   function simpanGambar(paket) {
-    if (!('caches' in window)) return;
     var urls = [];
     paket.forEach(function (p) { (p.gambar || []).forEach(function (g) { if (urls.indexOf(g) < 0) urls.push(g); }); });
-    if (!urls.length) return;
-    caches.open('ue-img').then(function (c) {
-      urls.forEach(function (u) { fetch(u, { mode: 'no-cors' }).then(function (res) { return c.put(u, res); }).catch(function () {}); });
+    if (!urls.length || !('caches' in window)) {
+      Unduh.tahap(3, urls.length ? 'tidak didukung HP ini' : 'tidak ada gambar');
+      return Promise.resolve({ total: 0, ok: 0 });
+    }
+    Unduh.tahap(3, '0/' + urls.length);
+    Unduh.set(80, 'Menyimpan gambar soal agar bisa dibuka offline: 0 dari ' + urls.length);
+    var hasil = { total: urls.length, ok: 0 }, selesai = 0, i = 0;
+    var kerja = caches.open('ue-img').then(function (c) {
+      function satu() {
+        if (i >= urls.length) return Promise.resolve();
+        var u = urls[i++];
+        return c.match(u).then(function (ada) {
+          return ada || fetchBatas(u, 20000).then(function (res) { return c.put(u, res); });
+        }).then(function () { hasil.ok++; }, function () {}).then(function () {
+          selesai++;
+          Unduh.ket(3, selesai + '/' + urls.length);
+          Unduh.set(80 + 20 * selesai / urls.length, 'Menyimpan gambar soal agar bisa dibuka offline: ' + selesai + ' dari ' + urls.length);
+          return satu();
+        });
+      }
+      var jalur = [];
+      for (var k = 0; k < Math.min(4, urls.length); k++) jalur.push(satu());
+      return Promise.all(jalur);
+    }).catch(function () {}).then(function () { return hasil; });
+    // Jaringan lambat: siswa boleh lanjut, gambar tetap diunduh di latar belakang
+    var tombol = setTimeout(function () { $('unduhLewati').classList.remove('hidden'); }, 6000);
+    var lewat = new Promise(function (ok) { Unduh.lewati = function () { ok({ total: hasil.total, ok: hasil.ok, lewat: true }); }; });
+    return Promise.race([kerja, lewat]).then(function (g) {
+      clearTimeout(tombol); Unduh.lewati = null; $('unduhLewati').classList.add('hidden');
+      return g;
     });
   }
 

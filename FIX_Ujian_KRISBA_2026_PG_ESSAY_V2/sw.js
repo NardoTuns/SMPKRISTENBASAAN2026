@@ -1,6 +1,6 @@
 ﻿/* Service worker — membuat aplikasi bisa dibuka tanpa internet.
    Setiap kali Anda mengubah file website, naikkan angka VERSI agar HP siswa ikut terbarui. */
-const VERSI = 'ue2-v8-banksoal';
+const VERSI = 'ue2-v9-progres-unduh';
 const SHELL = [
   './', './index.html', './kuis.html', './guru.html', './Cetak_Kartu.html', './config.js', './manifest.json',
   './assets/style.css', './assets/guru.css', './assets/common.js', './assets/app.js', './assets/guru.js', './assets/laporan.js',

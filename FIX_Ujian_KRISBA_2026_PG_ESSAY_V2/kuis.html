@@ -245,6 +245,24 @@
     </div>
   </div>
 
+  <!-- Overlay Progres Unduh Data (Unduh data & Perbarui data) -->
+  <div id="unduhOverlay" class="overlay hidden" style="z-index: 1000;" role="dialog" aria-modal="true" aria-labelledby="unduhJudul">
+    <div class="unduh-box">
+      <div class="unduh-judul" id="unduhJudul">📥 Mengunduh data ujian…</div>
+      <div class="unduh-track" role="progressbar" aria-label="Progres unduh"><div id="unduhBar"></div></div>
+      <div class="unduh-persen" id="unduhPersen" aria-live="polite">0%</div>
+      <div class="unduh-detail" id="unduhDetail"></div>
+      <ol class="unduh-langkah" id="unduhLangkah">
+        <li>Server menyiapkan data <small></small></li>
+        <li>Menerima data <small></small></li>
+        <li>Menyimpan di HP <small></small></li>
+        <li>Gambar soal (offline) <small></small></li>
+      </ol>
+      <button type="button" class="btn btn-wood btn-sm hidden" id="unduhLewati">Lanjut tanpa menunggu gambar</button>
+      <div class="unduh-catatan" id="unduhCatatan">Jangan tutup aplikasi sampai selesai.</div>
+    </div>
+  </div>
+
   <div id="toasts" aria-live="polite"></div>
   <script src="assets/common.js"></script>
   <script src="assets/app.js"></script>

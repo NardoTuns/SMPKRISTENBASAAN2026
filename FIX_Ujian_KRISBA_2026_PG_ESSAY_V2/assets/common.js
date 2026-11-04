@@ -4,7 +4,8 @@
   var CFG = window.APP_CONFIG || {};
 
   /* ---------- API ke Google Apps Script ---------- */
-  function api(action, data, timeoutMs) {
+  /** onProgress(diterima, total) opsional: dipanggil saat data balasan mengalir (total 0 = ukuran tidak diketahui) */
+  function api(action, data, timeoutMs, onProgress) {
     if (!CFG.API_URL || CFG.API_URL.indexOf('GANTI_DENGAN') >= 0) {
       return Promise.reject(new Error('URL API belum diatur di config.js'));
     }
@@ -20,7 +21,19 @@
       signal: ctrl ? ctrl.signal : undefined
     }).then(function (r) {
       if (!r.ok) throw new Error('Server membalas ' + r.status);
-      return r.json();
+      if (!onProgress || !r.body || !r.body.getReader || typeof TextDecoder === 'undefined') return r.json();
+      var total = +r.headers.get('Content-Length') || 0, diterima = 0, teks = '';
+      var reader = r.body.getReader(), dec = new TextDecoder();
+      onProgress(0, total);
+      return (function baca() {
+        return reader.read().then(function (x) {
+          if (x.done) { teks += dec.decode(); return JSON.parse(teks); }
+          diterima += x.value.length;
+          teks += dec.decode(x.value, { stream: true });
+          onProgress(diterima, total);
+          return baca();
+        });
+      })();
     }).then(function (j) {
       if (!j || j.ok === false) throw new Error((j && j.pesan) || 'Permintaan ditolak server');
       return j;

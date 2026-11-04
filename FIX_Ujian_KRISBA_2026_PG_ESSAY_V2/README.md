@@ -18,10 +18,11 @@ Aplikasi ujian bergaya game 2D yang bisa dikerjakan **tanpa internet**.
 | Paket: Duplikat & Hapus | **Duplikat** menyalin paket + seluruh soal (token tidak ikut, salinan nonaktif). **Hapus** bisa sekaligus menghapus soal & token paket. Ganti ID paket otomatis memindahkan soal & token (ditolak bila sudah ada hasil ujian). |
 | Bank Soal: Import file | **Import File (CSV / Excel .xlsx)** langsung, atau **Tempel dari Excel**. PG & essay sekaligus (sheet PG/ESSAY atau kolom TIPE). Ada **pratinjau & pengecekan per baris** sebelum disimpan. 3 cara: *Tambah & perbarui* (nomor sama ditimpa), *Tambahkan di akhir*, *Ganti seluruh soal*. |
 | Bank Soal: lainnya | **Hapus Semua Soal** paket terpilih (semua / PG saja / essay saja, konfirmasi ketik HAPUS), **Template** (Excel atau CSV), **Export** (Excel/CSV, bisa di-import kembali), **Pratinjau & cetak**, filter tipe & pencarian, kolom kunci/pedoman. Form soal: tipe & kunci berupa dropdown, pratinjau rumus langsung. |
+| **Progres unduh (siswa)** | Saat **Unduh data** / **Perbarui data**, siswa melihat persen dan 4 tahap: server menyiapkan data (dengan hitungan detik), menerima data (KB diterima), menyimpan di HP, dan gambar soal (x dari y). Bila gambar lambat, muncul tombol **Lanjut tanpa menunggu gambar** (gambar tetap diunduh di latar belakang). |
 | Data Siswa | Import CSV/Excel/tempel dengan pratinjau; username yang sudah ada **diperbarui**, bukan digandakan. Form siswa: kelas berupa dropdown. |
 | Perbaikan | Import soal sering gagal (tempel multi-baris terpotong jadi 1 baris, pemisah `;`/`,` salah terdeteksi, BOM, tanda kutip). Isian seperti `1/2`, `0,5`, `0123` tidak lagi berubah jadi tanggal/angka di spreadsheet. **Tambah/Edit siswa** sebelumnya selalu gagal (password siswa menimpa password guru) — sudah diperbaiki. |
 
-> **Wajib:** perbarui Apps Script (tempel `apps-script/Code.gs`, simpan, **Kelola deployment → Edit → Versi baru → Terapkan**). Bila server masih versi lama, menu Ringkasan menampilkan peringatan dan fitur baru meminta Anda memperbarui dulu. `VERSI` di `sw.js` sudah dinaikkan ke `ue2-v8-banksoal`.
+> **Wajib:** perbarui Apps Script (tempel `apps-script/Code.gs`, simpan, **Kelola deployment → Edit → Versi baru → Terapkan**). Bila server masih versi lama, menu Ringkasan menampilkan peringatan dan fitur baru meminta Anda memperbarui dulu. `VERSI` di `sw.js` sudah dinaikkan ke `ue2-v9-progres-unduh`.
 
 ### Format file import soal
 - **Paling mudah:** Bank Soal → **Template → Excel (.xlsx)**, isi sheet `PG` dan `ESSAY`, lalu **Import File**.

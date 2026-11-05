@@ -823,6 +823,7 @@
     if (r.tanpaKunci) masalah.push(r.tanpaKunci + ' soal PG kuncinya tidak valid');
     if (!r.tokenAktif && !r.tokenNanti) masalah.push('Belum ada token aktif');
     if (!r.peserta) masalah.push('Tidak ada siswa di kelas sasaran');
+    if (batasTerlaluPendek(p.mode, p.durasiMenit, r.waktuSoal)) masalah.push('Waktu maksimal ' + p.durasiMenit + ' menit lebih pendek dari waktu minimal semua soal (' + Math.ceil(r.waktuSoal / 60) + ' menit), siswa tidak akan sempat sampai soal terakhir');
     return { siap: p.aktif && !masalah.length, nonaktif: !p.aktif, masalah: masalah };
   }
   function renderRingkasan() {
@@ -1010,8 +1011,19 @@
   var KET_MODE = {
     TIMER: 'Siswa bebas maju-mundur, lompat nomor, dan menandai ragu-ragu. Ujian selesai otomatis saat durasi habis.',
     TIMERSOAL: 'Setiap soal memakai waktu soalnya. Saat habis jawaban terkunci dan pindah otomatis; tidak bisa kembali.',
-    TIMERFIXED: 'Tombol Lanjut terkunci sampai waktu soal habis; total waktu = jumlah waktu soal + 5%. Tidak bisa kembali.'
+    TIMERFIXED: 'Tombol Lanjut terkunci sampai waktu soal habis, lalu siswa masih boleh menjawab sampai waktu maksimal ujian habis. Tidak bisa kembali.'
   };
+  var MODE_BERBATAS = ['TIMER', 'TIMERFIXED']; // mode yang memakai DURASI_MENIT
+  /** TIMERFIXED: tombol Lanjut terkunci selama waktu tiap soal, jadi batas di bawah jumlahnya membuat soal terakhir tak tercapai */
+  function batasTerlaluPendek(mode, menit, waktuSoal) { return mode === 'TIMERFIXED' && +menit > 0 && !!waktuSoal && +menit * 60 < waktuSoal; }
+  function petunjukDurasi(v, r) {
+    var ring = (G.data && G.data.ringkasan) || [];
+    if (v.mode !== 'TIMERFIXED') return 'Kosongkan = jumlah waktu semua soal.';
+    if (ring.length && !ring.some(function (x) { return x.waktuSoal !== undefined; })) return 'Server belum diperbarui: batas ini baru berlaku setelah Code.gs versi baru di-deploy.';
+    var total = r && r.waktuSoal, mnt = total ? Math.ceil(total / 60) : 0;
+    if (batasTerlaluPendek(v.mode, v.durasi, total)) return 'Terlalu pendek: tombol Lanjut terkunci total ' + mnt + ' menit, siswa tidak akan sempat sampai soal terakhir.';
+    return 'Kosongkan = jumlah waktu soal + 5%' + (total ? ' (' + Math.ceil(total * 1.05 / 60) + ' menit). Waktu minimal semua soal: ' + mnt + ' menit.' : '.');
+  }
   var POLA_ID = /^[A-Za-z0-9._-]+$/;
   var PESAN_ID = 'ID paket hanya boleh huruf, angka, titik, tanda hubung (-) dan garis bawah (_), tanpa spasi.';
 
@@ -1026,7 +1038,7 @@
         var r = ringkasPaket(p.id) || {}, id = UE.esc(p.id);
         return '<tr><td><b>' + id + '</b></td><td class="wrap">' + UE.esc(p.nama) + '</td><td>' + UE.esc(p.mapel) + '</td><td class="wrap">' + UE.esc(p.kelas.join(', ')) + '</td>' +
           '<td>' + (r.pg || 0) + ' PG · ' + (r.es || 0) + ' essay</td><td>' + UE.esc(p.mode) + '</td>' +
-          '<td>' + (p.mode === 'TIMER' ? (p.durasiMenit ? p.durasiMenit + ' mnt' : 'Otomatis') : '–') + '</td>' +
+          '<td>' + (MODE_BERBATAS.indexOf(p.mode) >= 0 ? (p.durasiMenit ? p.durasiMenit + ' mnt' : 'Otomatis') : '–') + '</td>' +
           '<td>' + ya(p.acak) + '</td><td>' + ya(p.acakOpsi) + '</td><td>' + ya(p.tampil) + '</td><td>' + ya(p.aktif) + '</td>' +
           '<td><div class="aksi"><button class="btn btn-blue btn-sm" data-editpaket="' + id + '">Edit</button>' +
           '<button class="btn btn-wood btn-sm" data-duplikatpaket="' + id + '">Duplikat</button>' +
@@ -1059,7 +1071,7 @@
         { k: 'nama', label: 'Nama ujian', req: true, placeholder: 'mis. Ulangan Harian Kalor' },
         { k: 'mapel', label: 'Mata pelajaran', list: daftarMapelData(), placeholder: 'mis. IPA', hint: 'Tulis konsisten agar laporan per mapel rapi.' },
         { k: 'mode', label: 'Mode timer', type: 'select', wide: true, opsi: OPSI_MODE, hint: function (v) { return KET_MODE[v.mode]; } },
-        { k: 'durasi', label: 'Durasi ujian (menit)', type: 'number', min: 1, show: function (v) { return v.mode === 'TIMER'; }, hint: 'Kosongkan = jumlah waktu semua soal.' },
+        { k: 'durasi', label: 'Waktu maksimal ujian (menit)', type: 'number', min: 1, show: function (v) { return MODE_BERBATAS.indexOf(v.mode) >= 0; }, hint: function (v) { return petunjukDurasi(v, r); } },
         { k: 'kelas', label: 'Kelas peserta', type: 'checks', req: true, opsi: daftarKelasSemua().map(function (k) { return { v: k, t: k }; }),
           semua: 'SEMUA', semuaLabel: 'Semua kelas', tambahan: 'Kelas lain yang belum ada di daftar (pisahkan dengan koma)' },
         { k: 'pengaturan', label: 'Pengaturan ujian', type: 'toggles', opsi: [
@@ -1071,9 +1083,14 @@
       validasi: function (v) { return POLA_ID.test(v.id) ? '' : PESAN_ID; },
       simpan: function (v) {
         var yt = function (b) { return b ? 'YA' : 'TIDAK'; };
-        return guru('guruSimpanPaket', { idlama: baru ? '' : p.id, id: terkunci ? p.id : v.id, nama: v.nama, mapel: v.mapel, kelas: v.kelas.join(', '), mode: v.mode,
-          durasi: v.mode === 'TIMER' ? v.durasi : (p ? p.durasiMenit || '' : ''), acak: yt(v.acak), acakopsi: yt(v.acakopsi), tampil: yt(v.tampil), aktif: yt(v.aktif) })
-          .then(function (res) {
+        var yakin = !batasTerlaluPendek(v.mode, v.durasi, r && r.waktuSoal) ? Promise.resolve(true) : UE.dialog({
+          judul: 'Waktu maksimal terlalu pendek', bahaya: true, ok: 'Tetap simpan', batal: 'Perbaiki',
+          pesan: 'Tombol Lanjut terkunci total ' + Math.ceil(r.waktuSoal / 60) + ' menit, sedangkan waktu maksimal hanya ' + v.durasi + ' menit. Ujian akan berakhir otomatis sebelum siswa sampai soal terakhir.' });
+        return yakin.then(function (lanjut) {
+          if (!lanjut) throw new Error('Belum disimpan. Perbesar waktu maksimal ujian atau kosongkan.');
+          return guru('guruSimpanPaket', { idlama: baru ? '' : p.id, id: terkunci ? p.id : v.id, nama: v.nama, mapel: v.mapel, kelas: v.kelas.join(', '), mode: v.mode,
+          durasi: MODE_BERBATAS.indexOf(v.mode) >= 0 ? v.durasi : (p ? p.durasiMenit || '' : ''), acak: yt(v.acak), acakopsi: yt(v.acakopsi), tampil: yt(v.tampil), aktif: yt(v.aktif) });
+        }).then(function (res) {
             var id = (res && res.id) || v.id;
             UE.toast('Paket ' + id + ' tersimpan' + (res && res.pindah ? ' · ' + res.pindah + ' soal/token ikut pindah ke ID baru' : ''), 'ok');
             return muatUlang().then(function () {

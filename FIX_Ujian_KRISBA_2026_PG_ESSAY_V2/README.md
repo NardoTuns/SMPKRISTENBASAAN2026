@@ -9,6 +9,25 @@ Aplikasi ujian bergaya game 2D yang bisa dikerjakan **tanpa internet**.
 - Rumus matematika ditulis dengan **MathJax/LaTeX**.
 - Guru memantau ujian secara langsung dan mencetak **laporan PDF**.
 
+## Cetak Soal (`Cetak_Soal.html`) — PDF & Word
+
+Buka dari dashboard guru: **Tautan → Cetak soal (PDF & Word)**. Sesi login ikut terbawa; bila dibuka langsung, masukkan password guru.
+
+| Bagian | Keterangan |
+|---|---|
+| **Pilihan** | Mata pelajaran dan kelas boleh lebih dari satu. Paket nonaktif tampil tetapi tidak tercentang. Bisa dibuat naskah terpisah per kelas, varian Paket A–D dengan kunci menyesuaikan, dan pemilihan soal per butir. |
+| **Template** | Soal lalu Jawaban · Soal beserta Jawaban · Tabel (No, Soal, Jawaban, Level, TP) · Soal Saja · Naskah 2 Kolom · Soal + Ruang Jawab · Lembar Jawaban · Kunci & Penskoran · Kisi-kisi · Kartu Soal. |
+| **KOP** | Baris teks, ukuran, tebal, urutan, logo kiri/kanan, dan jenis garis. Tersimpan di perangkat dan bisa dicadangkan ke file. |
+| **PDF** | Tombol **Simpan PDF** membuka dialog cetak browser; pilih tujuan **Simpan sebagai PDF**. |
+| **Word** | Tombol **Unduh Word** langsung menghasilkan `.docx`; rumus LaTeX menjadi persamaan Word yang bisa diedit (rumus butuh MathJax yang termuat, jadi perlu internet saat pertama dipakai). |
+
+**Level soal.** Spreadsheet bawaan belum punya data level. Ada tiga cara mengisinya, dari prioritas tertinggi:
+1. Isi langsung di menu **Butir** (tersimpan di browser perangkat itu; bisa dipindah lewat **Tata letak → Cadangan pengaturan**).
+2. Tambahkan kolom `LEVEL` di ujung kanan `SOAL_PG` dan `SOAL_ESSAY`, isi `L1`–`L3`, `1`–`3`, atau `C1`–`C6`. Perlu `Code.gs` terbaru: **Kelola deployment → Edit → Versi baru → Terapkan**.
+3. Tombol **Perkirakan level kosong** menebak dari kata kerja pada TP. Hasilnya bertanda *perkiraan* dan perlu ditinjau guru.
+
+> Gambar soal di Word disematkan dengan mengunduhnya di browser. Bila server gambar menolak, tautannya dicetak di dokumen dan muncul peringatan, sehingga gambar perlu disisipkan manual.
+
 ## Yang baru (pembaruan November 2026 — Code.gs 3.1)
 
 | Fitur | Keterangan |

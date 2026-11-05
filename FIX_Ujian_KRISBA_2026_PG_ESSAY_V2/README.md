@@ -11,7 +11,9 @@ Aplikasi ujian bergaya game 2D yang bisa dikerjakan **tanpa internet**.
 
 ## Cetak Soal (`Cetak_Soal.html`) — PDF & Word
 
-Buka dari dashboard guru: **Tautan → Cetak soal (PDF & Word)**. Sesi login ikut terbawa; bila dibuka langsung, masukkan password guru.
+Buka dari dashboard guru: **Tautan → Cetak soal (PDF & Word)**. Sesi login ikut terbawa; bila dibuka langsung, masukkan password guru atau password cetak.
+
+**Password khusus cetak.** Isi `PASSWORD_CETAK` di sheet `PENGATURAN` agar guru mapel bisa mencetak tanpa masuk dashboard. Password ini hanya bisa membuka `Cetak_Soal.html`, tetapi bisa melihat **semua paket beserta kunci jawabannya**, jadi berikan hanya kepada guru yang berwenang. Kosongkan untuk mematikannya. Perlu `Code.gs` terbaru (**Kelola deployment → Edit → Versi baru → Terapkan**); bila baris `PASSWORD_CETAK` belum ada, jalankan menu **🎯 Ujian → 1. Siapkan / perbarui sheet** atau tambahkan barisnya manual.
 
 | Bagian | Keterangan |
 |---|---|
@@ -156,7 +158,7 @@ API_URL: 'https://script.google.com/macros/s/AKfycb.../exec',
 | NAMA_UJIAN, MAPEL | Tampil ke siswa dan di laporan. Isi MAPEL dengan konsisten agar laporan per mapel rapi. |
 | KELAS | `VIII-A, VIII-B` atau `SEMUA` |
 | MODE_TIMER | `TIMER` / `TIMERSOAL` / `TIMERFIXED` |
-| DURASI_MENIT | Khusus mode `TIMER`. Jika dikosongkan, durasi = jumlah `WAKTU_DETIK` semua soal. |
+| DURASI_MENIT | Waktu maksimal ujian, untuk mode `TIMER` dan `TIMERFIXED` (diabaikan pada `TIMERSOAL`). Jika dikosongkan: `TIMER` = jumlah `WAKTU_DETIK` semua soal; `TIMERFIXED` = jumlah `WAKTU_DETIK` + 5%. |
 | ACAK_SOAL | `YA` = urutan soal diacak per siswa (PG tetap di depan, essay di belakang) |
 | ACAK_OPSI | `YA` = urutan opsi A–E diacak per siswa |
 | TAMPILKAN_NILAI | `YA` = siswa bisa melihat nilai di menu "Lihat nilaiku" |
@@ -168,9 +170,11 @@ API_URL: 'https://script.google.com/macros/s/AKfycb.../exec',
 |---|---|---|
 | **TIMER** | Satu timer untuk seluruh ujian (`DURASI_MENIT`). Siswa bebas maju, mundur, lompat ke nomor mana saja, dan menandai **ragu-ragu**. Ujian selesai otomatis saat waktu habis. | Ulangan biasa, PAS/PAT, gaya ANBK |
 | **TIMERSOAL** | Setiap soal punya timer (`WAKTU_DETIK`). Saat timer habis, **jawaban terkunci** dan soal otomatis berganti. Siswa boleh lanjut lebih cepat, tetapi tidak bisa kembali. | Kuis cepat, soal hafalan |
-| **TIMERFIXED** | Setiap soal punya timer minimal: tombol **Lanjut terkunci** sampai timer soal habis. Setelah itu siswa **masih boleh menjawab** lalu menekan Lanjut. Ada **timer total = jumlah waktu semua soal + 5%**; jika habis, ujian selesai otomatis. Tidak bisa kembali. | Mencegah siswa terburu-buru dan asal menjawab |
+| **TIMERFIXED** | Setiap soal punya timer minimal: tombol **Lanjut terkunci** sampai timer soal habis. Setelah itu siswa **masih boleh menjawab** lalu menekan Lanjut. Ada **timer total = `DURASI_MENIT`** (bila kosong: jumlah waktu semua soal + 5%); jika habis, ujian selesai otomatis. Tidak bisa kembali. | Mencegah siswa terburu-buru dan asal menjawab |
 
-> Pada mode TIMERFIXED, waktu yang dipakai siswa setelah timer soal habis diambil dari cadangan 5%. Untuk soal yang butuh lebih banyak waktu, besarkan `WAKTU_DETIK`-nya.
+> Pada mode TIMERFIXED, waktu yang dipakai siswa setelah timer soal habis diambil dari selisih antara waktu maksimal dan jumlah waktu soal. Contoh: 40 soal × 60 detik dengan `DURASI_MENIT` 60 berarti tombol Lanjut terkunci 60 detik per soal (total 40 menit) dan siswa punya cadangan 20 menit. Tanpa `DURASI_MENIT`, cadangannya hanya 5% (total 42 menit).
+>
+> Waktu maksimal tidak boleh lebih pendek dari jumlah waktu soal, karena siswa tidak akan sempat sampai soal terakhir; dashboard memberi peringatan. Setelah waktu diubah, siswa perlu menekan **Perbarui data** agar batas baru berlaku.
 
 ### `SOAL_PG` — pilihan ganda
 | ID_PAKET | NO | SOAL | GAMBAR | OPSI_A | OPSI_B | OPSI_C | OPSI_D | OPSI_E | KUNCI | SKOR | WAKTU_DETIK | TUJUAN_PEMBELAJARAN |
@@ -205,6 +209,7 @@ API_URL: 'https://script.google.com/macros/s/AKfycb.../exec',
 | Kunci | Isi |
 |---|---|
 | NAMA_SEKOLAH, PASSWORD_GURU | **Ganti `guru123`!** |
+| PASSWORD_CETAK | Opsional: password khusus `Cetak_Soal.html`. Tidak bisa membuka dashboard, tetapi bisa melihat semua soal & kunci |
 | AI_PROVIDER, AI_MODEL, AUTO_NILAI, INSTRUKSI_AI | Pengaturan penilaian essay |
 | KKM | Batas tuntas di laporan (bisa diubah juga di form laporan) |
 | TAHUN_PELAJARAN, KOTA, NAMA_GURU, NIP_GURU, NAMA_KEPSEK, NIP_KEPSEK | Kop dan tanda tangan laporan |

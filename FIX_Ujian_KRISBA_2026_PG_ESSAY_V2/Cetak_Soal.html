@@ -550,8 +550,8 @@ mjx-container svg{max-width:100%}
 <div class="lapis hidden" id="lapisLogin" role="dialog" aria-modal="true" aria-labelledby="judulLogin">
   <form class="dialog" id="formLogin">
     <h3 id="judulLogin">Masuk Cetak Soal</h3>
-    <p>Gunakan password dashboard guru untuk mengambil soal dari spreadsheet.</p>
-    <label class="f"><span>Password guru</span><input type="password" id="pwLogin" autocomplete="current-password"></label>
+    <p>Gunakan password cetak soal atau password dashboard guru untuk mengambil soal dari spreadsheet.</p>
+    <label class="f"><span>Password</span><input type="password" id="pwLogin" autocomplete="current-password"></label>
     <div class="form-err" id="errLogin" role="alert"></div>
     <div class="aksi">
       <button class="btn" type="button" id="btnContoh">Coba dengan data contoh</button>
@@ -637,7 +637,8 @@ const simpan = () => {
 };
 
 /* ---------- Data ---------- */
-let PW = '', META = null, MODE_CONTOH = false;
+const AKSI_CETAK = { meta: 'cetakMeta', soal: 'cetakSoal' }, AKSI_GURU = { meta: 'guruMeta', soal: 'guruAmbilSoal' };
+let PW = '', META = null, MODE_CONTOH = false, AKSI = AKSI_CETAK;
 const SOAL = {}, STATUS = {}, GALAT = {};
 
 const KERTAS = { A4: [210, 297], F4: [215, 330], LETTER: [215.9, 279.4], LEGAL: [215.9, 355.6], A5: [148, 210] };
@@ -679,7 +680,7 @@ function ambilSoal(id, paksa) {
 function pompa() {
   while (aktifAmbil < 3 && antre.length) {
     const id = antre.shift(); aktifAmbil++;
-    UE.api('guruAmbilSoal', { paket: id, password: PW }, 90000).then(r => { SOAL[id] = r.soal || []; STATUS[id] = 'ok'; })
+    UE.api(AKSI.soal, { paket: id, password: PW }, 90000).then(r => { SOAL[id] = r.soal || []; STATUS[id] = 'ok'; })
       .catch(e => { STATUS[id] = 'err'; GALAT[id] = e.message; })
       .finally(() => { aktifAmbil--; pompa(); perbaruiPilihan(); });
   }
@@ -841,7 +842,7 @@ function daftarUnit() {
 /* ---------- Pembentuk blok ---------- */
 const skorStr = v => String(+(+v).toFixed(2)).replace('.', ',');
 function jumlahSoalStr(u) { return [u.pg.length ? u.pg.length + ' pilihan ganda' : '', u.es.length ? u.es.length + ' essay' : ''].filter(Boolean).join(', '); }
-function waktuStr(u) { return S.naskah.waktu || (u.p.durasiMenit ? u.p.durasiMenit + ' menit' : ''); }
+function waktuStr(u) { return S.naskah.waktu || (u.p.durasiMenit && u.p.mode !== 'TIMERSOAL' ? u.p.durasiMenit + ' menit' : ''); } // TIMERSOAL tidak memakai DURASI_MENIT
 function judulNaskah(u) { return (S.naskah.judul || u.p.nama || '').toUpperCase(); }
 const setelan = k => (META && META.setting && META.setting[k]) || '';
 function nilaiTTD() {
@@ -2134,8 +2135,17 @@ function setSumber(teks, contoh) { const p = $('sumber'); p.textContent = teks; 
 async function hubungkan() {
   setSumber('Menghubungkan…');
   try {
-    const m = await UE.api('guruMeta', { password: PW }, 60000);
-    sessionStorage.setItem('ue_guru_pw', PW);
+    let m;
+    try {
+      AKSI = AKSI_CETAK;
+      m = await UE.api(AKSI.meta, { password: PW }, 60000);
+    } catch (e) {
+      if (!/Aksi tidak dikenal/i.test(e.message)) throw e;
+      AKSI = AKSI_GURU; // Code.gs belum diperbarui: hanya password guru yang berlaku
+      m = await UE.api(AKSI.meta, { password: PW }, 60000);
+    }
+    // Disimpan terpisah dari sesi dashboard, karena password cetak tidak berlaku di dashboard
+    sessionStorage.setItem('cs_pw', PW);
     MODE_CONTOH = false;
     $('lapisLogin').classList.add('hidden');
     setSumber('Terhubung ke spreadsheet');
@@ -2144,6 +2154,7 @@ async function hubungkan() {
     return true;
   } catch (e) {
     setSumber('Belum terhubung');
+    if (/password/i.test(e.message)) { sessionStorage.removeItem('cs_pw'); sessionStorage.removeItem('ue_guru_pw'); }
     $('errLogin').textContent = e.message;
     $('lapisLogin').classList.remove('hidden');
     return false;
@@ -2226,7 +2237,7 @@ function dataContoh() {
   isiIkatan(); renderKop(); renderTemplate(); renderOpsiFilterLevel();
   renderChip($('chipMapel'), [], [], 'mapel'); renderChip($('chipKelas'), [], [], 'kelas'); renderPaket();
   $('pages').innerHTML = layarKosong();
-  PW = sessionStorage.getItem('ue_guru_pw') || '';
+  PW = sessionStorage.getItem('ue_guru_pw') || sessionStorage.getItem('cs_pw') || '';
   if (PW) hubungkan();
   else { $('lapisLogin').classList.remove('hidden'); setTimeout(() => $('pwLogin').focus(), 50); }
 })();

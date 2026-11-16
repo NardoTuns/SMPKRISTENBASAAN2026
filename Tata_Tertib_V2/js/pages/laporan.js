@@ -54,7 +54,7 @@ export function render(view, route) {
   const u = me();
   const cur = JENIS.find((j) => j.kode === f.jenis);
 
-  view.append(pageHead('Laporan', 'Pilih laporan, atur tanggal atau periode, lalu unduh PDF atau kirim ke WhatsApp.'));
+  view.append(pageHead('Laporan', 'Pilih laporan, atur tanggal atau periode, lalu unduh PDF, Word, atau kirim ke WhatsApp.'));
 
   // ---- 1. pilih laporan
   const harian = JENIS[0];
@@ -98,6 +98,7 @@ export function render(view, route) {
     h('div', { class: 'report-actions' },
       h('div', { class: 'export-bar', role: 'group', 'aria-label': 'Unduh atau bagikan laporan' },
         btn('Unduh PDF', () => runExport('pdf', ...doc()), { kind: 'primary', ic: 'download' }),
+        btn('Word', () => runExport('docx', ...doc()), { ic: 'report', class: 'btn word', title: 'Unduh dokumen Word (.docx) yang bisa diedit' }),
         btn('Kirim WA', () => waExport(...doc()), { kind: 'wa', ic: 'wa' }),
         btn('Cetak', () => runExport('print', ...doc()), { ic: 'printer' })),
       h('div', { class: 'export-more' },

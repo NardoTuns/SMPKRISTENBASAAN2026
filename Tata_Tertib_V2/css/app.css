@@ -941,3 +941,7 @@ button.barrow { cursor: pointer; }
 .paper-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .paper-pick { display: flex; align-items: center; gap: 10px; flex: 1 1 260px; font-weight: 600; font-size: 14px; }
 .paper-pick select { flex: 1; min-height: 44px; padding: 6px 10px; font-size: 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text); }
+.btn.word { background: #2b579a; color: #fff; }
+.btn.word:hover { background: #224680; }
+.export-bar { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 700px; }
+@media (max-width: 520px) { .export-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

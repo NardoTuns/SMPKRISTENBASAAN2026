@@ -4,6 +4,7 @@
 import { h, icon, btn, iconBtn, sheet, toast, dialog, downloadBlob } from './dom.js';
 import { signHtml, readSign } from './sign.js';
 import { paperSize, paperCode, PAPER_OPTIONS } from './paper.js';
+import { makeDocx } from './docx.js';
 
 const scripts = new Map();
 
@@ -190,17 +191,17 @@ function busyOverlay(text) {
 function busyDone() { busy?.remove(); busy = null; }
 
 /**
- * action: 'pdf' | 'png' | 'wa-pdf' | 'wa-png' | 'print'.
+ * action: 'pdf' | 'png' | 'docx' | 'wa-pdf' | 'wa-png' | 'print'.
  * opts: {landscape, fileBase, waNumber (62…), waText, waTo (nama penerima)}
  */
 export async function runExport(action, title, html, opts = {}) {
   html = withSignPrefs(html);
   if (action === 'print') return printNow(title, html, opts);
-  const kind = action.endsWith('png') ? 'png' : 'pdf';
-  busyOverlay(kind === 'pdf' ? 'Menyiapkan PDF…' : 'Menyiapkan gambar PNG…');
+  const kind = action.endsWith('png') ? 'png' : action.endsWith('docx') ? 'docx' : 'pdf';
+  busyOverlay({ pdf: 'Menyiapkan PDF…', png: 'Menyiapkan gambar PNG…', docx: 'Menyiapkan dokumen Word…' }[kind]);
   let res;
   try {
-    res = kind === 'pdf' ? await makePdf(title, html, opts) : await makePng(title, html, opts);
+    res = kind === 'pdf' ? await makePdf(title, html, opts) : kind === 'docx' ? await makeDocx(title, html, opts) : await makePng(title, html, opts);
   } catch (e) {
     busyDone();
     toast(e.message || 'Gagal membuat file.');
@@ -211,7 +212,7 @@ export async function runExport(action, title, html, opts = {}) {
   window.__lastExport = { name, type: res.blob.type, size: res.blob.size, blob: res.blob, pages: res.pages };
   if (!action.startsWith('wa')) {
     downloadBlob(res.blob, name);
-    toast(`${kind.toUpperCase()} tersimpan: ${name}${res.pages > 1 ? ` (${res.pages} halaman)` : ''}`);
+    toast(kind === 'docx' ? `Word tersimpan: ${name} — buka di Microsoft Word/WPS untuk diedit` : `${kind.toUpperCase()} tersimpan: ${name}${res.pages > 1 ? ` (${res.pages} halaman)` : ''}`);
     return name;
   }
   return shareToWhatsApp(res.blob, name, title, opts);
@@ -366,6 +367,7 @@ export function openDoc(title, html, opts = {}) {
       h('div', { class: 'doc-actions' },
         btn('Unduh PDF', () => runExport('pdf', title, cur(), opts), { ic: 'download', kind: 'primary' }),
         btn('Unduh PNG', () => runExport('png', title, cur(), opts), { ic: 'download' }),
+        btn('Unduh Word (bisa diedit)', () => runExport('docx', title, cur(), opts), { ic: 'report', class: 'btn tonal wide word' }),
         btn('WA (PDF)', () => runExport('wa-pdf', title, cur(), opts), { ic: 'wa', kind: 'wa' }),
         btn('WA (PNG)', () => runExport('wa-png', title, cur(), opts), { ic: 'wa', kind: 'wa' }),
         btn('Cetak', () => printNow(title, cur(), opts), { ic: 'printer', kind: 'tonal', class: 'btn tonal wide' })));

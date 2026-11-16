@@ -6,7 +6,7 @@ import { printSurat } from '../ui/print.js';
 import { S, D, me, saveRow } from '../store.js';
 import { canTindak, canTindakAny, kelasWali, isMgr } from '../core/perm.js';
 import { STATUS_TINDAK } from '../core/rules.js';
-import { addDays, fmtNum, fmtTgl, ymd, cmpKelas } from '../core/util.js';
+import { addDays, daysBetween, isYmd, fmtNum, fmtTgl, ymd, cmpKelas } from '../core/util.js';
 
 export const meta = { title: 'Tindak Lanjut', live: true };
 let limit = 50;
@@ -114,14 +114,28 @@ export function openTindak(t) {
 /** Isian tambahan sebelum mencetak surat (jadwal panggilan, skorsing, tanggal sidang). */
 function letterDialog(t, f) {
   const kind = t.level?.surat || '';
-  const o = { nomor: f.nomorSurat, tanggal: f.tanggalPelaksanaan || ymd(), hariTemu: addDays(ymd(), 2), jamTemu: '09:00', tempat: `Ruang BK ${S.settings.namaSekolah}`, mulai: addDays(ymd(), 1), selesai: addDays(ymd(), 3), sidang: ymd() };
-  const inp = (key, type, label) => h('label', { class: 'field' }, h('span', { class: 'lbl', text: label }), h('input', { type, value: o[key], oninput: (e) => { o[key] = e.target.value; } }));
+  const o = { nomor: f.nomorSurat, tanggal: f.tanggalPelaksanaan || ymd(), hariTemu: addDays(ymd(), 2), jamTemu: '09:00', tempat: `Ruang BK ${S.settings.namaSekolah}`, mulai: addDays(ymd(), 1), lama: 3, selesai: addDays(ymd(), 3), sidang: ymd() };
+  const els = {};
+  const inp = (key, type, label, after, attrs = {}) => h('label', { class: 'field' }, h('span', { class: 'lbl', text: label }),
+    (els[key] = h('input', { type, value: o[key], ...attrs, oninput: (e) => { o[key] = e.target.value; after?.(); } })));
+  // Lama skorsing ↔ tanggal selesai saling menyesuaikan (dihitung hari kalender, termasuk hari mulai).
+  const fromLama = () => { const n = Math.max(1, Math.round(Number(o.lama) || 1)); if (isYmd(o.mulai)) { o.selesai = addDays(o.mulai, n - 1); els.selesai.value = o.selesai; } };
+  const fromSelesai = () => { if (isYmd(o.mulai) && isYmd(o.selesai)) { const n = daysBetween(o.mulai, o.selesai) + 1; if (n >= 1) { o.lama = n; els.lama.value = n; } } };
   dialog('Data surat', h('div', { class: 'stack-sm' },
     inp('nomor', 'text', 'Nomor surat'), inp('tanggal', 'date', 'Tanggal surat'),
     kind === 'SP2' || kind === 'SP3' ? h('div', { class: 'stack-sm' }, h('p', { class: 'muted small', text: 'Jadwal panggilan orang tua/wali' }),
       h('div', { class: 'form-row' }, inp('hariTemu', 'date', 'Tanggal'), inp('jamTemu', 'time', 'Jam')), inp('tempat', 'text', 'Tempat')) : null,
-    kind === 'SP3' ? h('div', { class: 'form-row' }, inp('mulai', 'date', 'Skorsing mulai'), inp('selesai', 'date', 'Skorsing selesai')) : null,
+    kind === 'SP3' ? h('div', { class: 'stack-sm' }, h('p', { class: 'muted small', text: 'Skorsing' }),
+      h('div', { class: 'form-row' }, inp('lama', 'number', 'Lama skorsing (hari)', fromLama, { min: 1, max: 30, step: 1, inputmode: 'numeric' }), inp('mulai', 'date', 'Mulai', fromLama), inp('selesai', 'date', 'Selesai', fromSelesai)),
+      h('p', { class: 'hint', text: 'Ubah lama skorsing, tanggal selesai menyesuaikan otomatis (atau ubah tanggal selesai, lama ikut berubah). Teks surat: "skorsing selama … hari".' })) : null,
     kind === 'SP3' || kind === 'KELUAR' ? inp('sidang', 'date', 'Tanggal Sidang Dewan Guru') : null,
     !kind ? h('p', { class: 'muted small', text: 'Tahap ini tidak memerlukan surat resmi; dicetak lembar catatan pembinaan.' }) : null),
-  [{ label: 'Batal', value: null }, { label: 'Buat surat', value: 'ok', kind: 'primary' }]).then((v) => { if (v === 'ok') printSurat(t, o); });
+  [{ label: 'Batal', value: null }, { label: 'Buat surat', value: 'ok', kind: 'primary' }]).then((v) => {
+    if (v !== 'ok') return;
+    if (kind === 'SP3') {
+      o.lama = Math.max(1, Math.round(Number(o.lama) || 3));
+      if (!isYmd(o.selesai) || daysBetween(o.mulai, o.selesai) + 1 !== o.lama) o.selesai = addDays(o.mulai, o.lama - 1);
+    }
+    printSurat(t, o);
+  });
 }

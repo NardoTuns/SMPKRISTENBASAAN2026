@@ -21,6 +21,17 @@ export function addDays(s, n) {
   return ymd(d);
 }
 export const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+
+/** Bilangan dalam kata (0–999), mis. 3 → "tiga", 12 → "dua belas". */
+export function terbilang(n) {
+  n = Math.floor(Math.abs(Number(n) || 0));
+  const s = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+  if (n < 12) return s[n];
+  if (n < 20) return `${s[n - 10]} belas`;
+  if (n < 100) return `${s[Math.floor(n / 10)]} puluh${n % 10 ? ' ' + s[n % 10] : ''}`;
+  if (n < 1000) return `${n < 200 ? 'seratus' : s[Math.floor(n / 100)] + ' ratus'}${n % 100 ? ' ' + terbilang(n % 100) : ''}`;
+  return String(n);
+}
 /** Senin pada minggu tanggal s. */
 export function weekStart(s) {
   const d = parseYmd(s);

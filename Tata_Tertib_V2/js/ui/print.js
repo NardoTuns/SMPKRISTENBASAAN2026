@@ -1,7 +1,7 @@
 // Dokumen A4: BAP, kartu kedisiplinan, surat tahap sanksi, laporan, ringkasan, dan tata tertib.
 // Setiap dokumen dibuka di lembar "Bagikan": unduh PDF/PNG, kirim ke WhatsApp, atau cetak.
 import { S, D, me, katNama } from '../store.js';
-import { esc, fmtNum, fmtTgl, hariOf, ymd, addDays, waNumber } from '../core/util.js';
+import { esc, fmtNum, fmtTgl, hariOf, ymd, addDays, daysBetween, terbilang, waNumber } from '../core/util.js';
 import { byTime } from '../core/points.js';
 import { openDoc } from './export.js';
 import { signHtml } from './sign.js';
@@ -157,6 +157,7 @@ export function printSurat(item, o = {}) {
   const rinci = `<h3>Rincian pelanggaran</h3>${rincian(sum, { upTo: { tanggal: item.tanggalCapai } })}`;
   const lampiranRule = `<p>Ketentuan ini sesuai Tata Tertib dan Peraturan Sekolah ${esc(s.namaSekolah)} butir A (Prosedur Tindak Lanjut dan Akumulasi Poin): <em>${esc(level?.tindakan || '')}</em></p>`;
   let html = '';
+  let label = level?.label || 'Surat';
 
   if (kind === 'SP1') {
     html = `<div class="doc">${docHead('Surat Peringatan 1 (SP 1)\nTeguran Tertulis', o.nomor)}
@@ -185,11 +186,14 @@ export function printSurat(item, o = {}) {
       ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([bk, kepsek])}</div>`;
   } else if (kind === 'SP3') {
     const mulai = o.mulai || addDays(tgl, 1);
-    const selesai = o.selesai || addDays(mulai, 2);
+    const lama = Math.max(1, Number(o.lama) || (o.selesai ? daysBetween(mulai, o.selesai) + 1 : 3));
+    const selesai = o.selesai || addDays(mulai, lama - 1);
+    label = label.replace(/\b\d+\s*hari\b/i, `${lama} Hari`);
+    const periode = mulai === selesai ? `tanggal <b>${fmtTgl(mulai)}</b>` : `tanggal <b>${fmtTgl(mulai)}</b> s/d <b>${fmtTgl(selesai)}</b>`;
     html = `<div class="doc">${docHead('Surat Peringatan 3 (SP 3)\ndan Pemberitahuan Skorsing', o.nomor)}
       <p>Kepada Yth.<br>${esc(ortu)}<br>di tempat</p><p>Dengan hormat,</p>
       <p>Berdasarkan Buku Kedisiplinan Siswa dan hasil Sidang Dewan Guru${o.sidang ? ` tanggal ${fmtTgl(o.sidang)}` : ''}, siswa:</p>${identitas(siswa)}
-      <p>telah mengumpulkan akumulasi <b>${poin} poin</b> pelanggaran tata tertib sehingga dikenakan <b>Surat Peringatan 3 (SP 3)</b> disertai <b>skorsing selama 3 (tiga) hari</b>, yaitu tanggal <b>${fmtTgl(mulai)}</b> s/d <b>${fmtTgl(selesai)}</b>.</p>${lampiranRule}
+      <p>telah mengumpulkan akumulasi <b>${poin} poin</b> pelanggaran tata tertib sehingga dikenakan <b>Surat Peringatan 3 (SP 3)</b> disertai <b>skorsing selama ${lama} (${terbilang(lama)}) hari</b>, yaitu ${periode}.</p>${lampiranRule}
       <p>Selama masa skorsing, siswa belajar mandiri di rumah di bawah pengawasan orang tua/wali dan mengerjakan tugas yang diberikan sekolah. Bapak/Ibu diminta hadir di sekolah pada:</p>${temu}
       <p>Apabila akumulasi poin mencapai ${nextMin(level)} poin, siswa akan dikenakan Peringatan Keras Terakhir dengan surat perjanjian bermaterai.</p>
       ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([bk, kepsek])}</div>`;
@@ -219,7 +223,7 @@ export function printSurat(item, o = {}) {
       <h3>Pembinaan yang dilakukan</h3><p><span class="dots">..................................................................................................................</span><br><span class="dots">..................................................................................................................</span></p>
       ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([{ role: 'Siswa', name: siswa.nama, nip: siswa.nis, nipLabel: 'NIS.' }, { role: 'Guru Pembina', name: me()?.nama, nip: me()?.nip }])}</div>`;
   }
-  printDoc(`${level?.label || 'Surat'} ${siswa.nama}`, html, waOrtu(siswa, `Yth. Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}, terlampir surat dari ${s.namaSekolah} perihal ${level?.label || 'pembinaan'} untuk ananda ${siswa.nama} (kelas ${siswa.kelas}). Mohon dibaca dan ditindaklanjuti. Terima kasih.`));
+  printDoc(`${label} ${siswa.nama}`, html, waOrtu(siswa, `Yth. Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}, terlampir surat dari ${s.namaSekolah} perihal ${level?.label || 'pembinaan'} untuk ananda ${siswa.nama} (kelas ${siswa.kelas}). Mohon dibaca dan ditindaklanjuti. Terima kasih.`));
 }
 const nextMin = (level) => { const n = D().levels.find((l) => l.min > (level?.min || 0)); return n ? n.min : 100; };
 

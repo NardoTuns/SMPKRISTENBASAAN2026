@@ -148,7 +148,7 @@ try {
   assert.equal(rows[0]['Poin'], 20);
   assert.equal(rows[0]['Lokasi'], 'Ruang kelas');
   assert.equal(rows[0]['Tindakan Langsung'], 'HP disita sementara');
-  assert.equal(rows[0]['Siswa Pelapor'], 'Citra Mandagi');
+  assert.equal(rows[0]['Pelapor'], 'Citra Mandagi');
   assert.match(rows[0]['Kronologi'], /bermain game/);
   assert.equal(await A.st('D().summaries.get("s1").level.kode'), 'LISAN');
   ok('catat 3 langkah (HP saat jam pelajaran, 20 poin, tindakan & pelapor) → tersimpan & terkirim; Budi masuk Peringatan Lisan');
@@ -251,8 +251,10 @@ try {
   assert.equal(tl.length, 1);
   assert.equal(tl[0].Status, 'Selesai');
   assert.equal(tl[0]['Kode Tahap'], 'SP1');
-  assert.match(tl[0]['Nomor Surat'], /^001\/SP1\/SMPKB\/X\/2026$/);
-  ok('wali kelas 7A memproses SP 1 Budi (nomor surat otomatis 001/SP1/SMPKB/X/2026) → tersimpan di sheet Tindak Lanjut');
+  const romawi = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][new Date().getMonth()];
+  const nomorSP = `001/SP1/SMPKB/${romawi}/${new Date().getFullYear()}`;
+  assert.equal(tl[0]['Nomor Surat'], nomorSP);
+  ok(`wali kelas 7A memproses SP 1 Budi (nomor surat otomatis ${nomorSP}) → tersimpan di sheet Tindak Lanjut`);
 
   // ---- admin: tambah jenis pelanggaran → HP A menerimanya
   await B.go('#/akun');
@@ -352,7 +354,7 @@ try {
   // ---- Halaman Siswa & Orang Tua: tanpa nama di daftar, cek anak dengan NIS
   await A.p.goto(base + 'DashboardSiswa.html');
   await A.p.waitFor('window.__siswa && document.querySelector(".ds-hero")', 15000);
-  assert.match(await A.p.eval('document.getElementById("view").textContent'), /Siswa tanpa pelanggaran/);
+  assert.match(await A.p.eval('document.getElementById("view").textContent'), /siswa tanpa pelanggaran/i);
   await A.p.eval(`location.hash = '#kelas/7A'`);
   await A.p.waitFor('document.querySelector(".ds-tiles")', 5000);
   assert.equal((await A.p.eval('document.getElementById("view").textContent')).includes('Budi Santoso'), false, 'nama siswa tidak ditampilkan di rekap kelas');

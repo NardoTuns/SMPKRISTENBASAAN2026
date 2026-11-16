@@ -187,7 +187,7 @@ export function render(view, route) {
     const moreBox = h('div', { class: 'stack-sm', hidden: !draft.more },
       field('Kronologi', kron),
       field('Saksi', h('input', { type: 'text', value: draft.saksi, placeholder: 'Nama saksi (guru/staf/siswa)', oninput: bind('saksi') })),
-      field('Siswa pelapor', h('input', { type: 'text', value: draft.pelapor, placeholder: 'Bila ada', list: 'dl-siswa', oninput: bind('pelapor') })),
+      field('Pelapor', h('input', { type: 'text', value: draft.pelapor, placeholder: 'Nama pelapor (siswa/guru/staf), bila ada', list: 'dl-siswa', oninput: bind('pelapor') })),
       h('datalist', { id: 'dl-siswa' }, ...d.aktif.slice(0, 600).map((s) => h('option', { value: s.nama }))));
     const moreBtn = h('button', { class: 'btn text small more-btn', type: 'button', 'aria-expanded': String(draft.more), onclick: () => {
       draft.more = !draft.more; moreBox.hidden = !draft.more; moreBtn.setAttribute('aria-expanded', String(draft.more));

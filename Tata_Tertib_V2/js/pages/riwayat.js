@@ -112,7 +112,7 @@ function calendar(recs, onDay) {
 }
 
 function exportCsv(recs, label) {
-  const rows = [['Tanggal', 'Jam', 'NIS', 'Nama Siswa', 'Kelas', 'Kode', 'Bentuk Pelanggaran', 'Kategori', 'Tingkat', 'Poin', 'Lokasi', 'Kronologi', 'Saksi', 'Siswa Pelapor', 'Tindakan Langsung', 'Dicatat Oleh', 'Dibuat Pada', 'Dibatalkan', 'Alasan Pembatalan']];
+  const rows = [['Tanggal', 'Jam', 'NIS', 'Nama Siswa', 'Kelas', 'Kode', 'Bentuk Pelanggaran', 'Kategori', 'Tingkat', 'Poin', 'Lokasi', 'Kronologi', 'Saksi', 'Pelapor', 'Tindakan Langsung', 'Dicatat Oleh', 'Dibuat Pada', 'Dibatalkan', 'Alasan Pembatalan']];
   for (const r of [...recs].sort((a, b) => (a.tanggal + (a.jam || '') > b.tanggal + (b.jam || '') ? 1 : -1))) {
     rows.push([r.tanggal, r.jam, r.nis, r.nama, r.kelas, r.jenisKode, r.uraian, `${r.kategori}. ${katNama(r.kategori)}`, r.tingkat, r.poin, r.lokasi, r.kronologi, r.saksi, r.pelapor, r.tindakanLangsung, r.guruNama || r.guru, r.createdAt, r.batal ? 'Ya' : 'Tidak', r.alasanBatal]);
   }

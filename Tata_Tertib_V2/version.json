@@ -1,10 +1,9 @@
 {
-  "version": "1.3.0",
-  "date": "2026-10-27",
+  "version": "1.4.0",
+  "date": "2026-11-16",
   "notes": [
-    "Dokumen laporan kini berwarna: pita judul, kotak angka, batang tingkat pelanggaran, grafik batang, tabel berkepala biru tua, dan label warna untuk tingkat/tahap/status. Surat resmi tetap formal.",
-    "Beranda lebih sederhana: kartu Hari ini dengan tombol Catat pelanggaran & Laporan hari ini, menu cepat, dan grafik lengkap dilipat di Grafik & analisis lengkap.",
-    "Halaman Laporan: kartu besar Laporan Hari Ini (bisa pilih tanggal) dan kartu berwarna untuk setiap rekap/daftar; hasil dilengkapi grafik.",
-    "Catatan kronologi tetap ikut di setiap laporan; Laporan Harian kini punya kolom Tingkat tersendiri."
+    "Penanda tangan dokumen bisa diatur sebelum dicetak: centang/hapus centang setiap pihak, ubah nama, jabatan, keterangan atas, dan NIP/NIS, atau tambah penanda tangan lain. Berlaku untuk BAP, kartu, surat SP, laporan, dan tata tertib.",
+    "BAP: \"Siswa Pelapor\" menjadi \"Pelapor\"; tersedia pilihan tambahan Wali Kelas, Guru BK, dan Mengetahui Kepala Sekolah.",
+    "Semua dokumen bergaya resmi hitam-putih: kop surat bergaris ganda, judul di tengah, tabel bergaris, dan tanda tangan tersusun rapi."
   ]
 }

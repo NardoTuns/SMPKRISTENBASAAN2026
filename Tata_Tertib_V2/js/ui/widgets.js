@@ -143,7 +143,7 @@ export function openRecord(r) {
           const def = j ? (j.zt ? 100 : Number(j.poin)) : null;
           return `${r.poin} poin${def != null && def !== Number(r.poin) ? ` (poin aturan: ${def}${j.poinMaks ? '–' + j.poinMaks : ''}; disesuaikan guru)` : ''}`;
         })()),
-        kv('Lokasi', r.lokasi), u ? kv('Kronologi', r.kronologi) : null, u ? kv('Saksi', r.saksi) : null, u ? kv('Siswa pelapor', r.pelapor) : null,
+        kv('Lokasi', r.lokasi), u ? kv('Kronologi', r.kronologi) : null, u ? kv('Saksi', r.saksi) : null, u ? kv('Pelapor', r.pelapor) : null,
         kv('Tindakan langsung', r.tindakanLangsung),
         kv('Akumulasi setelah ini', after && !r.batal ? `${fmtNum(after.after)} poin` : null),
         kv('Dicatat oleh', `${r.guruNama || r.guru || '-'}${r.createdAt ? ' · ' + r.createdAt : ''}`),

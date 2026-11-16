@@ -48,7 +48,7 @@ var TABLES = {
     ['id', 'ID', 't'], ['tanggal', 'Tanggal', 'd'], ['jam', 'Jam', 'tm'], ['siswaId', 'ID Siswa', 't'], ['nis', 'NIS', 't'],
     ['nama', 'Nama Siswa', 't'], ['kelas', 'Kelas', 't'], ['jenisKode', 'Kode Pelanggaran', 't'], ['uraian', 'Bentuk Pelanggaran', 't'],
     ['kategori', 'Kategori', 't'], ['tingkat', 'Tingkat', 't'], ['poin', 'Poin', 'n'], ['lokasi', 'Lokasi', 't'],
-    ['kronologi', 'Kronologi', 't'], ['saksi', 'Saksi', 't'], ['pelapor', 'Siswa Pelapor', 't'], ['tindakanLangsung', 'Tindakan Langsung', 't'],
+    ['kronologi', 'Kronologi', 't'], ['saksi', 'Saksi', 't'], ['pelapor', 'Pelapor', 't'], ['tindakanLangsung', 'Tindakan Langsung', 't'],
     ['guru', 'Dicatat Oleh', 't'], ['guruNama', 'Nama Guru', 't'], ['createdAt', 'Dibuat Pada', 'dt'],
     ['batal', 'Dibatalkan', 'b', false], ['alasanBatal', 'Alasan Pembatalan', 't'], ['device', 'Perangkat', 't']]
     .concat(META).concat([['_rev', '_rev', 'n']]) },
@@ -200,7 +200,7 @@ function apiPull_(body) {
       out[name + 'Count'] = rows.length;
       out[name] = since ? rows.filter(function (r) { return (Number(r._rev) || 0) > since - REV_OVERLAP_MS; }) : rows;
     });
-    // Tanpa login: identitas siswa pelapor, saksi, dan kronologi tidak dikirim (melindungi pelapor).
+    // Tanpa login: identitas pelapor, saksi, dan kronologi tidak dikirim (melindungi pelapor).
     if (!auth) out.pelanggaran = out.pelanggaran.map(publicRecord_);
     out.full = !since;
   } else {
@@ -667,6 +667,12 @@ function ensureSheet_(def) {
   var width = Math.max(sh.getLastColumn(), 1);
   var head = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h).trim(); });
   var used = head.filter(function (h) { return h !== ''; }).length;
+  def.cols.forEach(function (c) {
+    if (!HEAD_ALIAS[c[0]]) return;
+    head.forEach(function (h, i) {
+      if (HEAD_ALIAS[c[0]].indexOf(h.toLowerCase()) >= 0) { sh.getRange(1, i + 1).setValue(c[1]); head[i] = c[1]; }
+    });
+  });
   var missing = def.cols.filter(function (c) { return !head.some(function (h) { return sameHead_(h, c); }); });
   if (missing.length) {
     var start = used ? sh.getLastColumn() + 1 : 1;
@@ -683,7 +689,12 @@ function ensureSheet_(def) {
   return sh;
 }
 
-function sameHead_(h, c) { var n = String(h).trim().toLowerCase(); return n === c[1].toLowerCase() || n === c[0].toLowerCase(); }
+// Nama kolom lama yang tetap dikenali (sheet yang dibuat versi sebelumnya); judulnya diganti otomatis ke nama baru.
+var HEAD_ALIAS = { pelapor: ['siswa pelapor'] };
+function sameHead_(h, c) {
+  var n = String(h).trim().toLowerCase();
+  return n === c[1].toLowerCase() || n === c[0].toLowerCase() || (HEAD_ALIAS[c[0]] || []).indexOf(n) >= 0;
+}
 function colIndex_(def, head) {
   var idx = {};
   def.cols.forEach(function (c) {

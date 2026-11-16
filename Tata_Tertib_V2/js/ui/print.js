@@ -4,6 +4,7 @@ import { S, D, me, katNama } from '../store.js';
 import { esc, fmtNum, fmtTgl, hariOf, ymd, addDays, waNumber } from '../core/util.js';
 import { byTime } from '../core/points.js';
 import { openDoc } from './export.js';
+import { signHtml } from './sign.js';
 
 const st = () => S.settings;
 
@@ -23,13 +24,12 @@ function kop() {
   const info = [s.npsn ? `NPSN ${s.npsn}` : '', s.alamat, s.telepon ? `Telp. ${s.telepon}` : '', s.email].filter(Boolean).join(' · ');
   return `<div class="kop">${s.logo ? `<img class="kop-logo" src="${esc(s.logo)}" alt="">` : ''}
     <div class="kop-text">${s.yayasan ? `<div class="kop-yys">${esc(s.yayasan)}</div>` : ''}
-    <div class="kop-nama">${esc(s.namaSekolah)}</div>${info ? `<div class="kop-info">${esc(info)}</div>` : ''}</div></div>`;
+    <div class="kop-nama">${esc(s.namaSekolah)}</div>${info ? `<div class="kop-info">${esc(info)}</div>` : ''}</div>
+    ${s.logo ? '<div class="kop-logo kop-pad"></div>' : ''}</div><div class="kop-rule"></div>`;
 }
 
-// Setiap kolom punya baris atas (boleh kosong) dan ruang tanda tangan setinggi sama → nama sejajar.
-const sign = (cols) => `<table class="sign"><tr>${cols.map((c) => `<td><div>${c.top ? esc(c.top) : '&nbsp;'}</div><div>${esc(c.role)}</div>
-  ${c.materai ? '<div class="materai">Materai<br>10.000</div>' : '<div class="sign-space"></div>'}
-  <div class="sign-name">${c.name ? esc(c.name) : '(..............................................)'}</div><div>${c.nip ? `NIP/NIY. ${esc(c.nip)}` : '&nbsp;'}</div></td>`).join('')}</tr></table>`;
+// Blok tanda tangan: lihat sign.js (bisa diaktifkan/dinonaktifkan & diedit di lembar pratinjau).
+const sign = (cols) => signHtml(cols);
 
 const tempatTanggal = (tgl = ymd()) => `${esc(st().kota || '')}${st().kota ? ', ' : ''}${fmtTgl(tgl)}`;
 
@@ -65,30 +65,52 @@ export function kronHtml(recs = []) {
 const docHead = (judul, nomor) => `${kop()}<h1 class="doc-title">${esc(judul)}</h1>${nomor !== undefined ? `<p class="doc-no">Nomor: ${nomor ? esc(nomor) : '........................................'}</p>` : ''}`;
 
 // ------------------------------------------------------------------ BAP
+const waliOf = (kelas) => S.d.users.find((u) => u.peran === 'Wali Kelas' && String(u.kelasWali).toLowerCase().split(/[,;]\s*/).includes(String(kelas).toLowerCase()));
+
+/**
+ * Penanda tangan BAP. Empat pihak utama aktif secara bawaan; Wali Kelas, Guru BK, dan Kepala Sekolah
+ * tersedia sebagai pilihan (nonaktif) — semuanya dapat diaktifkan/dinonaktifkan dan diedit di pratinjau.
+ */
+export function bapSigners(r, s = {}) {
+  const guru = S.d.users.find((u) => u.username === r.guru);
+  const wali = waliOf(r.kelas || s.kelas);
+  return [
+    { key: 'pelapor', role: 'Pelapor', name: r.pelapor },
+    { key: 'saksi', role: 'Saksi', name: r.saksi },
+    { key: 'pelanggar', role: 'Siswa Pelanggar', name: r.nama, nip: s.nis || r.nis, nipLabel: 'NIS.' },
+    { key: 'pemeriksa', role: 'Guru Berwenang', name: r.guruNama || guru?.nama, nip: guru?.nip },
+    { key: 'wali', role: 'Wali Kelas', name: wali?.nama, nip: wali?.nip, on: false },
+    { key: 'bk', role: 'Guru BK', name: st().guruBK, nip: st().nipBK, on: false },
+    { key: 'kepsek', top: 'Mengetahui,', role: 'Kepala Sekolah', name: st().kepalaSekolah, nip: st().nipKepsek, on: false },
+  ];
+}
+
 export function printBAP(r) {
   const d = D();
   const s = d.siswaMap.get(r.siswaId) || { nama: r.nama, kelas: r.kelas, nis: r.nis };
   const sum = d.summaries.get(r.siswaId);
   const after = sum?.timeline.find((t) => t.rec.id === r.id);
   const lv = after ? d.levels.filter((l) => l.min <= after.after).pop() : null;
-  const lines = (v) => (v ? esc(v) : '<span class="dots">..................................................................................................................</span><br><span class="dots">..................................................................................................................</span>');
-  const html = `<div class="doc">${docHead('Berita Acara Pemeriksaan (BAP)\nPelanggaran Tata Tertib Siswa', '')}
-    <p>Pada hari ini <b>${hariOf(r.tanggal)}</b>, tanggal <b>${fmtTgl(r.tanggal)}</b>${r.jam ? `, pukul <b>${esc(r.jam)} ${esc(st().zonaWaktu)}</b>` : ''}${r.lokasi ? `, bertempat di <b>${esc(r.lokasi)}</b>` : ''}, telah dilakukan pemeriksaan terhadap siswa:</p>
+  const dots = '<span class="dots">..................................................................................................................</span>';
+  const lines = (v) => (v ? `<div class="box-text">${esc(v)}</div>` : `<p>${dots}<br>${dots}<br>${dots}</p>`);
+  const isi = (v) => (v ? esc(v) : '..........................................');
+  const html = `<div class="doc">${docHead('Berita Acara Pemeriksaan\nPelanggaran Tata Tertib Siswa', '')}
+    <p>Pada hari ini <b>${hariOf(r.tanggal)}</b>, tanggal <b>${fmtTgl(r.tanggal)}</b>${r.jam ? `, pukul <b>${esc(r.jam)} ${esc(st().zonaWaktu)}</b>` : ''}${r.lokasi ? `, bertempat di <b>${esc(r.lokasi)}</b>` : ''}, yang bertanda tangan di bawah ini telah melakukan pemeriksaan terhadap siswa:</p>
     ${identitas(s)}
-    <h3>A. Pelanggaran</h3>
+    <h3>A. Pelanggaran yang Dilakukan</h3>
     <table class="ident"><tr><td>Kode / bentuk</td><td>:</td><td>${esc(r.jenisKode)}. ${esc(r.uraian)}</td></tr>
       <tr><td>Kategori</td><td>:</td><td>${esc(r.kategori)}. ${esc(katNama(r.kategori))}</td></tr>
-      <tr><td>Tingkat / poin</td><td>:</td><td>Pelanggaran ${esc(r.tingkat)} · <b>${r.poin} poin</b></td></tr>
-      <tr><td>Akumulasi poin</td><td>:</td><td>${after ? `<b>${after.after} poin</b>${lv ? ` → tahap <b>${esc(lv.label)}</b>` : ''}` : '-'}</td></tr></table>
-    <h3>B. Kronologi kejadian</h3><p>${lines(r.kronologi)}</p>
+      <tr><td>Tingkat / poin</td><td>:</td><td>Pelanggaran ${esc(r.tingkat)}, <b>${r.poin} poin</b></td></tr>
+      <tr><td>Akumulasi poin</td><td>:</td><td>${after ? `<b>${after.after} poin</b>${lv ? `, tahap <b>${esc(lv.label)}</b>` : ''}` : '-'}</td></tr></table>
+    <h3>B. Kronologi Kejadian</h3>${lines(r.kronologi)}
     <h3>C. Keterangan</h3>
-    <table class="ident"><tr><td>Saksi</td><td>:</td><td>${r.saksi ? esc(r.saksi) : '..........................................'}</td></tr>
-      <tr><td>Siswa pelapor</td><td>:</td><td>${r.pelapor ? esc(r.pelapor) : '..........................................'}</td></tr>
-      <tr><td>Tindakan langsung</td><td>:</td><td>${r.tindakanLangsung ? esc(r.tindakanLangsung) : '..........................................'}</td></tr></table>
+    <table class="ident"><tr><td>Pelapor</td><td>:</td><td>${isi(r.pelapor)}</td></tr>
+      <tr><td>Saksi</td><td>:</td><td>${isi(r.saksi)}</td></tr>
+      <tr><td>Tindakan langsung</td><td>:</td><td>${isi(r.tindakanLangsung)}</td></tr></table>
     ${r.batal ? `<p class="stamp">DIBATALKAN — ${esc(r.alasanBatal)}</p>` : ''}
     <p>Demikian berita acara ini dibuat dengan sebenar-benarnya untuk dipergunakan sebagaimana mestinya.</p>
     <p class="right">${tempatTanggal(r.tanggal)}</p>
-    ${sign([{ role: 'Siswa Pelapor', name: r.pelapor }, { role: 'Saksi', name: r.saksi }, { role: 'Siswa Pelanggar', name: r.nama }, { role: 'Guru Berwenang', name: r.guruNama }])}
+    ${sign(bapSigners(r, s))}
   </div>`;
   printDoc(`BAP ${r.nama} ${r.tanggal}`, html, waOrtu(s, `Yth. Bapak/Ibu ${s.ortu || 'Orang Tua/Wali'}, terlampir Berita Acara Pemeriksaan pelanggaran tata tertib ananda ${r.nama} (kelas ${r.kelas}) tanggal ${fmtTgl(r.tanggal)}. — ${st().namaSekolah}`));
 }
@@ -101,7 +123,7 @@ export function printKartu(siswa) {
 
 /** Kartu kedisiplinan dari data siswa + ringkasan (summarize). Dipakai juga Halaman Siswa & Orang Tua (tanpa kronologi). */
 export function kartuHtml(siswa, sum, { kronologi = showKron() } = {}) {
-  const wali = S.d.users.find((u) => u.peran === 'Wali Kelas' && String(u.kelasWali).toLowerCase().split(/[,;]\s*/).includes(String(siswa.kelas).toLowerCase()));
+  const wali = waliOf(siswa.kelas);
   return `<div class="doc">${docHead('Kartu Kendali Kedisiplinan Siswa')}
     ${identitas(siswa, [['Tahun ajaran', `${st().tahunAjaran} · Semester ${st().semester}`]])}
     <div class="summary-box"><div><span>Total akumulasi poin</span><b>${fmtNum(sum.total)}</b></div><div><span>Jumlah pelanggaran</span><b>${sum.count}</b></div>
@@ -125,7 +147,7 @@ export function printSurat(item, o = {}) {
   const s = st();
   const tgl = o.tanggal || ymd();
   const poin = item.poinSaat || sum.total;
-  const wali = S.d.users.find((u) => u.peran === 'Wali Kelas' && String(u.kelasWali).toLowerCase().split(/[,;]\s*/).includes(String(siswa.kelas).toLowerCase()));
+  const wali = waliOf(siswa.kelas);
   const kepsek = { role: 'Kepala Sekolah', name: s.kepalaSekolah, nip: s.nipKepsek };
   const bk = { role: 'Guru BK / Komite Disiplin', name: s.guruBK, nip: s.nipBK };
   const ortu = /^(bapak|ibu|bpk|bp\.|sdr)/i.test(siswa.ortu || '') ? siswa.ortu : `Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}`;
@@ -152,7 +174,7 @@ export function printSurat(item, o = {}) {
       <li>Apabila saya kembali melanggar, saya bersedia menerima sanksi sesuai Tata Tertib dan Peraturan Sekolah, termasuk pemanggilan orang tua/wali.</li></ol>
       <p>Demikian surat komitmen ini saya buat dengan sadar dan tanpa paksaan dari pihak mana pun.</p>
       <p class="right">${tempatTanggal(tgl)}</p>
-      ${sign([{ role: 'Wali Kelas', name: wali?.nama, nip: wali?.nip }, { top: 'Mengetahui,', role: 'Orang Tua/Wali', name: siswa.ortu }, { role: 'Siswa yang berjanji', name: siswa.nama }])}</div>`;
+      ${sign([{ role: 'Wali Kelas', name: wali?.nama, nip: wali?.nip }, { top: 'Mengetahui,', role: 'Orang Tua/Wali', name: siswa.ortu }, { role: 'Siswa yang Berjanji', name: siswa.nama, nip: siswa.nis, nipLabel: 'NIS.' }])}</div>`;
   } else if (kind === 'SP2') {
     html = `<div class="doc">${docHead('Surat Peringatan 2 (SP 2)\ndan Panggilan Orang Tua/Wali', o.nomor)}
       <p>Kepada Yth.<br>${esc(ortu)}<br>di tempat</p><p>Dengan hormat,</p>
@@ -181,7 +203,7 @@ export function printSurat(item, o = {}) {
       <li>Menyetujui klausul berikut: <em>"Apabila siswa mencapai akumulasi 100 poin atau melakukan pelanggaran Zero-Tolerance (langsung 100 poin), orang tua/wali menerima keputusan pengembalian siswa kepada orang tua secara final tanpa hak untuk melakukan penuntutan hukum dalam bentuk apa pun kepada pihak sekolah."</em></li></ol>
       <p>Demikian surat perjanjian ini dibuat dengan penuh kesadaran tanpa paksaan dari pihak mana pun.</p>
       ${rinci}<p class="right">${tempatTanggal(tgl)}</p>
-      ${sign([{ role: 'Orang Tua/Wali', name: siswa.ortu, materai: true }, { role: 'Siswa', name: siswa.nama }, { top: 'Mengetahui,', ...bk }, kepsek])}</div>`;
+      ${sign([{ role: 'Orang Tua/Wali', name: siswa.ortu, materai: true }, { role: 'Siswa', name: siswa.nama, nip: siswa.nis, nipLabel: 'NIS.' }, { top: 'Mengetahui,', ...bk }, kepsek])}</div>`;
   } else if (kind === 'KELUAR') {
     html = `<div class="doc">${docHead('Surat Keputusan\nPengembalian Siswa kepada Orang Tua/Wali', o.nomor)}
       <p>Kepala ${esc(s.namaSekolah)}, setelah</p>
@@ -195,16 +217,15 @@ export function printSurat(item, o = {}) {
     html = `<div class="doc">${docHead('Catatan Pembinaan Siswa', o.nomor)}
       <p>Siswa berikut telah mencapai tahap <b>${esc(level?.label || item.tahapLabel)}</b> dengan akumulasi <b>${poin} poin</b>:</p>${identitas(siswa)}${lampiranRule}
       <h3>Pembinaan yang dilakukan</h3><p><span class="dots">..................................................................................................................</span><br><span class="dots">..................................................................................................................</span></p>
-      ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([{ role: 'Siswa', name: siswa.nama }, { role: 'Guru Pembina', name: me()?.nama }])}</div>`;
+      ${rinci}<p class="right">${tempatTanggal(tgl)}</p>${sign([{ role: 'Siswa', name: siswa.nama, nip: siswa.nis, nipLabel: 'NIS.' }, { role: 'Guru Pembina', name: me()?.nama, nip: me()?.nip }])}</div>`;
   }
   printDoc(`${level?.label || 'Surat'} ${siswa.nama}`, html, waOrtu(siswa, `Yth. Bapak/Ibu ${siswa.ortu || 'Orang Tua/Wali'}, terlampir surat dari ${s.namaSekolah} perihal ${level?.label || 'pembinaan'} untuk ananda ${siswa.nama} (kelas ${siswa.kelas}). Mohon dibaca dan ditindaklanjuti. Terima kasih.`));
 }
 const nextMin = (level) => { const n = D().levels.find((l) => l.min > (level?.min || 0)); return n ? n.min : 100; };
 
-// ------------------------------------------------------------------ laporan berwarna (rekap, daftar, ringkasan)
-// Surat resmi (BAP, kartu, surat tahap, tata tertib) tetap hitam-putih. Laporan memakai gaya .rpt: pita judul,
-// kotak angka, grafik batang HTML (aman untuk html2canvas), tabel berkepala navy, dan pil warna untuk
-// tingkat/tahap/status — warna selalu disertai tulisan, jadi tetap terbaca bila dicetak hitam-putih.
+// ------------------------------------------------------------------ laporan (rekap, daftar, ringkasan)
+// Semua dokumen bergaya resmi hitam-putih: kop surat bergaris ganda, judul tengah bergaris bawah, tabel
+// bergaris, kotak angka & grafik batang abu-abu (aman untuk html2canvas dan cetak hitam-putih).
 const dicetak = () => `Dibuat ${fmtTgl(ymd())}${me() ? ` oleh ${esc(me().nama)}` : ''} dari aplikasi Tata Tertib ${esc(st().namaSekolah)}.`;
 const signPejabat = () => sign([{ role: 'Guru BK', name: st().guruBK, nip: st().nipBK }, { top: 'Mengetahui,', role: 'Kepala Sekolah', name: st().kepalaSekolah, nip: st().nipKepsek }]);
 

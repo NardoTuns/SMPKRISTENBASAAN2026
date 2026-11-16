@@ -1,7 +1,8 @@
 // Dokumen → Cetak / PDF / PNG / kirim ke WhatsApp. Dokumen (BAP, surat, laporan) dipotong menjadi halaman A4
 // di kertas tak terlihat, dirasterisasi dengan html2canvas, lalu dirakit jsPDF. Kedua pustaka dimuat saat
 // dibutuhkan saja dan ikut tersimpan offline oleh service worker.
-import { h, icon, btn, sheet, toast, dialog, downloadBlob } from './dom.js';
+import { h, icon, btn, iconBtn, sheet, toast, dialog, downloadBlob } from './dom.js';
+import { signHtml, readSign } from './sign.js';
 
 const A4 = { portrait: [794, 1123], landscape: [1123, 794] };
 const scripts = new Map();
@@ -78,6 +79,24 @@ function paginate(html, landscape) {
         }
         continue;
       }
+      // Blok tanda tangan dipecah per baris; baris pertama tetap bersama "tempat, tanggal".
+      const srows = el.matches('.sign-block') ? [...el.children] : null;
+      if (srows && srows.length > 1) {
+        let part = el.cloneNode(false);
+        holder.append(part);
+        for (const row of srows) {
+          part.append(row);
+          if (fits()) continue;
+          part.removeChild(row);
+          const carry = part.children.length ? [] : (holder.removeChild(part), takeTrailing());
+          newPage();
+          holder.append(...carry);
+          part = el.cloneNode(false);
+          holder.append(part);
+          part.append(row);
+        }
+        continue;
+      }
       const carry = takeTrailing();
       newPage();
       holder.append(...carry, el); // elemen lebih tinggi dari satu halaman tetap ditaruh (terpotong di bawah)
@@ -142,6 +161,7 @@ export async function makePng(title, html, { landscape = false } = {}) {
 
 // ------------------------------------------------------------------ cetak, unduh, bagikan
 export async function printNow(title, html, { landscape = false } = {}) {
+  html = withSignPrefs(html);
   const root = document.getElementById('print-root');
   root.innerHTML = `<style>@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 12mm 15mm; }</style>${cleanHtml(html)}`;
   await Promise.all([...root.querySelectorAll('img')].map((img) => img.decode?.().catch(() => {})));
@@ -165,6 +185,7 @@ function busyDone() { busy?.remove(); busy = null; }
  * opts: {landscape, fileBase, waNumber (62…), waText, waTo (nama penerima)}
  */
 export async function runExport(action, title, html, opts = {}) {
+  html = withSignPrefs(html);
   if (action === 'print') return printNow(title, html, opts);
   const kind = action.endsWith('png') ? 'png' : 'pdf';
   busyOverlay(kind === 'pdf' ? 'Menyiapkan PDF…' : 'Menyiapkan gambar PNG…');
@@ -218,12 +239,91 @@ export async function waExport(title, html, opts = {}) {
   return null;
 }
 
-/** Lembar dokumen: pratinjau + Unduh PDF / Unduh PNG / Kirim WA / Cetak. */
+// ------------------------------------------------------------------ penanda tangan (pratinjau)
+const LS_TTD = 'tatib.ttd.v1';
+const loadPrefs = () => { try { return JSON.parse(localStorage.getItem(LS_TTD) || '{}') || {}; } catch { return {}; } };
+const savePrefs = (p) => { try { localStorage.setItem(LS_TTD, JSON.stringify(p)); } catch { /* penyimpanan tidak tersedia */ } };
+/** Jenis blok = gabungan kunci bawaan; pilihan aktif/nonaktif diingat per jenis dokumen. */
+const blockKind = (cols) => cols.filter((c) => !c.custom).map((c) => c.key).join('|');
+
+/**
+ * Dokumen yang dapat diedit penanda tangannya: blok .sign-block di HTML dibaca, diubah lewat panel,
+ * lalu dirender ulang. html() selalu mengembalikan versi terbaru untuk pratinjau, PDF, PNG, WA, dan cetak.
+ */
+function signDoc(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = cleanHtml(html);
+  const els = [...tpl.content.querySelectorAll('.sign-block')];
+  const prefs = loadPrefs();
+  const blocks = els.map((el, i) => {
+    const base = readSign(el);
+    const kind = blockKind(base);
+    const saved = prefs[kind] || {};
+    const cols = base.map((c) => (c.key in saved ? { ...c, on: !!saved[c.key] } : { ...c }));
+    const docEl = el.closest('.doc');
+    const title = (docEl?.querySelector('.doc-title')?.textContent || `Dokumen ${i + 1}`).replace(/\s+/g, ' ').trim();
+    return { el, base, kind, cols, title };
+  });
+  const apply = (b) => {
+    const fresh = document.createElement('template');
+    fresh.innerHTML = signHtml(b.cols);
+    const n = fresh.content.firstElementChild;
+    b.el.replaceWith(n);
+    b.el = n;
+  };
+  const remember = (b) => {
+    const p = loadPrefs();
+    p[b.kind] = Object.fromEntries(b.cols.filter((c) => !c.custom).map((c) => [c.key, c.on]));
+    savePrefs(p);
+  };
+  blocks.forEach(apply);
+  return { blocks, html: () => tpl.innerHTML, apply, remember };
+}
+
+function signPanel(sd, onChange) {
+  if (!sd.blocks.length) return null;
+  const list = h('div', { class: 'ttd-list' });
+  const draw = () => {
+    list.replaceChildren(...sd.blocks.map((b, bi) => {
+      const changed = () => { sd.apply(b); sd.remember(b); onChange(); };
+      const rows = b.cols.map((c, ci) => {
+        const inp = (key, label, ph) => h('label', { class: 'ttd-f' }, h('span', { text: label }),
+          h('input', { type: 'text', value: c[key] || '', placeholder: ph, disabled: !c.on, oninput: (e) => { c[key] = e.target.value; sd.apply(b); onChange(); } }));
+        const chk = h('input', { type: 'checkbox', checked: c.on, 'aria-label': `Cetak tanda tangan ${c.role || 'penanda tangan'}`, onchange: (e) => { c.on = e.target.checked; changed(); draw(); } });
+        return h('div', { class: 'ttd-row' + (c.on ? '' : ' off') },
+          h('label', { class: 'ttd-on', title: c.on ? 'Ditampilkan di dokumen' : 'Tidak ditampilkan' }, chk, h('b', { text: c.role || 'Penanda tangan' })),
+          h('div', { class: 'ttd-fields' },
+            inp('top', 'Keterangan atas', 'mis. Mengetahui,'),
+            inp('role', 'Jabatan / pihak', 'mis. Kepala Sekolah'),
+            inp('name', 'Nama', 'Kosongkan untuk garis titik-titik'),
+            inp('nip', c.nipLabel === 'NIS.' ? 'NIS' : 'NIP / NIY', 'Boleh dikosongkan')),
+          c.custom ? iconBtn('trash', 'Hapus penanda tangan ini', () => { b.cols.splice(ci, 1); changed(); draw(); }) : null);
+      });
+      const on = b.cols.filter((c) => c.on).length;
+      return h('div', { class: 'ttd-block' },
+        sd.blocks.length > 1 ? h('div', { class: 'ttd-doc', text: `${bi + 1}. ${b.title}` }) : null,
+        ...rows,
+        h('div', { class: 'ttd-foot' },
+          h('span', { class: 'muted small', text: `${on} dari ${b.cols.length} penanda tangan dicetak` }),
+          btn('Tambah', () => { b.cols.push({ key: 'x' + Date.now().toString(36), top: '', role: 'Penanda tangan', name: '', nip: '', nipLabel: 'NIP.', materai: false, on: true, custom: true }); changed(); draw(); }, { ic: 'plus', small: true, kind: 'text' }),
+          btn('Setelan awal', () => { b.cols = b.base.map((c) => ({ ...c })); changed(); draw(); }, { small: true, kind: 'text' })));
+    }));
+  };
+  draw();
+  const total = sd.blocks.reduce((t, b) => t + b.cols.length, 0);
+  return h('details', { class: 'ttd-panel' },
+    h('summary', null, icon('users'), h('span', { class: 'grow', text: 'Penanda tangan dokumen' }), h('span', { class: 'muted small', text: `${total} pihak · atur & edit nama` }), icon('down')),
+    h('p', { class: 'muted small', text: 'Centang pihak yang ikut menandatangani, lalu ubah nama/jabatan bila perlu. Perubahan langsung terlihat di pratinjau dan dipakai saat unduh PDF/PNG, kirim WA, atau cetak. Pilihan centang diingat untuk dokumen sejenis berikutnya.' }),
+    list);
+}
+
+/** Lembar dokumen: pratinjau + penanda tangan + Unduh PDF / Unduh PNG / Kirim WA / Cetak. */
 export function openDoc(title, html, opts = {}) {
   const [pw] = A4[opts.landscape ? 'landscape' : 'portrait'];
+  const sd = signDoc(html);
+  const cur = () => sd.html();
   sheet((b) => {
     const inner = h('div', { class: 'doc-preview-inner docs', style: { width: pw + 'px' } });
-    inner.innerHTML = cleanHtml(html);
     const scaler = h('div', null, inner);
     const box = h('div', { class: 'doc-preview', 'aria-label': 'Pratinjau dokumen' }, scaler);
     const fit = () => {
@@ -232,15 +332,21 @@ export function openDoc(title, html, opts = {}) {
       scaler.style.height = inner.offsetHeight * s + 'px';
       scaler.style.width = pw * s + 'px';
     };
+    const render = () => { inner.innerHTML = cur(); fit(); };
+    render();
     b.append(box,
+      signPanel(sd, render),
       opts.waTo ? h('p', { class: 'muted small', text: `Penerima WhatsApp yang disarankan: ${opts.waTo}` }) : null,
       h('div', { class: 'doc-actions' },
-        btn('Unduh PDF', () => runExport('pdf', title, html, opts), { ic: 'download', kind: 'primary' }),
-        btn('Unduh PNG', () => runExport('png', title, html, opts), { ic: 'download' }),
-        btn('WA (PDF)', () => runExport('wa-pdf', title, html, opts), { ic: 'wa', kind: 'wa' }),
-        btn('WA (PNG)', () => runExport('wa-png', title, html, opts), { ic: 'wa', kind: 'wa' }),
-        btn('Cetak', () => printNow(title, html, opts), { ic: 'printer', kind: 'tonal', class: 'btn tonal wide' })));
+        btn('Unduh PDF', () => runExport('pdf', title, cur(), opts), { ic: 'download', kind: 'primary' }),
+        btn('Unduh PNG', () => runExport('png', title, cur(), opts), { ic: 'download' }),
+        btn('WA (PDF)', () => runExport('wa-pdf', title, cur(), opts), { ic: 'wa', kind: 'wa' }),
+        btn('WA (PNG)', () => runExport('wa-png', title, cur(), opts), { ic: 'wa', kind: 'wa' }),
+        btn('Cetak', () => printNow(title, cur(), opts), { ic: 'printer', kind: 'tonal', class: 'btn tonal wide' })));
     requestAnimationFrame(fit);
     new ResizeObserver(fit).observe(box);
   }, { title, wide: true });
 }
+
+/** HTML dokumen dengan pilihan penanda tangan tersimpan (untuk tombol PDF/PNG/WA langsung tanpa pratinjau). */
+export const withSignPrefs = (html) => signDoc(html).html();

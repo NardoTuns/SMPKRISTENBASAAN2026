@@ -36,7 +36,7 @@ export function render(view, route, opts = {}) {
     h('section', { class: 'card span-6' }, h('h3', { text: 'B. SOP due process & resolusi konflik' }),
       h('ol', { class: 'rules-list' },
         h('li', null, h('strong', { text: 'Sidang Dewan Guru: ' }), `keputusan pelanggaran di atas ${s.batasSidang} poin atau yang mengarah pada skorsing hingga dikeluarkan diputuskan melalui sidang Dewan Guru.`),
-        h('li', null, h('strong', { text: 'Berita Acara Pemeriksaan (BAP): ' }), 'setiap pelanggaran yang dikenakan poin didokumentasikan dalam BAP yang ditandatangani siswa pelapor, saksi, pelanggar, dan guru berwenang (BAP dapat dicetak dari detail catatan).'),
+        h('li', null, h('strong', { text: 'Berita Acara Pemeriksaan (BAP): ' }), 'setiap pelanggaran yang dikenakan poin didokumentasikan dalam BAP yang ditandatangani pelapor, saksi, siswa pelanggar, dan guru berwenang (BAP dapat dicetak dari detail catatan).'),
         h('li', null, h('strong', { text: 'Klausul pelepasan tuntutan: ' }), 'orang tua/wali menandatangani kesepakatan tata tertib di atas materai; bila siswa mencapai 100 poin atau melakukan pelanggaran Zero Tolerance, keputusan pengembalian siswa kepada orang tua bersifat final.')))));
 
   const search = h('input', { type: 'search', placeholder: 'Cari bentuk pelanggaran…', value: q, 'aria-label': 'Cari pelanggaran', oninput: debounce((e) => { q = e.target.value; drawList(); }, 150) });

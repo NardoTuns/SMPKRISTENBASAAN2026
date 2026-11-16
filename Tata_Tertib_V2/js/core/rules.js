@@ -125,6 +125,7 @@ export const DEFAULT_SETTINGS = {
   dashboardSiswa: 'nis',
   infoSiswa: '',
   waSekolah: '',
+  ukuranKertas: 'A4',
 };
 
 export const SETTING_INFO = {
@@ -151,6 +152,7 @@ export const SETTING_INFO = {
   dashboardSiswa: 'Halaman Siswa & Orang Tua: nis = detail siswa dibuka dengan NIS; nama = daftar nama siswa ditampilkan',
   infoSiswa: 'Pengumuman/informasi untuk siswa & orang tua (tampil di Halaman Siswa & Orang Tua)',
   waSekolah: 'Nomor WhatsApp sekolah/BK yang dapat dihubungi orang tua',
+  ukuranKertas: 'Ukuran kertas bawaan dokumen (A4, F4, Letter, Legal)',
 };
 
 export const tahunAjaranOf = (d = new Date()) => {

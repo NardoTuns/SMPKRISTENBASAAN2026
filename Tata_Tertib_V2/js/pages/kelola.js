@@ -7,6 +7,7 @@ import { callAuthed, syncNow } from '../sync.js';
 import { canAdmin, canRules, canSiswa } from '../core/perm.js';
 import { ROLES, STATUS_SISWA, SURAT, TINGKAT, WARNA, SETTING_INFO } from '../core/rules.js';
 import { cmpKelas, cmpNama, debounce, fmtNum, matches, norm, parseTable, toCSV, uid } from '../core/util.js';
+import { PAPERS, PAPER_OPTIONS } from '../ui/paper.js';
 
 // Formulir pengaturan tidak digambar ulang saat sinkron agar isian yang belum disimpan tidak hilang.
 let curTab = '';
@@ -389,6 +390,9 @@ function tabPengaturan(body) {
         h('span', { class: 'hint', text: 'Diperkecil otomatis (maks. ±35 KB) agar muat di spreadsheet.' })))),
     h('section', { class: 'card stack' }, h('h3', { text: 'Pejabat penanda tangan' }),
       h('div', { class: 'form-row' }, inp('kepalaSekolah'), inp('nipKepsek')), h('div', { class: 'form-row' }, inp('guruBK'), inp('nipBK'))),
+    h('section', { class: 'card stack' }, h('h3', { text: 'Dokumen & cetak' }),
+      fld('Ukuran kertas bawaan', select(PAPER_OPTIONS, PAPERS[f.ukuranKertas] ? f.ukuranKertas : 'A4', (v) => set('ukuranKertas', v))),
+      h('p', { class: 'hint', text: 'Dipakai untuk BAP, surat, kartu, laporan, dan tata tertib (PDF, PNG, cetak). Ukuran tetap bisa diganti per dokumen di lembar pratinjau sebelum diunduh/dicetak.' })),
     h('section', { class: 'card stack' }, h('h3', { text: 'Tahun ajaran' }),
       h('div', { class: 'form-row' }, inp('tahunAjaran'), fld(SETTING_INFO.semester, select(['Ganjil', 'Genap'], f.semester, (v) => set('semester', v))), fld(SETTING_INFO.zonaWaktu, select(['WIB', 'WITA', 'WIT'], f.zonaWaktu, (v) => set('zonaWaktu', v))))),
     h('section', { class: 'card stack' }, h('h3', { text: 'Aturan aplikasi' }),

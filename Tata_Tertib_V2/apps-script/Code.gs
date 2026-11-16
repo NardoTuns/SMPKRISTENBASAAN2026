@@ -145,7 +145,8 @@ var DEFAULT_SETTINGS = [
   ['logo', '', 'Logo sekolah (diunggah dari aplikasi)'],
   ['dashboardSiswa', 'nis', 'Halaman Siswa & Orang Tua: nis = detail siswa dibuka dengan NIS; nama = daftar nama siswa ditampilkan'],
   ['infoSiswa', '', 'Pengumuman/informasi untuk siswa & orang tua (tampil di Halaman Siswa & Orang Tua)'],
-  ['waSekolah', '', 'Nomor WhatsApp sekolah/BK yang dapat dihubungi orang tua']];
+  ['waSekolah', '', 'Nomor WhatsApp sekolah/BK yang dapat dihubungi orang tua'],
+  ['ukuranKertas', 'A4', 'Ukuran kertas bawaan dokumen (A4, F4, Letter, Legal)']];
 
 // ----------------------------------------------------------------------------- pintu masuk
 function doGet(e) {

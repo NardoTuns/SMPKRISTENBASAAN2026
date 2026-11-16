@@ -3,8 +3,8 @@
 // dibutuhkan saja dan ikut tersimpan offline oleh service worker.
 import { h, icon, btn, iconBtn, sheet, toast, dialog, downloadBlob } from './dom.js';
 import { signHtml, readSign } from './sign.js';
+import { paperSize, paperCode, PAPER_OPTIONS } from './paper.js';
 
-const A4 = { portrait: [794, 1123], landscape: [1123, 794] };
 const scripts = new Map();
 
 function loadScript(src) {
@@ -29,7 +29,8 @@ const safeName = (s) => String(s || 'dokumen').replace(/[\\/:*?"<>|]+/g, '').rep
 
 // ------------------------------------------------------------------ pemotongan halaman
 /** Susun isi .doc ke halaman-halaman .paper. Tabel panjang dipecah per baris (judul kolom diulang). */
-function paginate(html, landscape) {
+function paginate(html, landscape, paper) {
+  const [pw, ph] = paperSize(paper, landscape).px;
   const stage = h('div', { class: 'paper-stage' });
   document.body.append(stage);
   const src = h('div');
@@ -37,7 +38,7 @@ function paginate(html, landscape) {
   const pages = [];
   let page, holder, docClass = 'doc';
   const newPage = () => {
-    page = h('div', { class: 'paper docs' + (landscape ? ' landscape' : '') });
+    page = h('div', { class: 'paper docs', style: { width: pw + 'px', height: ph + 'px' } });
     holder = h('div', { class: docClass }); // kelas dokumen (mis. "doc rpt" = laporan berwarna) ikut ke setiap halaman
     page.append(holder);
     stage.append(page);
@@ -105,9 +106,9 @@ function paginate(html, landscape) {
   return { stage, pages };
 }
 
-async function rasterize(html, { landscape = false, scale = 2 } = {}) {
+async function rasterize(html, { landscape = false, paper, scale = 2 } = {}) {
   const { html2canvas } = await libs();
-  const { stage, pages } = paginate(html, landscape);
+  const { stage, pages } = paginate(html, landscape, paper);
   try {
     await Promise.all([...stage.querySelectorAll('img')].map((img) => img.decode?.().catch(() => {})));
     const out = [];
@@ -121,14 +122,15 @@ async function rasterize(html, { landscape = false, scale = 2 } = {}) {
   }
 }
 
-export async function makePdf(title, html, { landscape = false } = {}) {
-  const canvases = await rasterize(html, { landscape, scale: 2 });
+export async function makePdf(title, html, { landscape = false, paper } = {}) {
+  const canvases = await rasterize(html, { landscape, paper, scale: 2 });
   const { jsPDF } = await libs();
   const orient = landscape ? 'landscape' : 'portrait';
-  const pdf = new jsPDF({ orientation: orient, unit: 'mm', format: 'a4', compress: true });
-  const [w, hgt] = landscape ? [297, 210] : [210, 297];
+  const { mm: [w, hgt] } = paperSize(paper, landscape);
+  const fmt = [Math.min(w, hgt), Math.max(w, hgt)];
+  const pdf = new jsPDF({ orientation: orient, unit: 'mm', format: fmt, compress: true });
   canvases.forEach((c, i) => {
-    if (i) pdf.addPage('a4', orient);
+    if (i) pdf.addPage(fmt, orient);
     pdf.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, w, hgt, undefined, 'FAST');
   });
   pdf.setProperties({ title, creator: 'Aplikasi Tata Tertib' });
@@ -136,13 +138,11 @@ export async function makePdf(title, html, { landscape = false } = {}) {
 }
 
 /** Satu PNG; dokumen beberapa halaman disusun ke bawah (skala disesuaikan agar tetap aman di HP). */
-export async function makePng(title, html, { landscape = false } = {}) {
-  const [, pageH] = A4[landscape ? 'landscape' : 'portrait'];
-  const probe = paginate(html, landscape);
-  const n = probe.pages.length;
-  probe.stage.remove();
+export async function makePng(title, html, { landscape = false, paper } = {}) {
+  const [, pageH] = paperSize(paper, landscape).px;
+  const n = countPages(html, landscape, paper);
   const scale = Math.max(1, Math.min(2, 15000 / (n * pageH)));
-  const canvases = await rasterize(html, { landscape, scale });
+  const canvases = await rasterize(html, { landscape, paper, scale });
   let canvas = canvases[0];
   if (canvases.length > 1) {
     const gap = Math.round(16 * scale);
@@ -159,11 +159,20 @@ export async function makePng(title, html, { landscape = false } = {}) {
   return { blob, pages: canvases.length };
 }
 
+/** Jumlah halaman hasil pemotongan untuk ukuran kertas tertentu. */
+export function countPages(html, landscape = false, paper) {
+  const probe = paginate(html, landscape, paper);
+  const n = probe.pages.length;
+  probe.stage.remove();
+  return n;
+}
+
 // ------------------------------------------------------------------ cetak, unduh, bagikan
-export async function printNow(title, html, { landscape = false } = {}) {
+export async function printNow(title, html, { landscape = false, paper } = {}) {
   html = withSignPrefs(html);
   const root = document.getElementById('print-root');
-  root.innerHTML = `<style>@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: 12mm 15mm; }</style>${cleanHtml(html)}`;
+  const { mm: [w, hgt] } = paperSize(paper, landscape);
+  root.innerHTML = `<style>@page { size: ${w}mm ${hgt}mm; margin: 12mm 15mm; }</style>${cleanHtml(html)}`;
   await Promise.all([...root.querySelectorAll('img')].map((img) => img.decode?.().catch(() => {})));
   const old = document.title;
   document.title = title;
@@ -319,7 +328,8 @@ function signPanel(sd, onChange) {
 
 /** Lembar dokumen: pratinjau + penanda tangan + Unduh PDF / Unduh PNG / Kirim WA / Cetak. */
 export function openDoc(title, html, opts = {}) {
-  const [pw] = A4[opts.landscape ? 'landscape' : 'portrait'];
+  opts = { ...opts, paper: paperCode(opts.paper) };
+  let pw = paperSize(opts.paper, opts.landscape).px[0];
   const sd = signDoc(html);
   const cur = () => sd.html();
   sheet((b) => {
@@ -332,9 +342,25 @@ export function openDoc(title, html, opts = {}) {
       scaler.style.height = inner.offsetHeight * s + 'px';
       scaler.style.width = pw * s + 'px';
     };
-    const render = () => { inner.innerHTML = cur(); fit(); };
+    const pagesInfo = h('span', { class: 'muted small paper-pages' });
+    let countT;
+    const recount = () => {
+      clearTimeout(countT);
+      countT = setTimeout(() => {
+        const n = countPages(cur(), opts.landscape, opts.paper);
+        pagesInfo.textContent = `${n} halaman ${opts.paper}${opts.landscape ? ' mendatar' : ''}`;
+      }, 250);
+    };
+    const render = () => { inner.innerHTML = cur(); fit(); recount(); };
     render();
+    const paperSel = h('select', { 'aria-label': 'Ukuran kertas', onchange: (e) => {
+      opts.paper = e.target.value;
+      pw = paperSize(opts.paper, opts.landscape).px[0];
+      inner.style.width = pw + 'px';
+      render();
+    } }, ...PAPER_OPTIONS.map((o) => h('option', { value: o.value, text: o.label, selected: o.value === opts.paper })));
     b.append(box,
+      h('div', { class: 'paper-row' }, h('label', { class: 'paper-pick' }, h('span', { text: 'Ukuran kertas' }), paperSel), pagesInfo),
       signPanel(sd, render),
       opts.waTo ? h('p', { class: 'muted small', text: `Penerima WhatsApp yang disarankan: ${opts.waTo}` }) : null,
       h('div', { class: 'doc-actions' },
